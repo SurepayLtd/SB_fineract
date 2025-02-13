@@ -60,7 +60,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
@@ -113,8 +112,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
             throw new PlatformDataIntegrityException("error.msg.invalid.outputType", "No matching Output Type: " + outputType);
         }
 
-        // final var reportPath = mifosBaseDir + File.separator + "pentahoReports" + File.separator + reportName +
-        // ".prpt";
+
         String reportPath;
         if (!"en".equals(locale.toString().toLowerCase()) && locale != null) {
             reportPath = getReportPath() + reportName + "_" + locale.toString().toLowerCase() + ".prpt";
@@ -253,9 +251,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
             final var rptParamValues = report.getParameterValues();
             final var paramsDefinition = report.getParameterDefinition();
 
-            // only allow integer, long, date and string parameter types and assume all mandatory - could go more
-            // detailed like Pawel did in Mifos later and could match incoming and Pentaho parameters better...
-            // currently assuming they come in ok... and if not an error
+
             for (final ParameterDefinitionEntry paramDefEntry : paramsDefinition.getParameterDefinitions()) {
                 final var paramName = paramDefEntry.getName();
                 if ((!paramName.equals("tenantUrl") && (!paramName.equals("userhierarchy") && !paramName.equals("username")
@@ -295,9 +291,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
                 }
             }
 
-            // Tenant database name and current user's office hierarchy
-            // passed as parameters to allow multitenant Pentaho reporting
-            // and data scoping
+
             final var tenant = ThreadLocalContextUtil.getTenant();
             final var tenantConnection = tenant.getConnection();
             String protocol = toProtocol(this.tenantDataSource);

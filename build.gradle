@@ -97,14 +97,18 @@ plugins {
     id 'com.github.hierynomus.license' version '0.16.1' apply false
     id 'com.github.jk1.dependency-license-report' version '2.9' apply false
     id 'org.zeroturnaround.gradle.jrebel' version '1.2.0' apply false
-    id 'org.springframework.boot' version '3.3.5' apply false
-    id 'net.ltgt.errorprone' version '4.1.0' apply false
-    id 'io.swagger.core.v3.swagger-gradle-plugin' version '2.2.23' apply false
-    id 'com.gorylenko.gradle-git-properties' version '2.4.2' apply false
-    id 'org.asciidoctor.jvm.convert' version '3.3.2' apply false
-    id 'org.asciidoctor.jvm.pdf' version '3.3.2' apply false
-    id 'com.google.cloud.tools.jib' version '3.4.4' apply false
-    id 'org.sonarqube' version '6.0.1.5171'
+    id 'org.springframework.boot' version '3.2.2' apply false
+    id 'net.ltgt.errorprone' version '3.1.0' apply false
+    id 'io.swagger.core.v3.swagger-gradle-plugin' version '2.2.19' apply false
+    id 'com.gorylenko.gradle-git-properties' version '2.4.1' apply false
+    // id 'org.asciidoctor.jvm.convert' version '3.3.2' apply false
+    // id 'org.asciidoctor.jvm.pdf' version '3.3.2' apply false
+    // id 'org.asciidoctor.jvm.epub' version '3.3.2' apply false
+    // id 'org.asciidoctor.jvm.revealjs' version '3.3.2' apply false
+    // id 'org.asciidoctor.jvm.gems' version '3.3.2' apply false
+    // id 'org.asciidoctor.kindlegen.base' version '3.2.0' apply false
+    id 'com.google.cloud.tools.jib' version '3.4.0' apply false
+    id 'org.sonarqube' version '4.4.1.3373'
     id 'com.github.andygoossens.modernizer' version '1.10.0' apply false
     // TODO: upgrade to 6.0.4
     id 'com.github.spotbugs' version '6.0.26' apply false
@@ -142,6 +146,13 @@ gitVersioning.apply {
 
 ext['groovy.version'] = '4.0.17'
 ext['swaggerFile'] = "$rootDir/fineract-provider/build/classes/java/main/static/fineract.json".toString()
+
+def pentahoReportDir = System.properties['user.home'] + System.properties['file.separator'] + '.mifosx' + System.properties['file.separator'] + 'pentahoReports'
+
+copy {
+    from "fineract-report/pentahoReports"
+    into pentahoReportDir
+}
 
 allprojects  {
     group = 'org.apache.fineract'
@@ -370,7 +381,7 @@ configure(project.fineractJavaProjects) {
             cacheDynamicVersionsFor 0, 'seconds'
         }
     }
-    
+
     tasks.withType(JavaCompile).configureEach {
         options.incremental = true
         options.fork = true

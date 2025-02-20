@@ -62,19 +62,19 @@
             UPDATE m_product_loan t SET t.loan_transaction_strategy_code = 'interest-principal-penalties-fees-order-strategy', t.loan_transaction_strategy_name = 'Interest, Principal, Penalties, Fees Order' WHERE t.loan_transaction_strategy_code = '-'  AND t.loan_transaction_strategy_name = '-'
         </sql>
     </changeSet>
-    <changeSet author="fineract" id="cleanup_script_to_add_loan_configurable_attributes">
-        <preConditions onFail="MARK_RAN">
-            <not>
-                <and>
-                    <tableExists tableName="m_product_loan_configurable_attributes"/>
-                    <sqlCheck expectedResult="1">
-                        SELECT COUNT(*) FROM m_product_loan_configurable_attributes WHERE id = 1 AND loan_product_id = 1
-                    </sqlCheck>
-                </and>
-            </not>
-        </preConditions>
-        <sql>
-            INSERT INTO m_product_loan_configurable_attributes(id, loan_product_id, amortization_method_enum, interest_method_enum, loan_transaction_strategy_code, interest_calculated_in_period_enum, arrearstolerance_amount, repay_every, moratorium, grace_on_arrears_ageing) VALUES (1, 1, true, true, true, true, true, true, true, true)
-        </sql>
-    </changeSet>
+<!--    <changeSet author="fineract" id="cleanup_script_to_add_loan_configurable_attributes">-->
+<!--        <preConditions onFail="MARK_RAN">-->
+<!--            <not>-->
+<!--                <and>-->
+<!--                    <tableExists tableName="m_product_loan_configurable_attributes"/>-->
+<!--                    <sqlCheck expectedResult="1">-->
+<!--                        SELECT COUNT(*) FROM m_product_loan_configurable_attributes WHERE id = 1 AND loan_product_id = 1-->
+<!--                    </sqlCheck>-->
+<!--                </and>-->
+<!--            </not>-->
+<!--        </preConditions>-->
+<!--        <sql>-->
+<!--            INSERT INTO m_product_loan_configurable_attributes(id, loan_product_id, amortization_method_enum, interest_method_enum, loan_transaction_strategy_code, interest_calculated_in_period_enum, arrearstolerance_amount, repay_every, moratorium, grace_on_arrears_ageing) VALUES (1, 1, true, true, true, true, true, true, true, true)-->
+<!--        </sql>-->
+<!--    </changeSet>-->
 </databaseChangeLog>

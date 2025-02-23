@@ -16,15 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.portfolio.loanaccount.loanschedule.data;
+package org.apache.fineract.portfolio.loanaccount.api.pointintime.data;
 
+import java.util.List;
 import lombok.Data;
-import org.apache.fineract.organisation.monetary.domain.Money;
+import org.apache.fineract.infrastructure.core.api.DateParam;
 
 @Data
-public class PeriodDueDetails {
+public class RetrieveLoansPointInTimeExternalIdsRequest {
 
-    private final Money emi;
-    private final Money duePrincipal;
-    private final Money dueInterest;
+    private List<String> externalIds;
+    private DateParam date;
+    private String dateFormat;
+    private String locale;
 }

@@ -16,12 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.portfolio.interestpauses.service;
+package org.apache.fineract.test.messaging.event.loan.transaction;
 
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
+public class LoanChargeAdjustmentPostBusinessEvent extends AbstractLoanTransactionEvent {
 
-public interface AccountTransfersService {
-
-    void updateLoanTransaction(Long loanTransactionId, LoanTransaction newLoanTransaction);
-
+    @Override
+    public String getEventName() {
+        return "LoanChargeAdjustmentPostBusinessEvent";
+    }
 }

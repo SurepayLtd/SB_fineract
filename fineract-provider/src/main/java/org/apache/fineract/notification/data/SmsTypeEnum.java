@@ -18,20 +18,28 @@
  */
 package org.apache.fineract.notification.data;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
+import lombok.Getter;
 
-import java.io.Serializable;
+@Getter
+public enum SmsTypeEnum {
 
-@Data
-@NoArgsConstructor
-@Accessors(chain = true)
-public class SmsNotificationResponse implements Serializable {
+    LOAN_SUBMISSION(1, "SmsTypeEnum.loanSubmission", "Loan Submission"), //
+    LOAN_APPROVAL(2, "SmsTypeEnum.loanApproval", "Loan Approval"), //
+    LOAN_DISBURSEMENT(3, "SmsTypeEnum.loanDisbursement", "Loan Disbursement"), //
+    LOAN_REPAYMENT(4, "SmsTypeEnum.loanRepayment", "Loan Repayment"), //
+    LOAN_REJECTED(4, "SmsTypeEnum.loanRejected", "Loan Application Rejected"), //
+    ;
 
-    private static final long serialVersionUID = 1L;
+    private final Integer value;
+    private final String code;
+    private final String description;
 
-    private String responseCode;
-    private String responseDescription;
-    private String responseId;
+    SmsTypeEnum(final Integer value, final String code, final String description) {
+        this.value = value;
+        this.code = code;
+        this.description = description;
+    }
+
+
+
 }

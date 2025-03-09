@@ -54,6 +54,7 @@ import org.apache.fineract.infrastructure.event.business.domain.loan.LoanUndoApp
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.notification.data.SmsNotificationData;
+import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
 import org.apache.fineract.portfolio.account.domain.AccountAssociationType;
 import org.apache.fineract.portfolio.account.domain.AccountAssociations;
@@ -170,13 +171,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             // Trigger business event
             businessEventNotifierService.notifyPostBusinessEvent(new LoanCreatedBusinessEvent(loan));
             //Send SMS
-            String clientName = loan.client().getDisplayName();
-            String mobileNo = loan.client().getMobileNo();
-            String message = String.format("Dear %s, your loan application has been received, it\\'s under review, we will notify you once the process is done, thank you for choosing %s .", clientName, ThreadLocalContextUtil.getTenant().getName());
-
-            if (mobileNo != null) {
-            smsNotificationWritePlatformService.sendSms(new SmsNotificationData(mobileNo, message, "LOAN-SUBMIT-" + loan.getId()));
-            }
+            smsNotificationWritePlatformService.processSmsNotification(loan,SmsTypeEnum.LOAN_SUBMISSION);
             // Building response
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //
@@ -575,6 +570,8 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             createNote(noteText, loan).ifPresent(note -> changes.put("note", noteText));
             businessEventNotifierService.notifyPostBusinessEvent(new LoanApprovedBusinessEvent(loan));
         }
+        //Send SMS
+        smsNotificationWritePlatformService.processSmsNotification(loan,SmsTypeEnum.LOAN_APPROVAL);
 
         return new CommandProcessingResultBuilder() //
                 .withCommandId(command.commandId()) //
@@ -719,6 +716,9 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             final String noteText = command.stringValueOfParameterNamed("note");
             createNote(noteText, loan);
         }
+
+        //Send SMS
+        smsNotificationWritePlatformService.processSmsNotification(loan,SmsTypeEnum.LOAN_REJECTED);
 
         businessEventNotifierService.notifyPostBusinessEvent(new LoanRejectedBusinessEvent(loan));
         return new CommandProcessingResultBuilder() //

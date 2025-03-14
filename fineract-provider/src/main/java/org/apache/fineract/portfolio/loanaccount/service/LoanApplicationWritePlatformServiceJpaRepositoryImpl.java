@@ -171,7 +171,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             // Trigger business event
             businessEventNotifierService.notifyPostBusinessEvent(new LoanCreatedBusinessEvent(loan));
             //Send SMS
-            smsNotificationWritePlatformService.processSmsNotification(loan,SmsTypeEnum.LOAN_SUBMISSION);
+            smsNotificationWritePlatformService.processSmsNotification(loan,SmsTypeEnum.LOAN_SUBMISSION,null);
             // Building response
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //
@@ -571,7 +571,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             businessEventNotifierService.notifyPostBusinessEvent(new LoanApprovedBusinessEvent(loan));
         }
         //Send SMS
-        smsNotificationWritePlatformService.processSmsNotification(loan,SmsTypeEnum.LOAN_APPROVAL);
+        smsNotificationWritePlatformService.processSmsNotification(loan,SmsTypeEnum.LOAN_APPROVAL,null);
 
         return new CommandProcessingResultBuilder() //
                 .withCommandId(command.commandId()) //
@@ -718,7 +718,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
         }
 
         //Send SMS
-        smsNotificationWritePlatformService.processSmsNotification(loan,SmsTypeEnum.LOAN_REJECTED);
+        smsNotificationWritePlatformService.processSmsNotification(loan,SmsTypeEnum.LOAN_REJECTED,null);
 
         businessEventNotifierService.notifyPostBusinessEvent(new LoanRejectedBusinessEvent(loan));
         return new CommandProcessingResultBuilder() //

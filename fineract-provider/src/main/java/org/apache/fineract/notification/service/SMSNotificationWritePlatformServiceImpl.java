@@ -36,6 +36,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import java.util.ArrayList;
@@ -110,7 +111,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         throw new PlatformDataIntegrityException(httpResponse, httpResponse);
     }
     @Override
-    public void processSmsNotification(Loan loan , SmsTypeEnum smsType) {
+    public void processSmsNotification(Loan loan , SmsTypeEnum smsType, LoanTransaction transaction) {
         String clientName = loan.client().getDisplayName();
         String mobileNo = loan.client().getMobileNo();
         String message = null;
@@ -131,6 +132,10 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
             case LOAN_REJECTED:
                 message = String.format("Dear %s, your loan application %s of %s %s has been rejected, please reach out to %s nearest branch for more details.", clientName,loan.getId(),loan.getCurrencyCode(),loan.getProposedPrincipal(), ThreadLocalContextUtil.getTenant().getName());
                 messageId = String.format("LOAN-REJECTED-%s", loan.getId());
+                break;
+            case LOAN_REPAYMENT:
+                message = String.format("Dear %s, we have successfully received your loan instalment payment of %s  %s, thank you for banking with %s .", clientName,loan.getCurrencyCode(),transaction.getAmount(), ThreadLocalContextUtil.getTenant().getName());
+                messageId = String.format("LOAN-REPAYMENT-%s", transaction.getId());
                 break;
             default:
                 log.info("No sms type found to process a notification");

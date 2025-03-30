@@ -27,7 +27,8 @@ public enum SmsTypeEnum {
     LOAN_APPROVAL(2, "SmsTypeEnum.loanApproval", "Loan Approval"), //
     LOAN_DISBURSEMENT(3, "SmsTypeEnum.loanDisbursement", "Loan Disbursement"), //
     LOAN_REPAYMENT(4, "SmsTypeEnum.loanRepayment", "Loan Repayment"), //
-    LOAN_REJECTED(4, "SmsTypeEnum.loanRejected", "Loan Application Rejected"), //
+    LOAN_REJECTED(5, "SmsTypeEnum.loanRejected", "Loan Application Rejected"), //
+    LOAN_CLOSED(5, "SmsTypeEnum.loanClosed", "Loan Account Fully Paid and Closed"), //
     ;
 
     private final Integer value;

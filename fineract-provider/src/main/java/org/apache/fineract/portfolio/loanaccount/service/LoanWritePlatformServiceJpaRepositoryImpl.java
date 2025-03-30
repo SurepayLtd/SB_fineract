@@ -1285,7 +1285,9 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         loan = loanTransaction.getLoan();
         this.loanAccountDomainService.updateAndSaveLoanCollateralTransactionsForIndividualAccounts(loan, loanTransaction);
 
-        //Send SMS
+        if(loan.getStatus().isClosed()){
+            smsNotificationWritePlatformService.processSmsNotification(loan,SmsTypeEnum.LOAN_CLOSED, loanTransaction);
+        }
         smsNotificationWritePlatformService.processSmsNotification(loan,SmsTypeEnum.LOAN_REPAYMENT,loanTransaction);
 
         return new CommandProcessingResultBuilder().withCommandId(command.commandId()) //

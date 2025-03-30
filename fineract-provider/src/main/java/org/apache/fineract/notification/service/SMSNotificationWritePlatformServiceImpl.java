@@ -112,6 +112,15 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
     }
     @Override
     public void processSmsNotification(Loan loan , SmsTypeEnum smsType, LoanTransaction transaction) {
+
+        final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
+                .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
+
+        if (!property.isEnabled()) {
+            log.info("** SMS Notification is disabled for this Tenant :-> "+ThreadLocalContextUtil.getTenant().getName());
+            return;
+        }
+
         String clientName = loan.client().getDisplayName();
         String mobileNo = loan.client().getMobileNo();
         String message = null;
@@ -136,6 +145,10 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
             case LOAN_REPAYMENT:
                 message = String.format("Dear %s, we have successfully received your loan instalment payment of %s  %s, thank you for banking with %s .", clientName,loan.getCurrencyCode(),transaction.getAmount(), ThreadLocalContextUtil.getTenant().getName());
                 messageId = String.format("LOAN-REPAYMENT-%s", transaction.getId());
+                break;
+            case LOAN_CLOSED:
+                message = String.format("Congrats, %s ! You have fully paid off your loan. Thank you for your payments and choosing %s .", clientName, ThreadLocalContextUtil.getTenant().getName());
+                messageId = String.format("LOAN-CLOSED-%s", transaction.getId());
                 break;
             default:
                 log.info("No sms type found to process a notification");

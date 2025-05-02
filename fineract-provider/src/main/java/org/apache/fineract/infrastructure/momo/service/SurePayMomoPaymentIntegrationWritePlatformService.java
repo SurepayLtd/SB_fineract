@@ -26,6 +26,4 @@ import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 public interface SurePayMomoPaymentIntegrationWritePlatformService {
 
     void payOut(MomoPaymentData momoPaymentData, Loan loan, LoanTransaction loanTransaction) throws IOException;
-
-    void processLoanTransactionsOnMomoPayment();
 }

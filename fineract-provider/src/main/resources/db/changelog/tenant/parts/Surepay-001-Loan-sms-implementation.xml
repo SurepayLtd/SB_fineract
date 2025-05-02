@@ -155,5 +155,4 @@
         <column name="short_name" value="MOMO_PAY"/>
     </insert>
     </changeSet>
-
 </databaseChangeLog>

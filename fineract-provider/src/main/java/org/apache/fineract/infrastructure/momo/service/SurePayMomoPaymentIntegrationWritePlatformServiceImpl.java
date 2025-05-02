@@ -38,6 +38,8 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.apache.fineract.infrastructure.configuration.api.GlobalConfigurationConstants;
+import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationProperty;
 import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.portfolio.loanaccount.data.MomoPaymentData;
@@ -67,7 +69,13 @@ public class SurePayMomoPaymentIntegrationWritePlatformServiceImpl implements Su
     @Override
     public void payOut(MomoPaymentData momoPaymentData, Loan loan, LoanTransaction loanTransaction) throws IOException {
 
-        log.info(momoPaymentData.toString());
+        final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
+                .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SURE_MOBILE_MONEY_PAYMENT);
+
+        if (!property.isEnabled()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.momo.payments.is.disabled","Surepay Mobile Money payments is disabled");
+        }
+
 
         String message = buildMessage(momoPaymentData);
 
@@ -75,7 +83,6 @@ public class SurePayMomoPaymentIntegrationWritePlatformServiceImpl implements Su
         momoPaymentData.setVendorCode(getConfigProperty("momo.vendorCode"));
         momoPaymentData.setTelecom(getConfigProperty("momo.telecom"));
 
-        log.info("Momo Payments - - - >: " + momoPaymentData.toString());
 
         Gson gson = new GsonBuilder().create();
         String momo = gson.toJson(momoPaymentData);
@@ -83,7 +90,6 @@ public class SurePayMomoPaymentIntegrationWritePlatformServiceImpl implements Su
         HttpUrl.Builder urlBuilder = HttpUrl.parse(getConfigProperty("momo.url.payout")).newBuilder();
         String url = urlBuilder.build().toString();
 
-        log.info("MOMO URL :=>" + url);
         OkHttpClient client = new OkHttpClient();
         Response response = null;
 
@@ -96,9 +102,7 @@ public class SurePayMomoPaymentIntegrationWritePlatformServiceImpl implements Su
         response = client.newCall(request).execute();
         String resObject = response.body().string();
 
-        log.info("Momo Message Response :=>" + resObject);
         JsonObject jsonResponse = JsonParser.parseString(resObject).getAsJsonObject();
-        log.info(" Code or status ---- > " + jsonResponse.get("statusCode"));
         if (response.isSuccessful() && jsonResponse.get("statusCode").getAsString().equals("PENDING")) {
             // React to the response from MiddleWare . .
             MomoPaymentResponse resBody = getMomoResponse(jsonResponse);
@@ -181,8 +185,4 @@ public class SurePayMomoPaymentIntegrationWritePlatformServiceImpl implements Su
         return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
     }
 
-    @Override
-    public void processLoanTransactionsOnMomoPayment() {
-
-    }
 }

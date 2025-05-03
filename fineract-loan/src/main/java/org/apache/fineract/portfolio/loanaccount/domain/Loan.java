@@ -477,10 +477,10 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     private boolean disbursedViaMomoPay = false;
     @Setter()
     @Column(name = "disbursement_payout_completed", nullable = false)
-    private boolean dibursementPayoutCompleted = false;
+    private boolean disbursementPayoutCompleted = false;
     @Setter()
     @Column(name = "disbursement_payout_completed_date", nullable = false)
-    private LocalDate dibursementPayoutCompletedDate;
+    private LocalDate disbursementPayoutCompletedDate;
 
     @Setter()
     @Column(name = "middleware_reference_no", nullable = true)

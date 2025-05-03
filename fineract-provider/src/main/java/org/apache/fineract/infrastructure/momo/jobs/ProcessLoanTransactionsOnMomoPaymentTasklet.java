@@ -23,9 +23,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +35,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
+import org.apache.fineract.infrastructure.jobs.exception.JobExecutionException;
 import org.apache.fineract.infrastructure.momo.data.MomoPaymentData;
 import org.apache.fineract.infrastructure.momo.data.MomoPaymentResponse;
 import org.apache.fineract.infrastructure.momo.data.MomoTransactionTypeEnum;
@@ -46,7 +45,6 @@ import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.fineract.infrastructure.jobs.exception.JobExecutionException;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
@@ -116,8 +114,8 @@ public class ProcessLoanTransactionsOnMomoPaymentTasklet implements Tasklet {
             completedTransaction = Boolean.TRUE;
         }
 
-        loan.setDibursementPayoutCompleted(completedTransaction);
-        loan.setDibursementPayoutCompletedDate(DateUtils.parseLocalDateFlexible(paymentResponse.getRecordDate()));
+        loan.setDisbursementPayoutCompleted(completedTransaction);
+        loan.setDisbursementPayoutCompletedDate(DateUtils.parseLocalDateFlexible(paymentResponse.getRecordDate()));
         loanRepositoryWrapper.saveAndFlush(loan);
     }
 
@@ -163,7 +161,6 @@ public class ProcessLoanTransactionsOnMomoPaymentTasklet implements Tasklet {
     private String getConfigProperty(String propertyName) {
         return this.env.getProperty(propertyName);
     }
-
 
     private MomoPaymentResponse getMomoResponse(JsonObject jsonResponse) {
         MomoPaymentResponse momoPaymentResponse = new MomoPaymentResponse();

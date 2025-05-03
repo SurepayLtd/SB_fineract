@@ -109,7 +109,7 @@ public class SurePayMomoPaymentIntegrationWritePlatformServiceImpl implements Su
             log.info("Momo Message Response :=>" + resBody.toString());
 
             loan.setDisbursedViaMomoPay(Boolean.TRUE);
-            loan.setDibursementPayoutCompleted(Boolean.FALSE);
+            loan.setDisbursementPayoutCompleted(Boolean.FALSE);
             loan.setMiddlewareReferenceNo(resBody.getTranReference());
             this.loanRepositoryWrapper.saveAndFlush(loan);
 

@@ -32,6 +32,8 @@ import org.apache.fineract.infrastructure.core.service.PaginationHelper;
 import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.infrastructure.dataqueries.service.EntityDatatableChecksWritePlatformService;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
+import org.apache.fineract.infrastructure.momo.domain.MomoLoanPaymentTransactionRepository;
+import org.apache.fineract.infrastructure.momo.service.SurePayMomoPaymentIntegrationWritePlatformServiceImpl;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.infrastructure.security.utils.ColumnValidator;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
@@ -71,16 +73,7 @@ import org.apache.fineract.portfolio.interestpauses.service.InterestPauseReadPla
 import org.apache.fineract.portfolio.interestpauses.service.InterestPauseReadPlatformServiceImpl;
 import org.apache.fineract.portfolio.interestpauses.service.InterestPauseWritePlatformService;
 import org.apache.fineract.portfolio.interestpauses.service.InterestPauseWritePlatformServiceImpl;
-import org.apache.fineract.portfolio.loanaccount.domain.GLIMAccountInfoRepository;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanAccountDomainService;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanChargeRepository;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanLifecycleStateMachine;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleInstallmentRepository;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleTransactionProcessorFactory;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanRepository;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionRelationRepository;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionRepository;
+import org.apache.fineract.portfolio.loanaccount.domain.*;
 import org.apache.fineract.portfolio.loanaccount.guarantor.service.GuarantorDomainService;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleGeneratorFactory;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanScheduleAssembler;
@@ -396,7 +389,8 @@ public class LoanAccountConfiguration {
             LoanOfficerValidator loanOfficerValidator, LoanDownPaymentTransactionValidator loanDownPaymentTransactionValidator,
             LoanDisbursementService loanDisbursementService, LoanScheduleService loanScheduleService,
             LoanChargeValidator loanChargeValidator, LoanOfficerService loanOfficerService,
-            SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService) {
+            SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService,
+            SurePayMomoPaymentIntegrationWritePlatformServiceImpl momoPaymentIntegrationWritePlatformService) {
         return new LoanWritePlatformServiceJpaRepositoryImpl(context, loanTransactionValidator, loanUpdateCommandFromApiJsonDeserializer,
                 loanRepositoryWrapper, loanAccountDomainService, noteRepository, loanTransactionRepository,
                 loanTransactionRelationRepository, loanAssembler, journalEntryWritePlatformService, calendarInstanceRepository,
@@ -410,7 +404,8 @@ public class LoanAccountConfiguration {
                 loanAccountLockService, externalIdFactory, replayedTransactionBusinessEventService,
                 loanAccrualTransactionBusinessEventService, errorHandler, loanDownPaymentHandlerService, accountTransferRepository,
                 loanTransactionAssembler, loanAccrualsProcessingService, loanOfficerValidator, loanDownPaymentTransactionValidator,
-                loanDisbursementService, loanScheduleService, loanChargeValidator, loanOfficerService, smsNotificationWritePlatformService);
+                loanDisbursementService, loanScheduleService, loanChargeValidator, loanOfficerService, smsNotificationWritePlatformService,
+                momoPaymentIntegrationWritePlatformService);
     }
 
     @Bean
@@ -488,5 +483,14 @@ public class LoanAccountConfiguration {
     public SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService(
             GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper) {
         return new SMSNotificationWritePlatformServiceImpl(configurationRepositoryWrapper);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(SurePayMomoPaymentIntegrationWritePlatformServiceImpl.class)
+    public SurePayMomoPaymentIntegrationWritePlatformServiceImpl surePayMomoPaymentIntegrationWritePlatformService(
+            GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper, LoanRepositoryWrapper loanRepositoryWrapper,
+            MomoLoanPaymentTransactionRepository loanPaymentTransactionRepository) {
+        return new SurePayMomoPaymentIntegrationWritePlatformServiceImpl(configurationRepositoryWrapper, loanRepositoryWrapper,
+                loanPaymentTransactionRepository);
     }
 }

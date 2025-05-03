@@ -273,6 +273,11 @@ public class LoanAccountData {
 
     private StringEnumOptionData chargeOffBehaviour;
 
+    private boolean disbursedViaMomoPay;
+    private boolean disbursementPayoutCompleted;
+    private LocalDate disbursementPayoutCompletedDate;
+    private String middlewareReferenceNo;
+
     public static LoanAccountData importInstanceIndividual(EnumOptionData loanTypeEnumOption, Long clientId, Long productId,
             Long loanOfficerId, LocalDate submittedOnDate, Long fundId, BigDecimal principal, Integer numberOfRepayments,
             Integer repaymentEvery, EnumOptionData repaidEveryFrequencyEnums, Integer loanTermFrequency,

@@ -31,6 +31,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.github.resilience4j.retry.annotation.Retry;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -104,6 +105,8 @@ import org.apache.fineract.infrastructure.event.business.domain.loan.transaction
 import org.apache.fineract.infrastructure.event.business.domain.loan.transaction.LoanWrittenOffPostBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.loan.transaction.LoanWrittenOffPreBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
+import org.apache.fineract.infrastructure.momo.data.MomoPaymentData;
+import org.apache.fineract.infrastructure.momo.service.SurePayMomoPaymentIntegrationWritePlatformServiceImpl;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
@@ -283,6 +286,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
     private final LoanChargeValidator loanChargeValidator;
     private final LoanOfficerService loanOfficerService;
     private final SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService;
+    private final SurePayMomoPaymentIntegrationWritePlatformServiceImpl payments;
 
     @Transactional
     @Override
@@ -341,6 +345,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         if (!loan.isMultiDisburmentLoan()) {
             loan.setActualDisbursementDate(actualDisbursementDate);
         }
+        final BigDecimal loanAmount = command.bigDecimalValueOfParameterNamed(LoanApiConstants.principalDisbursedParameterName);
 
         // validate actual disbursement date against meeting date
         ScheduleGeneratorDTO scheduleGeneratorDTO = this.loanUtilService.buildScheduleGeneratorDTO(loan, null);
@@ -366,7 +371,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         Money amountBeforeAdjust = loan.getPrincipal();
         final Locale locale = command.extractLocale();
         final DateTimeFormatter fmt = DateTimeFormatter.ofPattern(command.dateFormat()).withLocale(locale);
-
+        LoanTransaction disbursementTransaction = null;
         if (loan.canDisburse()) {
             // Get netDisbursalAmount from disbursal screen field.
             final BigDecimal netDisbursalAmount = command
@@ -406,7 +411,6 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 disburseLoanToLoan(loan, command, loanOutstanding);
             }
 
-            LoanTransaction disbursementTransaction = null;
             if (isAccountTransfer) {
                 disburseLoanToSavings(loan, command, amountToDisburse, paymentDetail);
                 existingTransactionIds.addAll(loan.findExistingTransactionIds());
@@ -549,6 +553,28 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         postJournalEntries(loan, existingTransactionIds, existingReversedTransactionIds);
         loanAccrualTransactionBusinessEventService.raiseBusinessEventForAccrualTransactions(loan, existingTransactionIds);
 
+        // MOMO Payments
+        assert paymentDetail != null;
+        if (paymentDetail.getPaymentType().getCodeName().equals("SURE_PAY_MOMO_PAYMENT")) {
+            LocalDate today = DateUtils.getLocalDateOfTenant();
+            if (actualDisbursementDate != null && DateUtils.isBefore(actualDisbursementDate, today)) {
+                final String errorMessage = "The date on which a loan is disbursed cannot be before its Today's date: " + today;
+                throw new InvalidLoanStateTransitionException("disbursal", "cannot.be.before.today", errorMessage, actualDisbursementDate,
+                        today);
+            }
+            if (!loan.getCurrency().getCode().equals("UGX")) {
+                throw new GeneralPlatformDomainRuleException("error.msg.momo.payment.currency.not.supported",
+                        "Surepay Momo payment is not supported for this currency");
+            }
+
+            try {
+                integrateMomoPayments(loan, actualDisbursementDate, loanAmount, disbursementTransaction);
+                log.info("Momo payment integration done");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         // Send SMS
         smsNotificationWritePlatformService.processSmsNotification(loan, SmsTypeEnum.LOAN_DISBURSEMENT, null);
 
@@ -564,6 +590,18 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 .withLoanId(loanId) //
                 .with(changes) //
                 .build();
+    }
+
+    private void integrateMomoPayments(Loan loan, LocalDate actualDisbursementDate, BigDecimal amount, LoanTransaction transaction)
+            throws IOException {
+        // -Integrate with Momo Payments
+        log.info("Loan-Tx-->" + transaction.getId());
+
+        Client client = loan.getClient();
+        MomoPaymentData momoPaymentData = new MomoPaymentData(client.getMobileNo(), amount, "MOMO", "DISBURSEMENTS", "UGX",
+                client.getDisplayName(), DateUtils.format(actualDisbursementDate), loan.getAccountNumber() + transaction.getId(),
+                "Loan Disbursement " + loan.getAccountNumber());
+        payments.payOut(momoPaymentData, loan, transaction);
     }
 
     private void createNote(Loan loan, JsonCommand command, Map<String, Object> changes) {
@@ -907,6 +945,10 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
     public CommandProcessingResult undoLoanDisbursal(final Long loanId, final JsonCommand command) {
 
         Loan loan = this.loanAssembler.assembleFrom(loanId);
+        if (loan.isDisbursedViaMomoPay() || loan.isDisbursementPayoutCompleted()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.loan.is.disbursed.via.mobile.money",
+                    "Undo Loan: " + loanId + " disbursement is not allowed. Loan Account is Disbursed via Mobile Money", loanId);
+        }
         checkClientOrGroupActive(loan);
         if (loan.isChargedOff()) {
             throw new GeneralPlatformDomainRuleException("error.msg.loan.is.charged.off",

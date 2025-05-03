@@ -472,6 +472,19 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
     @Column(name = "enable_installment_level_delinquency", nullable = false)
     private boolean enableInstallmentLevelDelinquency = false;
+    @Setter()
+    @Column(name = "is_disbursed_via_momo_pay", nullable = false)
+    private boolean disbursedViaMomoPay = false;
+    @Setter()
+    @Column(name = "disbursement_payout_completed", nullable = false)
+    private boolean disbursementPayoutCompleted = false;
+    @Setter()
+    @Column(name = "disbursement_payout_completed_date", nullable = false)
+    private LocalDate disbursementPayoutCompletedDate;
+
+    @Setter()
+    @Column(name = "middleware_reference_no", nullable = true)
+    private String middlewareReferenceNo;
 
     public static Loan newIndividualLoanApplication(final String accountNo, final Client client, final AccountType loanType,
             final LoanProduct loanProduct, final Fund fund, final Staff officer, final CodeValue loanPurpose,

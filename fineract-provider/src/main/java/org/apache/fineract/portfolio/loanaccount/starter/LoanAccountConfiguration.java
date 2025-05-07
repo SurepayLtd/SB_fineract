@@ -32,6 +32,7 @@ import org.apache.fineract.infrastructure.core.service.PaginationHelper;
 import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.infrastructure.dataqueries.service.EntityDatatableChecksWritePlatformService;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
+import org.apache.fineract.infrastructure.momo.domain.MomoCredentialDetailRepository;
 import org.apache.fineract.infrastructure.momo.domain.MomoLoanPaymentTransactionRepository;
 import org.apache.fineract.infrastructure.momo.service.SurePayMomoPaymentIntegrationWritePlatformServiceImpl;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
@@ -489,8 +490,9 @@ public class LoanAccountConfiguration {
     @ConditionalOnMissingBean(SurePayMomoPaymentIntegrationWritePlatformServiceImpl.class)
     public SurePayMomoPaymentIntegrationWritePlatformServiceImpl surePayMomoPaymentIntegrationWritePlatformService(
             GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper, LoanRepositoryWrapper loanRepositoryWrapper,
-            MomoLoanPaymentTransactionRepository loanPaymentTransactionRepository) {
+            MomoLoanPaymentTransactionRepository loanPaymentTransactionRepository,
+            MomoCredentialDetailRepository momoCredentialDetailRepository) {
         return new SurePayMomoPaymentIntegrationWritePlatformServiceImpl(configurationRepositoryWrapper, loanRepositoryWrapper,
-                loanPaymentTransactionRepository);
+                loanPaymentTransactionRepository, momoCredentialDetailRepository);
     }
 }

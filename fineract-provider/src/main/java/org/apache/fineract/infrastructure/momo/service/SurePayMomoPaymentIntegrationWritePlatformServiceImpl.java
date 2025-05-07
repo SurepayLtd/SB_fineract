@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Optional;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,8 @@ import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRu
 import org.apache.fineract.infrastructure.momo.data.MomoPaymentData;
 import org.apache.fineract.infrastructure.momo.data.MomoPaymentResponse;
 import org.apache.fineract.infrastructure.momo.data.MomoTransactionTypeEnum;
+import org.apache.fineract.infrastructure.momo.domain.MomoCredentialDetail;
+import org.apache.fineract.infrastructure.momo.domain.MomoCredentialDetailRepository;
 import org.apache.fineract.infrastructure.momo.domain.MomoLoanPaymentTransaction;
 import org.apache.fineract.infrastructure.momo.domain.MomoLoanPaymentTransactionRepository;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
@@ -66,6 +69,7 @@ public class SurePayMomoPaymentIntegrationWritePlatformServiceImpl implements Su
     private static final String HMAC_SHA512 = "HmacSHA512";
     private final LoanRepositoryWrapper loanRepositoryWrapper;
     private final MomoLoanPaymentTransactionRepository loanPaymentTransactionRepository;
+    private final MomoCredentialDetailRepository momoCredentialDetailRepository;
 
     @Override
     public void payOut(MomoPaymentData momoPaymentData, Loan loan, LoanTransaction loanTransaction) throws IOException {
@@ -77,12 +81,19 @@ public class SurePayMomoPaymentIntegrationWritePlatformServiceImpl implements Su
             throw new GeneralPlatformDomainRuleException("error.msg.momo.payments.is.disabled",
                     "Surepay Mobile Money payments is disabled");
         }
+        Optional<MomoCredentialDetail> momoCredentialDetail = this.momoCredentialDetailRepository.findById(1L);
+
+        if (momoCredentialDetail.isEmpty()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.momo.failed.due.missing.activation.details",
+                    "Surepay Mobile Money payments has failed due to missing activation details.");
+        }
 
         String message = buildMessage(momoPaymentData);
 
-        momoPaymentData.setTranSignature(generateSignature(message, getConfigProperty("momo.secret")));
-        momoPaymentData.setVendorCode(getConfigProperty("momo.vendorCode"));
         momoPaymentData.setTelecom(getConfigProperty("momo.telecom"));
+        momoPaymentData.setTranSignature(generateSignature(message, momoCredentialDetail.get().getMomoSecret()));
+        momoPaymentData.setVendorCode(momoCredentialDetail.get().getMomoVendorCode());
+        momoPaymentData.setPassword(momoCredentialDetail.get().getMomoPassword());
 
         Gson gson = new GsonBuilder().create();
         String momo = gson.toJson(momoPaymentData);

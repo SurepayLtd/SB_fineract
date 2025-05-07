@@ -196,4 +196,22 @@
             </column>
         </addColumn>
     </changeSet>
+    <changeSet author="fineract" id="create_m_momo_credential_details">
+        <createTable tableName="m_momo_credential_details">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="momo_vendor_code" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="momo_secret" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="momo_password" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+        </createTable>
+    </changeSet>
+
 </databaseChangeLog>

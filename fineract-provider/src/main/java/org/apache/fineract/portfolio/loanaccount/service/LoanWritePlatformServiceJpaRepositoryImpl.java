@@ -1300,6 +1300,12 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         final LocalDate transactionDate = command.localDateValueOfParameterNamed("transactionDate");
         final BigDecimal transactionAmount = command.bigDecimalValueOfParameterNamed("transactionAmount");
         final ExternalId txnExternalId = externalIdFactory.createFromCommand(command, LoanApiConstants.externalIdParameterName);
+        final Long paymentTypeId = command.longValueOfParameterNamed("paymentTypeId");
+
+        if (paymentTypeId == 100 && txnExternalId.isEmpty()) {
+            throw new GeneralPlatformDomainRuleException("error.mgs.externalId.is.required.if.mobile.money.used",
+                    "External Id is required when Mobile Money payment type is used");
+        }
 
         final Map<String, Object> changes = new LinkedHashMap<>();
         changes.put("transactionDate", command.stringValueOfParameterNamed("transactionDate"));
@@ -1409,6 +1415,12 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         this.loanTransactionValidator.validateTransaction(command.json());
         LoanTransaction transactionToAdjust = this.loanTransactionRepository.findByIdAndLoanId(command.entityId(), command.getLoanId())
                 .orElseThrow(() -> new LoanTransactionNotFoundException(command.entityId(), command.getLoanId()));
+
+        if (transactionToAdjust.getPaymentDetail() != null && transactionToAdjust.getPaymentDetail().getPaymentType() != null
+                && transactionToAdjust.getPaymentDetail().getPaymentType().getId() == 100) {
+            throw new GeneralPlatformDomainRuleException("error.mgs.undo.loan.repayment.is.not.supported.for.mobile.money.repayment",
+                    "Undo Repayment is not supported for mobile money transaction/s " + transactionId);
+        }
 
         Loan loan = this.loanAssembler.assembleFrom(loanId);
         if (loan.getStatus().isClosed() && loan.getLoanSubStatus() != null

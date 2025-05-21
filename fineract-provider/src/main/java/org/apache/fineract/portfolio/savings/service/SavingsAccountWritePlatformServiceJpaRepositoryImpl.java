@@ -51,7 +51,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.accounting.journalentry.service.JournalEntryWritePlatformService;
+import org.apache.fineract.infrastructure.configuration.api.GlobalConfigurationConstants;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
+import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationProperty;
+import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
@@ -95,6 +98,7 @@ import org.apache.fineract.portfolio.group.exception.GroupNotActiveException;
 import org.apache.fineract.portfolio.note.domain.Note;
 import org.apache.fineract.portfolio.note.domain.NoteRepository;
 import org.apache.fineract.portfolio.paymentdetail.domain.PaymentDetail;
+import org.apache.fineract.portfolio.paymentdetail.domain.PaymentDetailRepository;
 import org.apache.fineract.portfolio.paymentdetail.service.PaymentDetailWritePlatformService;
 import org.apache.fineract.portfolio.savings.SavingsAccountTransactionType;
 import org.apache.fineract.portfolio.savings.SavingsApiConstants;
@@ -165,6 +169,8 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
     private final GSIMRepositoy gsimRepository;
     private final SavingsAccountInterestPostingService savingsAccountInterestPostingService;
     private final ErrorHandler errorHandler;
+    private final PaymentDetailRepository paymentDetailRepository;
+    private final GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper;
 
     @Transactional
     @Override
@@ -297,6 +303,11 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         final LocalDate transactionDate = command.localDateValueOfParameterNamed("transactionDate");
         final BigDecimal transactionAmount = command.bigDecimalValueOfParameterNamed("transactionAmount");
 
+        final String routingCode = command.stringValueOfParameterNamed("routingCode");
+        final Integer paymentTypeId = command.integerValueOfParameterNamed("paymentTypeId");
+
+        validateMomoIntegration(routingCode, paymentTypeId);
+
         this.savingsAccountTransactionDataValidator.validateTransactionWithPivotDate(transactionDate, account);
 
         final Map<String, Object> changes = new LinkedHashMap<>();
@@ -353,6 +364,10 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
 
         final LocalDate transactionDate = command.localDateValueOfParameterNamed("transactionDate");
         final BigDecimal transactionAmount = command.bigDecimalValueOfParameterNamed("transactionAmount");
+        final String routingCode = command.stringValueOfParameterNamed("routingCode");
+        final Integer paymentTypeId = command.integerValueOfParameterNamed("paymentTypeId");
+
+        validateMomoIntegration(routingCode, paymentTypeId);
 
         final Locale locale = command.extractLocale();
         final DateTimeFormatter fmt = DateTimeFormatter.ofPattern(command.dateFormat()).withLocale(locale);
@@ -403,6 +418,23 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
                 .withSavingsId(savingsId) //
                 .with(changes)//
                 .build();
+    }
+
+    private void validateMomoIntegration(String routingCode, Integer paymentTypeId) {
+        PaymentDetail payments = paymentDetailRepository.findPaymentDetailByRoutingCode(routingCode);
+
+        if(payments != null){
+            throw new GeneralPlatformDomainRuleException("error.mgs.transaction.already.exist",
+                    "Duplicate Transaction detected. Ref :-"+ routingCode);
+        }
+
+        final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
+                .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SURE_MOBILE_MONEY_PAYMENT);
+
+        if (!property.isEnabled() && paymentTypeId == 100) {
+            throw new GeneralPlatformDomainRuleException("error.msg.momo.payments.is.disabled",
+                    "Surepay Mobile Money payments is disabled");
+        }
     }
 
     @Transactional

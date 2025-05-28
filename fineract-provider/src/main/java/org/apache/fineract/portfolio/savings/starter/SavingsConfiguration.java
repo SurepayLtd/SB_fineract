@@ -352,21 +352,22 @@ public class SavingsConfiguration {
     @Bean
     @ConditionalOnMissingBean(SavingsAccountWritePlatformService.class)
     public SavingsAccountWritePlatformService savingsAccountWritePlatformService(PlatformSecurityContext context,
-                                                                                 SavingsAccountDataValidator fromApiJsonDeserializer, SavingsAccountRepositoryWrapper savingAccountRepositoryWrapper,
-                                                                                 StaffRepositoryWrapper staffRepository, SavingsAccountTransactionRepository savingsAccountTransactionRepository,
-                                                                                 SavingsAccountAssembler savingAccountAssembler, SavingsAccountTransactionDataValidator savingsAccountTransactionDataValidator,
-                                                                                 SavingsAccountChargeDataValidator savingsAccountChargeDataValidator,
-                                                                                 PaymentDetailWritePlatformService paymentDetailWritePlatformService,
-                                                                                 JournalEntryWritePlatformService journalEntryWritePlatformService, SavingsAccountDomainService savingsAccountDomainService,
-                                                                                 NoteRepository noteRepository, AccountTransfersReadPlatformService accountTransfersReadPlatformService,
-                                                                                 AccountAssociationsReadPlatformService accountAssociationsReadPlatformService, ChargeRepositoryWrapper chargeRepository,
-                                                                                 SavingsAccountChargeRepositoryWrapper savingsAccountChargeRepository, HolidayRepositoryWrapper holidayRepository,
-                                                                                 WorkingDaysRepositoryWrapper workingDaysRepository, ConfigurationDomainService configurationDomainService,
-                                                                                 DepositAccountOnHoldTransactionRepository depositAccountOnHoldTransactionRepository,
-                                                                                 EntityDatatableChecksWritePlatformService entityDatatableChecksWritePlatformService, AppUserRepositoryWrapper appuserRepository,
-                                                                                 StandingInstructionRepository standingInstructionRepository, BusinessEventNotifierService businessEventNotifierService,
-                                                                                 GSIMRepositoy gsimRepository, SavingsAccountInterestPostingService savingsAccountInterestPostingService,
-                                                                                 ErrorHandler errorHandler, PaymentDetailRepository paymentDetailRepository, GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper) {
+            SavingsAccountDataValidator fromApiJsonDeserializer, SavingsAccountRepositoryWrapper savingAccountRepositoryWrapper,
+            StaffRepositoryWrapper staffRepository, SavingsAccountTransactionRepository savingsAccountTransactionRepository,
+            SavingsAccountAssembler savingAccountAssembler, SavingsAccountTransactionDataValidator savingsAccountTransactionDataValidator,
+            SavingsAccountChargeDataValidator savingsAccountChargeDataValidator,
+            PaymentDetailWritePlatformService paymentDetailWritePlatformService,
+            JournalEntryWritePlatformService journalEntryWritePlatformService, SavingsAccountDomainService savingsAccountDomainService,
+            NoteRepository noteRepository, AccountTransfersReadPlatformService accountTransfersReadPlatformService,
+            AccountAssociationsReadPlatformService accountAssociationsReadPlatformService, ChargeRepositoryWrapper chargeRepository,
+            SavingsAccountChargeRepositoryWrapper savingsAccountChargeRepository, HolidayRepositoryWrapper holidayRepository,
+            WorkingDaysRepositoryWrapper workingDaysRepository, ConfigurationDomainService configurationDomainService,
+            DepositAccountOnHoldTransactionRepository depositAccountOnHoldTransactionRepository,
+            EntityDatatableChecksWritePlatformService entityDatatableChecksWritePlatformService, AppUserRepositoryWrapper appuserRepository,
+            StandingInstructionRepository standingInstructionRepository, BusinessEventNotifierService businessEventNotifierService,
+            GSIMRepositoy gsimRepository, SavingsAccountInterestPostingService savingsAccountInterestPostingService,
+            ErrorHandler errorHandler, PaymentDetailRepository paymentDetailRepository,
+            GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper) {
         return new SavingsAccountWritePlatformServiceJpaRepositoryImpl(context, fromApiJsonDeserializer, savingAccountRepositoryWrapper,
                 staffRepository, savingsAccountTransactionRepository, savingAccountAssembler, savingsAccountTransactionDataValidator,
                 savingsAccountChargeDataValidator, paymentDetailWritePlatformService, journalEntryWritePlatformService,
@@ -374,7 +375,7 @@ public class SavingsConfiguration {
                 chargeRepository, savingsAccountChargeRepository, holidayRepository, workingDaysRepository, configurationDomainService,
                 depositAccountOnHoldTransactionRepository, entityDatatableChecksWritePlatformService, appuserRepository,
                 standingInstructionRepository, businessEventNotifierService, gsimRepository, savingsAccountInterestPostingService,
-                errorHandler,paymentDetailRepository,configurationRepositoryWrapper);
+                errorHandler, paymentDetailRepository, configurationRepositoryWrapper);
     }
 
     @Bean

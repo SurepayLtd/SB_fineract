@@ -1456,8 +1456,12 @@ public final class LoanApplicationValidator {
             if (this.fromApiJsonHelper.parameterExists(LoanApiConstants.INTEREST_RECOGNITION_ON_DISBURSEMENT_DATE, element)) {
                 if (!LoanScheduleType.PROGRESSIVE.equals(loanProduct.getLoanProductRelatedDetail().getLoanScheduleType())) {
                     List<String> unsupportedParameterList = new ArrayList<>();
-                    unsupportedParameterList.add(LoanApiConstants.INTEREST_RECOGNITION_ON_DISBURSEMENT_DATE);
-                    throw new UnsupportedParameterException(unsupportedParameterList);
+                    final Boolean interestRecognitionOnDisbursementDate = this.fromApiJsonHelper
+                            .extractBooleanNamed(LoanProductConstants.INTEREST_RECOGNITION_ON_DISBURSEMENT_DATE, element);
+                    if (interestRecognitionOnDisbursementDate) {
+                        unsupportedParameterList.add(LoanApiConstants.INTEREST_RECOGNITION_ON_DISBURSEMENT_DATE);
+                        throw new UnsupportedParameterException(unsupportedParameterList);
+                    }
                 }
             }
         });

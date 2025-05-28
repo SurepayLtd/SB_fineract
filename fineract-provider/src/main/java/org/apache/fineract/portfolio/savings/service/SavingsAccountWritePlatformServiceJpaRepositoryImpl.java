@@ -421,11 +421,11 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
     }
 
     private void validateMomoIntegration(String routingCode, Integer paymentTypeId) {
-        PaymentDetail payments = paymentDetailRepository.findPaymentDetailByRoutingCode(routingCode);
+        List<PaymentDetail> payments = paymentDetailRepository.findPaymentDetailByRoutingCode(routingCode);
 
-        if(payments != null){
+        if (!org.apache.commons.collections4.CollectionUtils.isEmpty(payments) && paymentTypeId == 100) {
             throw new GeneralPlatformDomainRuleException("error.mgs.transaction.already.exist",
-                    "Duplicate Transaction detected. Ref :-"+ routingCode);
+                    "Duplicate Transaction detected. Ref :-" + routingCode);
         }
 
         final GlobalConfigurationProperty property = this.configurationRepositoryWrapper

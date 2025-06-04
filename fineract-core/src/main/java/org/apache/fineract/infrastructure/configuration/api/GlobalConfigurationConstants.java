@@ -78,6 +78,12 @@ public final class GlobalConfigurationConstants {
     public static final String ENABLE_IMMEDIATE_CHARGE_ACCRUAL_POST_MATURITY = "enable-immediate-charge-accrual-post-maturity";
     public static final String ENABLE_SMS_NOTIFICATIONS = "enable-sms-notifications";
     public static final String ENABLE_SURE_MOBILE_MONEY_PAYMENT = "enable-surepay-mobile-money-payment";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_LOAN_CREATED = "send-sms-notification-when-loan-account-is-created";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_LOAN_APPROVED = "send-sms-notification-when-loan-account-is-approved";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_LOAN_DISBURSED = "send-sms-notification-when-loan-account-is-disbursed";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_LOAN_REJECTED = "send-sms-notification-when-loan-account-is-rejected";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_LOAN_REPAYMENT = "send-sms-notification-when-loan-repayment-is-made";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_LOAN_CLOSED = "send-sms-notification-when-loan-account-is-closed";
 
     private GlobalConfigurationConstants() {}
 }

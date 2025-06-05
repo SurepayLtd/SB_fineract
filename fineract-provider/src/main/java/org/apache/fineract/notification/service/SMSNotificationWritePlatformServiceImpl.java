@@ -128,41 +128,67 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         String messageId = null;
         switch (smsType) {
             case LOAN_SUBMISSION:
-                message = String.format(
-                        "Dear %s, your loan application has been received, it\\'s under review, we will notify you once the process is done, thank you for choosing %s .",
-                        clientName, ThreadLocalContextUtil.getTenant().getName());
-                messageId = String.format("LOAN-SUBMISSION-%s", loan.getId());
+                final GlobalConfigurationProperty submitLoan = this.configurationRepositoryWrapper
+                        .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_CREATED);
+                if (submitLoan.isEnabled()) {
+                    message = String.format(
+                            "Dear %s, your loan application has been received, it\\'s under review, we will notify you once the process is done, thank you for choosing %s .",
+                            clientName, ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("LOAN-SUBMISSION-%s", loan.getId());
+                }
             break;
             case LOAN_APPROVAL:
-                message = String.format(
-                        "Dear %s, congratulations, your loan %s of %s %s has been approved, please visit our branch for signoff, thank you for choosing %s .",
-                        clientName, loan.getId(), loan.getCurrencyCode(), loan.getApprovedPrincipal(),
-                        ThreadLocalContextUtil.getTenant().getName());
-                messageId = String.format("LOAN-APPROVAL-%s", loan.getId());
+                final GlobalConfigurationProperty approvedLoan = this.configurationRepositoryWrapper
+                        .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_APPROVED);
+                if (approvedLoan.isEnabled()) {
+                    message = String.format(
+                            "Dear %s, congratulations, your loan %s of %s %s has been approved, please visit our branch for signoff, thank you for choosing %s .",
+                            clientName, loan.getId(), loan.getCurrencyCode(), loan.getApprovedPrincipal(),
+                            ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("LOAN-APPROVAL-%s", loan.getId());
+                }
             break;
             case LOAN_DISBURSEMENT:
-                message = String.format("Dear %s, your %s of %s %s has been disbursed on account number %s, thank you for choosing %s .",
-                        clientName, loan.getId(), loan.getCurrencyCode(), loan.getDisbursedAmount(), loan.getAccountNumber(),
-                        ThreadLocalContextUtil.getTenant().getName());
-                messageId = String.format("LOAN-DISBURSEMENT-%s", loan.getId());
+                final GlobalConfigurationProperty disburseLoan = this.configurationRepositoryWrapper
+                        .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_DISBURSED);
+                if (disburseLoan.isEnabled()) {
+                    message = String.format(
+                            "Dear %s, your %s of %s %s has been disbursed on account number %s, thank you for choosing %s .", clientName,
+                            loan.getId(), loan.getCurrencyCode(), loan.getDisbursedAmount(), loan.getAccountNumber(),
+                            ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("LOAN-DISBURSEMENT-%s", loan.getId());
+                }
             break;
             case LOAN_REJECTED:
-                message = String.format(
-                        "Dear %s, your loan application %s of %s %s has been rejected, please reach out to %s nearest branch for more details.",
-                        clientName, loan.getId(), loan.getCurrencyCode(), loan.getProposedPrincipal(),
-                        ThreadLocalContextUtil.getTenant().getName());
-                messageId = String.format("LOAN-REJECTED-%s", loan.getId());
+                final GlobalConfigurationProperty rejectedLoan = this.configurationRepositoryWrapper
+                        .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_REJECTED);
+                if (rejectedLoan.isEnabled()) {
+                    message = String.format(
+                            "Dear %s, your loan application %s of %s %s has been rejected, please reach out to %s nearest branch for more details.",
+                            clientName, loan.getId(), loan.getCurrencyCode(), loan.getProposedPrincipal(),
+                            ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("LOAN-REJECTED-%s", loan.getId());
+                }
             break;
             case LOAN_REPAYMENT:
-                message = String.format(
-                        "Dear %s, we have successfully received your loan instalment payment of %s  %s, thank you for banking with %s .",
-                        clientName, loan.getCurrencyCode(), transaction.getAmount(), ThreadLocalContextUtil.getTenant().getName());
-                messageId = String.format("LOAN-REPAYMENT-%s", transaction.getId());
+                final GlobalConfigurationProperty repaymentLoan = this.configurationRepositoryWrapper
+                        .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_REPAYMENT);
+                if (repaymentLoan.isEnabled()) {
+                    message = String.format(
+                            "Dear %s, we have successfully received your loan instalment payment of %s  %s, thank you for banking with %s .",
+                            clientName, loan.getCurrencyCode(), transaction.getAmount(), ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("LOAN-REPAYMENT-%s", transaction.getId());
+                }
             break;
             case LOAN_CLOSED:
-                message = String.format("Congrats, %s ! You have fully paid off your loan. Thank you for your payments and choosing %s .",
-                        clientName, ThreadLocalContextUtil.getTenant().getName());
-                messageId = String.format("LOAN-CLOSED-%s", transaction.getId());
+                final GlobalConfigurationProperty closeLoan = this.configurationRepositoryWrapper
+                        .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_CLOSED);
+                if (closeLoan.isEnabled()) {
+                    message = String.format(
+                            "Congrats, %s ! You have fully paid off your loan. Thank you for your payments and choosing %s .", clientName,
+                            ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("LOAN-CLOSED-%s", transaction.getId());
+                }
             break;
             default:
                 log.info("No sms type found to process a notification");
@@ -170,7 +196,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
 
         }
 
-        if (mobileNo != null) {
+        if (mobileNo != null && messageId != null) {
             sendSms(new SmsNotificationData(mobileNo, message, messageId));
         }
     }

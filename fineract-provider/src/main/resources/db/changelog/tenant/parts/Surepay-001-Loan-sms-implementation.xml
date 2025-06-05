@@ -214,4 +214,76 @@
         </createTable>
     </changeSet>
 
+    <changeSet author="fineract" id="send-sms-when-loan-account-is-created">
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-notification-when-loan-account-is-created"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value" value="Send sms notification when Loan account is created"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Send an sms notification when Loan account is created"/>
+        </insert>
+    </changeSet>
+
+    <changeSet author="fineract" id="send-sms-when-loan-account-is-approved">
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-notification-when-loan-account-is-approved"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value" value="Send sms notification when Loan account is approved"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Send an sms notification when Loan account is approved"/>
+        </insert>
+    </changeSet>
+
+    <changeSet author="fineract" id="send-sms-when-loan-account-is-disbursed">
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-notification-when-loan-account-is-disbursed"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value" value="Send sms notification when Loan account is disbursed"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Send an sms notification when Loan account is disbursed"/>
+        </insert>
+    </changeSet>
+
+    <changeSet author="fineract" id="send-sms-when-loan-repayment-is-made">
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-notification-when-loan-repayment-is-made"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value" value="Send sms notification when Loan repayment is made"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Send an sms notification when Loan repayment is made"/>
+        </insert>
+    </changeSet>
+
+    <changeSet author="fineract" id="send-sms-when-loan-account-is-rejected">
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-notification-when-loan-account-is-rejected"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value" value="Send sms notification when Loan account is rejected"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Send an sms notification when Loan account is rejected"/>
+        </insert>
+    </changeSet>
+
+    <changeSet author="fineract" id="send-sms-when-loan-account-is-closed">
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-notification-when-loan-account-is-closed"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value" value="Send sms notification when Loan account is closed"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Send an sms notification when Loan account is closed"/>
+        </insert>
+    </changeSet>
+
 </databaseChangeLog>

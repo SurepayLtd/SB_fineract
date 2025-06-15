@@ -22,10 +22,14 @@ import org.apache.fineract.notification.data.SmsNotificationData;
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
+import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
+import org.apache.fineract.portfolio.savings.domain.SavingsAccountTransaction;
 
 public interface SmsNotificationWritePlatformService {
 
     void sendSms(SmsNotificationData smsNotificationData);
 
-    void processSmsNotification(Loan loan, SmsTypeEnum smsType, LoanTransaction transaction);
+    void processLoanSmsNotification(Loan loan, SmsTypeEnum smsType, LoanTransaction transaction);
+
+    void processSavingsAccountSmsNotification(SavingsAccount savingsAccount, SmsTypeEnum smsType, SavingsAccountTransaction transaction);
 }

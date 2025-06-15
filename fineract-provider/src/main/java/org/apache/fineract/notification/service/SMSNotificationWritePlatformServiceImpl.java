@@ -20,6 +20,7 @@ package org.apache.fineract.notification.service;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,8 @@ import org.apache.fineract.notification.data.SmsNotificationData;
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
+import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
+import org.apache.fineract.portfolio.savings.domain.SavingsAccountTransaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 
@@ -112,7 +115,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
     }
 
     @Override
-    public void processSmsNotification(Loan loan, SmsTypeEnum smsType, LoanTransaction transaction) {
+    public void processLoanSmsNotification(Loan loan, SmsTypeEnum smsType, LoanTransaction transaction) {
 
         final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
                 .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
@@ -194,6 +197,73 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 log.info("No sms type found to process a notification");
                 return;
 
+        }
+
+        if (mobileNo != null && messageId != null) {
+            sendSms(new SmsNotificationData(mobileNo, message, messageId));
+        }
+    }
+
+    @Override
+    public void processSavingsAccountSmsNotification(SavingsAccount savingsAccount, SmsTypeEnum smsType,
+            SavingsAccountTransaction transaction) {
+
+        final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
+                .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
+
+        if (!property.isEnabled()) {
+            log.info("** SMS Notification is disabled for this Tenant :-> " + ThreadLocalContextUtil.getTenant().getName());
+            return;
+        }
+
+        String clientName = savingsAccount.getClient().getDisplayName();
+        String mobileNo = savingsAccount.getClient().getMobileNo();
+        String message = null;
+        String messageId = null;
+
+        switch (smsType) {
+            case SAVINGS_DEPOSIT:
+                final GlobalConfigurationProperty depoosit = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                        GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_DEPOSIT);
+                if (depoosit.isEnabled()) {
+                    message = String.format("Dear %s, we have received your deposit of %s %s. Thank you for choosing %s ", clientName,
+                            savingsAccount.getCurrency().getCode(), transaction.getAmount().setScale(2, RoundingMode.HALF_UP),
+                            ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("SAVINGS-DEPOSIT-%s", transaction.getId());
+                }
+            break;
+            case SAVINGS_WITHDRAW:
+                final GlobalConfigurationProperty withdrawal = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                        GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_WITHDRAW);
+                if (withdrawal.isEnabled()) {
+                    message = String.format("Dear %s, we have received your withdraw of %s %s. Thank you for choosing %s ", clientName,
+                            savingsAccount.getCurrency().getCode(), transaction.getAmount().setScale(2, RoundingMode.HALF_UP),
+                            ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("SAVINGS-WITHDRAW-%s", transaction.getId());
+                }
+            break;
+            case SAVINGS_CREATION:
+                final GlobalConfigurationProperty creation = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                        GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_CREATION);
+                if (creation.isEnabled()) {
+
+                    message = String.format("Dear %s, your account has been successfully created. Welcome to %s ! ", clientName,
+                            ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("SAVINGS-CREATION-%s", savingsAccount.getId());
+                }
+            break;
+            case SAVINGS_ACTIVATED:
+                final GlobalConfigurationProperty approval = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                        GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_ACTIVATED);
+                if (approval.isEnabled()) {
+                    message = String.format("Dear %s, your account has been successfully Activated. Welcome to %s ! ", clientName,
+                            ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("SAVINGS-ACTIVATED-%s", savingsAccount.getId());
+                }
+            break;
+            default:
+                log.info("No sms type found to process a notification");
+                return;
         }
 
         if (mobileNo != null && messageId != null) {

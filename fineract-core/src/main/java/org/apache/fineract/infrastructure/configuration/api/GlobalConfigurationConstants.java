@@ -84,6 +84,10 @@ public final class GlobalConfigurationConstants {
     public static final String SEND_SMS_NOTIFICATION_WHEN_LOAN_REJECTED = "send-sms-notification-when-loan-account-is-rejected";
     public static final String SEND_SMS_NOTIFICATION_WHEN_LOAN_REPAYMENT = "send-sms-notification-when-loan-repayment-is-made";
     public static final String SEND_SMS_NOTIFICATION_WHEN_LOAN_CLOSED = "send-sms-notification-when-loan-account-is-closed";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_DEPOSIT = "send-sms-when-savings-account-deposit-is-made";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_WITHDRAW = "send-sms-when-savings-account-withdraw-is-made";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_CREATION = "send-sms-when-savings-account-creation-is-made";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_ACTIVATED = "send-sms-when-savings-account-activated-is-made";
 
     private GlobalConfigurationConstants() {}
 }

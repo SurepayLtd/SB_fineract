@@ -286,4 +286,52 @@
         </insert>
     </changeSet>
 
+    <changeSet author="fineract" id="send-sms-when-savings-account-deposit-is-madex">
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-when-savings-account-deposit-is-made"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value" value="Send sms notification when savings account deposit is made"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Send sms notification when savings account deposit is made"/>
+        </insert>
+    </changeSet>
+
+    <changeSet author="fineract" id="send-sms-when-savings-account-withdraw-is-madex">
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-when-savings-account-withdraw-is-made"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value" value="Send sms notification when savings account withdraw is made"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Send sms notification when savings account withdraw is made"/>
+        </insert>
+    </changeSet>
+
+    <changeSet author="fineract" id="send-sms-when-savings-account-creation-is-made">
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-when-savings-account-creation-is-made"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value" value="Send sms notification when savings account creation is made"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Send sms notification when savings account creation is made"/>
+        </insert>
+    </changeSet>
+
+    <changeSet author="fineract" id="send-sms-when-savings-account-activated-is-made">
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-when-savings-account-activated-is-made"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value" value="Send sms notification when savings account activated is made"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Send sms notification when savings account activated is made"/>
+        </insert>
+    </changeSet>
+
 </databaseChangeLog>

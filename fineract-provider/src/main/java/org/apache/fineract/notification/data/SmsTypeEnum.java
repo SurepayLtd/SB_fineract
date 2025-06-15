@@ -28,7 +28,11 @@ public enum SmsTypeEnum {
     LOAN_DISBURSEMENT(3, "SmsTypeEnum.loanDisbursement", "Loan Disbursement"), //
     LOAN_REPAYMENT(4, "SmsTypeEnum.loanRepayment", "Loan Repayment"), //
     LOAN_REJECTED(5, "SmsTypeEnum.loanRejected", "Loan Application Rejected"), //
-    LOAN_CLOSED(5, "SmsTypeEnum.loanClosed", "Loan Account Fully Paid and Closed"), //
+    LOAN_CLOSED(6, "SmsTypeEnum.loanClosed", "Loan Account Fully Paid and Closed"), SAVINGS_DEPOSIT(7, "SmsTypeEnum.savingsDeposit",
+            "Savings Account Deposit"), //
+    SAVINGS_WITHDRAW(8, "SmsTypeEnum.savingsWithdraw", "Savings Account Withdraw"), //
+    SAVINGS_CREATION(9, "SmsTypeEnum.savingsCreation", "Savings Account Creation"), //
+    SAVINGS_ACTIVATED(10, "SmsTypeEnum.savingsActivated", "Savings Account Activated"), //
     ;
 
     private final Integer value;

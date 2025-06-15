@@ -75,6 +75,8 @@ import org.apache.fineract.infrastructure.event.business.domain.savings.SavingsC
 import org.apache.fineract.infrastructure.event.business.domain.savings.SavingsPostInterestBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.notification.data.SmsTypeEnum;
+import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
 import org.apache.fineract.organisation.holiday.domain.HolidayRepositoryWrapper;
 import org.apache.fineract.organisation.monetary.domain.Money;
 import org.apache.fineract.organisation.monetary.domain.MoneyHelper;
@@ -171,6 +173,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
     private final ErrorHandler errorHandler;
     private final PaymentDetailRepository paymentDetailRepository;
     private final GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper;
+    private final SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService;
 
     @Transactional
     @Override
@@ -225,6 +228,8 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
 
         postJournalEntries(account, existingTransactionIds, existingReversedTransactionIds, false);
         businessEventNotifierService.notifyPostBusinessEvent(new SavingsActivateBusinessEvent(account));
+
+        smsNotificationWritePlatformService.processSavingsAccountSmsNotification(account, SmsTypeEnum.SAVINGS_ACTIVATED, null);
 
         return new CommandProcessingResultBuilder() //
                 .withEntityId(savingsId) //
@@ -338,6 +343,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
             final Note note = Note.savingsTransactionNote(account, deposit, noteText);
             this.noteRepository.save(note);
         }
+        smsNotificationWritePlatformService.processSavingsAccountSmsNotification(account, SmsTypeEnum.SAVINGS_DEPOSIT, deposit);
 
         return new CommandProcessingResultBuilder() //
                 .withEntityId(deposit.getId()) //
@@ -409,7 +415,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
             final Note note = Note.savingsTransactionNote(account, withdrawal, noteText);
             this.noteRepository.save(note);
         }
-
+        smsNotificationWritePlatformService.processSavingsAccountSmsNotification(account, SmsTypeEnum.SAVINGS_WITHDRAW, withdrawal);
         return new CommandProcessingResultBuilder() //
                 .withEntityId(withdrawal.getId()) //
                 .withOfficeId(account.officeId()) //

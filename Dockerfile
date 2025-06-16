@@ -15,9 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-FROM azul/zulu-openjdk:17 AS builder
+FROM azul/zulu-openjdk-alpine:17 AS builder
 
-RUN apt-get update -qq && apt-get install -y wget
+RUN apk update && apk add wget
 
 COPY . fineract
 WORKDIR /fineract
@@ -36,7 +36,7 @@ WORKDIR /app/libs
 RUN wget -q https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.23/mysql-connector-java-8.0.23.jar
 # =========================================
 
-FROM azul/zulu-openjdk:17 as fineract
+FROM azul/zulu-openjdk-alpine:17 as fineract
 
 COPY --from=builder /fineract/fineract-report/pentahoReports/*.properties /root/.mifosx/pentahoReports/
 COPY --from=builder /fineract/fineract-report/pentahoReports/*.prpt /root/.mifosx/pentahoReports/
@@ -71,10 +71,10 @@ ENV FINERACT_DEFAULT_TENANTDB_HOSTNAME="localhost"
 ENV FINERACT_DEFAULT_TENANTDB_PORT="3306"
 ENV FINERACT_DEFAULT_TENANTDB_UID="root"
 ENV FINERACT_DEFAULT_TENANTDB_PWD="mysql"
-ENV FINERACT_DEFAULT_TENANTDB_TIMEZONE="Africa/Accra"
-ENV FINERACT_DEFAULT_TENANTDB_IDENTIFIER="moniafrica"
-ENV FINERACT_DEFAULT_TENANTDB_NAME="fineract_moniafrica"
-ENV FINERACT_DEFAULT_TENANTDB_DESCRIPTION="MoniAfrica Default Tenant"
+ENV FINERACT_DEFAULT_TENANTDB_TIMEZONE="Africa/Kampala"
+ENV FINERACT_DEFAULT_TENANTDB_IDENTIFIER="showroom"
+ENV FINERACT_DEFAULT_TENANTDB_NAME="fineract_showroom"
+ENV FINERACT_DEFAULT_TENANTDB_DESCRIPTION="Showroom "
 ENV FINERACT_SERVER_SSL_ENABLED="true"
 ENV FINERACT_SERVER_PORT="8443"
 

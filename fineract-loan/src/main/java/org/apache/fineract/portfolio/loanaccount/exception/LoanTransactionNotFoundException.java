@@ -56,4 +56,9 @@ public class LoanTransactionNotFoundException extends AbstractPlatformResourceNo
                 + ObjectUtils.defaultIfNull(transactionExternalId, ExternalId.empty()).getValue() + " does not exist",
                 transactionExternalId, e);
     }
+
+    public LoanTransactionNotFoundException(String routingCode, EmptyResultDataAccessException e) {
+        super("error.msg.loan.transaction.routing.code.invalid", "Loan Transaction with Routing Code " + routingCode + " does not exist",
+                routingCode, e);
+    }
 }

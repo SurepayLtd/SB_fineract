@@ -130,6 +130,28 @@ public class SavingsAccountTransactionsApiResource {
     }
 
     @GET
+    @Path("routingCode/{routingCode}")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    public String retrieveOneByRoutingCode(@PathParam("savingsId") final Long savingsId, @PathParam("routingCode") final String routingCode,
+                              @Context final UriInfo uriInfo) {
+
+        this.context.authenticatedUser().validateHasReadPermission(SavingsApiConstants.SAVINGS_ACCOUNT_RESOURCE_NAME);
+        SavingsAccountTransactionData transactionData = this.savingsAccountReadPlatformService.retrieveSavingsTransactionByRoutingCode(savingsId,
+                routingCode, DepositAccountType.SAVINGS_DEPOSIT);
+
+        final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
+
+        if (settings.isTemplate()) {
+            final Collection<PaymentTypeData> paymentTypeOptions = this.paymentTypeReadPlatformService.retrieveAllPaymentTypes();
+            transactionData = SavingsAccountTransactionData.templateOnTop(transactionData, paymentTypeOptions);
+        }
+
+        return this.toApiJsonSerializer.serialize(settings, transactionData,
+                SavingsApiSetConstants.SAVINGS_TRANSACTION_RESPONSE_DATA_PARAMETERS);
+    }
+
+    @GET
     @Path("search")
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Search Savings Account Transactions")

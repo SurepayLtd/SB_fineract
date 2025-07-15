@@ -61,6 +61,8 @@ public interface LoanReadPlatformService {
 
     LoanTransactionData retrieveLoanTransaction(Long loanId, Long transactionId);
 
+    LoanTransactionData retrieveLoanTransactionByRoutingCode(String routingCode);
+
     LoanTransactionData retrieveNewClosureDetails();
 
     LoanTransactionData retrieveDisbursalTemplate(Long loanId, boolean paymentDetailsRequired);

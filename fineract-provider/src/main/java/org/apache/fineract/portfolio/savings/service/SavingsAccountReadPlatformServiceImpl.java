@@ -59,6 +59,7 @@ import org.apache.fineract.portfolio.client.data.ClientData;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
 import org.apache.fineract.portfolio.group.data.GroupGeneralData;
 import org.apache.fineract.portfolio.group.service.GroupReadPlatformService;
+import org.apache.fineract.portfolio.loanaccount.exception.LoanTransactionNotFoundException;
 import org.apache.fineract.portfolio.paymentdetail.data.PaymentDetailData;
 import org.apache.fineract.portfolio.paymenttype.data.PaymentTypeData;
 import org.apache.fineract.portfolio.savings.DepositAccountType;
@@ -108,6 +109,7 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
     // mappers
     private final SavingsAccountTransactionTemplateMapper transactionTemplateMapper;
     private final SavingsAccountTransactionsMapper transactionsMapper;
+    private final SavingsAccountTransactionsRoutingCodeMapper transactionsRoutingCodeMapper;
     private final SavingsAccountTransactionsForBatchMapper savingsAccountTransactionsForBatchMapper;
     private final SavingAccountMapper savingAccountMapper;
     private final SavingAccountMapperForInterestPosting savingAccountMapperForInterestPosting;
@@ -149,6 +151,7 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
         this.paginationHelper = paginationHelper;
         this.savingAccountMapperForInterestPosting = new SavingAccountMapperForInterestPosting();
         this.savingAccountAssembler = savingAccountAssembler;
+        this.transactionsRoutingCodeMapper = new SavingsAccountTransactionsRoutingCodeMapper();
     }
 
     @Override
@@ -1199,6 +1202,20 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
                 new Object[] { savingsId, depositAccountType.getValue(), transactionId });
     }
 
+    @Override
+    public SavingsAccountTransactionData retrieveSavingsTransactionByRoutingCode(final Long savingsId, final String routingCode,
+                                                                    DepositAccountType depositAccountType) {
+        try{
+        final String sql = "select " + this.transactionsRoutingCodeMapper.schema() + " where sa.id = ? and sa.deposit_type_enum = ? and pd.routing_code = ?";
+
+        return this.jdbcTemplate.queryForObject(sql, this.transactionsRoutingCodeMapper,
+                new Object[] { savingsId, depositAccountType.getValue(), routingCode });
+
+        } catch (final EmptyResultDataAccessException e) {
+            throw new SavingsAccountNotFoundException(routingCode, e);
+        }
+    }
+
     private static final class SavingsAccountTransactionsForBatchMapper implements RowMapper<SavingsAccountTransactionData> {
 
         private final String schemaSql;
@@ -1358,6 +1375,134 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
                     submittedByUsername, note, isReversal, originalTransactionId, lienTransaction, releaseTransactionId, reasonForBlock);
         }
     }
+
+
+    public static final class SavingsAccountTransactionsRoutingCodeMapper implements RowMapper<SavingsAccountTransactionData> {
+
+        private static final String SELECT = buildSelect();
+        private static final String FROM = buildFrom();
+        private static final String SCHEMA = SELECT + FROM;
+
+        public SavingsAccountTransactionsRoutingCodeMapper() {}
+
+        private static String buildSelect() {
+            return "tr.id as transactionId, tr.transaction_type_enum as transactionType, "
+                    + "tr.transaction_date as transactionDate, tr.amount as transactionAmount, "
+                    + "tr.release_id_of_hold_amount as releaseTransactionId, tr.reason_for_block as reasonForBlock, "
+                    + "tr.submitted_on_date as submittedOnDate, au.username as submittedByUsername, nt.note as transactionNote, "
+                    + "tr.running_balance_derived as runningBalance, tr.is_reversed as reversed, "
+                    + "tr.is_reversal as isReversal, tr.original_transaction_id as originalTransactionId, tr.is_lien_transaction as lienTransaction, "
+                    + "fromtran.id as fromTransferId, fromtran.is_reversed as fromTransferReversed, "
+                    + "fromtran.transaction_date as fromTransferDate, fromtran.amount as fromTransferAmount, "
+                    + "fromtran.description as fromTransferDescription, "
+                    + "totran.id as toTransferId, totran.is_reversed as toTransferReversed, "
+                    + "totran.transaction_date as toTransferDate, totran.amount as toTransferAmount, "
+                    + "totran.description as toTransferDescription, sa.id as savingsId, sa.account_no as accountNo, "
+                    + "pd.payment_type_id as paymentType,pd.account_number as accountNumber,pd.check_number as checkNumber, "
+                    + "pd.receipt_number as receiptNumber, pd.bank_number as bankNumber,pd.routing_code as routingCode, "
+                    + "sa.currency_code as currencyCode, sa.currency_digits as currencyDigits, sa.currency_multiplesof as inMultiplesOf, "
+                    + "curr.name as currencyName, curr.internationalized_name_code as currencyNameCode, "
+                    + "curr.display_symbol as currencyDisplaySymbol, pt.value as paymentTypeName, " + "tr.is_manual as postInterestAsOn ";
+        }
+
+        private static String buildFrom() {
+            return " FROM m_savings_account_transaction tr "
+                    + "inner join m_savings_account sa on tr.savings_account_id = sa.id "
+                    + "inner join m_currency curr on curr.code = sa.currency_code "
+                    + "left join m_account_transfer_transaction fromtran on fromtran.from_savings_transaction_id = tr.id "
+                    + "left join m_account_transfer_transaction totran on totran.to_savings_transaction_id = tr.id "
+                    + "inner join m_payment_detail pd on tr.payment_detail_id = pd.id "
+                    + "left join m_payment_type pt on pd.payment_type_id = pt.id left join m_appuser au on au.id= tr." + CREATED_BY_DB_FIELD
+                    + " left join m_note nt ON nt.savings_account_transaction_id=tr.id ";
+        }
+
+        public String schema() {
+            return SCHEMA;
+        }
+
+        public String select() {
+            return SELECT;
+        }
+
+        public String from() {
+            return FROM;
+        }
+
+        @Override
+        public SavingsAccountTransactionData mapRow(final ResultSet rs, @SuppressWarnings("unused") final int rowNum) throws SQLException {
+            final Long id = rs.getLong("transactionId");
+            final int transactionTypeInt = JdbcSupport.getInteger(rs, "transactionType");
+            final SavingsAccountTransactionEnumData transactionType = SavingsEnumerations.transactionType(transactionTypeInt);
+
+            final LocalDate date = JdbcSupport.getLocalDate(rs, "transactionDate");
+            final LocalDate submittedOnDate = JdbcSupport.getLocalDate(rs, "submittedOnDate");
+            final BigDecimal amount = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "transactionAmount");
+            final Long releaseTransactionId = rs.getLong("releaseTransactionId");
+            final String reasonForBlock = rs.getString("reasonForBlock");
+            final BigDecimal outstandingChargeAmount = null;
+            final BigDecimal runningBalance = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "runningBalance");
+            final boolean reversed = rs.getBoolean("reversed");
+            final boolean isReversal = rs.getBoolean("isReversal");
+            final Long originalTransactionId = rs.getLong("originalTransactionId");
+            final Boolean lienTransaction = rs.getBoolean("lienTransaction");
+
+            final Long savingsId = rs.getLong("savingsId");
+            final String accountNo = rs.getString("accountNo");
+            final boolean postInterestAsOn = rs.getBoolean("postInterestAsOn");
+
+            PaymentDetailData paymentDetailData = null;
+            if (transactionType.isDepositOrWithdrawal()) {
+                final Long paymentTypeId = JdbcSupport.getLong(rs, "paymentType");
+                if (paymentTypeId != null) {
+                    final String typeName = rs.getString("paymentTypeName");
+                    final PaymentTypeData paymentType = PaymentTypeData.instance(paymentTypeId, typeName);
+                    final String accountNumber = rs.getString("accountNumber");
+                    final String checkNumber = rs.getString("checkNumber");
+                    final String routingCode = rs.getString("routingCode");
+                    final String receiptNumber = rs.getString("receiptNumber");
+                    final String bankNumber = rs.getString("bankNumber");
+                    paymentDetailData = new PaymentDetailData(id, paymentType, accountNumber, checkNumber, routingCode, receiptNumber,
+                            bankNumber);
+                }
+            }
+
+            final String currencyCode = rs.getString("currencyCode");
+            final String currencyName = rs.getString("currencyName");
+            final String currencyNameCode = rs.getString("currencyNameCode");
+            final String currencyDisplaySymbol = rs.getString("currencyDisplaySymbol");
+            final Integer currencyDigits = JdbcSupport.getInteger(rs, "currencyDigits");
+            final Integer inMultiplesOf = JdbcSupport.getInteger(rs, "inMultiplesOf");
+            final CurrencyData currency = new CurrencyData(currencyCode, currencyName, currencyDigits, inMultiplesOf, currencyDisplaySymbol,
+                    currencyNameCode);
+
+            AccountTransferData transfer = null;
+            final Long fromTransferId = JdbcSupport.getLong(rs, "fromTransferId");
+            final Long toTransferId = JdbcSupport.getLong(rs, "toTransferId");
+            if (fromTransferId != null) {
+                final LocalDate fromTransferDate = JdbcSupport.getLocalDate(rs, "fromTransferDate");
+                final BigDecimal fromTransferAmount = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "fromTransferAmount");
+                final boolean fromTransferReversed = rs.getBoolean("fromTransferReversed");
+                final String fromTransferDescription = rs.getString("fromTransferDescription");
+
+                transfer = AccountTransferData.transferBasicDetails(fromTransferId, currency, fromTransferAmount, fromTransferDate,
+                        fromTransferDescription, fromTransferReversed);
+            } else if (toTransferId != null) {
+                final LocalDate toTransferDate = JdbcSupport.getLocalDate(rs, "toTransferDate");
+                final BigDecimal toTransferAmount = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "toTransferAmount");
+                final boolean toTransferReversed = rs.getBoolean("toTransferReversed");
+                final String toTransferDescription = rs.getString("toTransferDescription");
+
+                transfer = AccountTransferData.transferBasicDetails(toTransferId, currency, toTransferAmount, toTransferDate,
+                        toTransferDescription, toTransferReversed);
+            }
+            final String submittedByUsername = rs.getString("submittedByUsername");
+            final String note = rs.getString("transactionNote");
+            return SavingsAccountTransactionData.create(id, transactionType, paymentDetailData, savingsId, accountNo, date, currency,
+                    amount, outstandingChargeAmount, runningBalance, reversed, transfer, submittedOnDate, postInterestAsOn,
+                    submittedByUsername, note, isReversal, originalTransactionId, lienTransaction, releaseTransactionId, reasonForBlock);
+        }
+    }
+
 
     private static final class SavingsAccountTransactionTemplateMapper implements RowMapper<SavingsAccountTransactionData> {
 

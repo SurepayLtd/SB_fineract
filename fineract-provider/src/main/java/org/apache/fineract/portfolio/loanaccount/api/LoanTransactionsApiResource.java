@@ -174,6 +174,22 @@ public class LoanTransactionsApiResource {
     }
 
     @GET
+    @Path("routingCode/{routingCode}")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Retrieve a Transaction Details by routing Code", description = "Retrieves a Transaction Details\n\n"
+            + "Example Request:\n" + "\n" + "routingCode/SIMS-333")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = LoanTransactionsApiResourceSwagger.GetLoansLoanIdTransactionsTransactionIdResponse.class))) })
+    public String retrieveTransactionByRoutingCode(
+            @PathParam("routingCode") @Parameter(description = "routingCode", required = true) final String routingCode,
+            @QueryParam("fields") @Parameter(in = ParameterIn.QUERY, name = "fields", description = "Optional Loan Transaction attribute list to be in the response", required = false, example = "id,date,amount") final String fields,
+            @Context final UriInfo uriInfo) {
+
+        return retrieveTransactionByRoutingCode(routingCode, uriInfo);
+    }
+
+    @GET
     @Path("{loanId}/transactions/external-id/{externalTransactionId}")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
@@ -435,6 +451,16 @@ public class LoanTransactionsApiResource {
             final Collection<PaymentTypeData> paymentTypeOptions = this.paymentTypeReadPlatformService.retrieveAllPaymentTypes();
             transactionData = LoanTransactionData.templateOnTop(transactionData, paymentTypeOptions);
         }
+
+        return this.toApiJsonSerializer.serialize(settings, transactionData, this.responseDataParameters);
+    }
+
+    private String retrieveTransactionByRoutingCode(final String routingCode, final UriInfo uriInfo) {
+        this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSIONS);
+
+        LoanTransactionData transactionData = this.loanReadPlatformService.retrieveLoanTransactionByRoutingCode(routingCode);
+
+        final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
 
         return this.toApiJsonSerializer.serialize(settings, transactionData, this.responseDataParameters);
     }

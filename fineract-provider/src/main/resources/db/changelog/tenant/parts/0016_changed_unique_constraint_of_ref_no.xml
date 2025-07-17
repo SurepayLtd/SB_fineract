@@ -25,7 +25,7 @@
     <changeSet author="fineract" id="1" context="postgresql">
         <dropUniqueConstraint tableName="m_savings_account_transaction" constraintName="m_savings_account_transaction_ref_no_key"/>
     </changeSet>
-    <changeSet author="fineract" id="1" context="mysql">
-        <dropUniqueConstraint tableName="m_savings_account_transaction" constraintName="ref_no"/>
-    </changeSet>
+<!--    <changeSet author="fineract" id="1" context="mysql">-->
+<!--        <dropUniqueConstraint tableName="m_savings_account_transaction" constraintName="ref_no"/>-->
+<!--    </changeSet>-->
 </databaseChangeLog>

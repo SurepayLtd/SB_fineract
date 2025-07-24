@@ -60,6 +60,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
@@ -74,7 +75,8 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
 
     private final PlatformSecurityContext context;
     private final DataSource tenantDataSource;
-
+    @Value("${FINERACT_PENTAHO_REPORTS_PATH:./fineract-report/pentahoReports}")
+    private String fineractPentahoBaseDir;
     @Autowired
     FineractProperties fineractProperties;
 
@@ -177,8 +179,8 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
     }
 
     private String getReportPath() {
-        if (StringUtils.isNotBlank(mifosBaseDir)) {
-            return this.mifosBaseDir + File.separator;
+        if (StringUtils.isNotBlank(fineractPentahoBaseDir)) {
+            return this.fineractPentahoBaseDir + File.separator;
         }
         return this.mifosBaseDir + File.separator + "pentahoReports" + File.separator;
     }

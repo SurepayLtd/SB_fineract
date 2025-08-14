@@ -59,7 +59,6 @@ import org.apache.fineract.portfolio.client.data.ClientData;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
 import org.apache.fineract.portfolio.group.data.GroupGeneralData;
 import org.apache.fineract.portfolio.group.service.GroupReadPlatformService;
-import org.apache.fineract.portfolio.loanaccount.exception.LoanTransactionNotFoundException;
 import org.apache.fineract.portfolio.paymentdetail.data.PaymentDetailData;
 import org.apache.fineract.portfolio.paymenttype.data.PaymentTypeData;
 import org.apache.fineract.portfolio.savings.DepositAccountType;
@@ -1204,12 +1203,13 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
 
     @Override
     public SavingsAccountTransactionData retrieveSavingsTransactionByRoutingCode(final Long savingsId, final String routingCode,
-                                                                    DepositAccountType depositAccountType) {
-        try{
-        final String sql = "select " + this.transactionsRoutingCodeMapper.schema() + " where sa.id = ? and sa.deposit_type_enum = ? and pd.routing_code = ?";
+            DepositAccountType depositAccountType) {
+        try {
+            final String sql = "select " + this.transactionsRoutingCodeMapper.schema()
+                    + " where sa.id = ? and sa.deposit_type_enum = ? and pd.routing_code = ?";
 
-        return this.jdbcTemplate.queryForObject(sql, this.transactionsRoutingCodeMapper,
-                new Object[] { savingsId, depositAccountType.getValue(), routingCode });
+            return this.jdbcTemplate.queryForObject(sql, this.transactionsRoutingCodeMapper,
+                    new Object[] { savingsId, depositAccountType.getValue(), routingCode });
 
         } catch (final EmptyResultDataAccessException e) {
             throw new SavingsAccountNotFoundException(routingCode, e);
@@ -1376,7 +1376,6 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
         }
     }
 
-
     public static final class SavingsAccountTransactionsRoutingCodeMapper implements RowMapper<SavingsAccountTransactionData> {
 
         private static final String SELECT = buildSelect();
@@ -1406,8 +1405,7 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
         }
 
         private static String buildFrom() {
-            return " FROM m_savings_account_transaction tr "
-                    + "inner join m_savings_account sa on tr.savings_account_id = sa.id "
+            return " FROM m_savings_account_transaction tr " + "inner join m_savings_account sa on tr.savings_account_id = sa.id "
                     + "inner join m_currency curr on curr.code = sa.currency_code "
                     + "left join m_account_transfer_transaction fromtran on fromtran.from_savings_transaction_id = tr.id "
                     + "left join m_account_transfer_transaction totran on totran.to_savings_transaction_id = tr.id "
@@ -1502,7 +1500,6 @@ public class SavingsAccountReadPlatformServiceImpl implements SavingsAccountRead
                     submittedByUsername, note, isReversal, originalTransactionId, lienTransaction, releaseTransactionId, reasonForBlock);
         }
     }
-
 
     private static final class SavingsAccountTransactionTemplateMapper implements RowMapper<SavingsAccountTransactionData> {
 

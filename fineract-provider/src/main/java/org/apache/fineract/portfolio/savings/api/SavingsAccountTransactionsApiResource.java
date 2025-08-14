@@ -134,11 +134,11 @@ public class SavingsAccountTransactionsApiResource {
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
     public String retrieveOneByRoutingCode(@PathParam("savingsId") final Long savingsId, @PathParam("routingCode") final String routingCode,
-                              @Context final UriInfo uriInfo) {
+            @Context final UriInfo uriInfo) {
 
         this.context.authenticatedUser().validateHasReadPermission(SavingsApiConstants.SAVINGS_ACCOUNT_RESOURCE_NAME);
-        SavingsAccountTransactionData transactionData = this.savingsAccountReadPlatformService.retrieveSavingsTransactionByRoutingCode(savingsId,
-                routingCode, DepositAccountType.SAVINGS_DEPOSIT);
+        SavingsAccountTransactionData transactionData = this.savingsAccountReadPlatformService
+                .retrieveSavingsTransactionByRoutingCode(savingsId, routingCode, DepositAccountType.SAVINGS_DEPOSIT);
 
         final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
 

@@ -27,6 +27,8 @@ import org.apache.fineract.organisation.office.data.OfficeData;
 import org.apache.poi.hssf.usermodel.HSSFDataValidationHelper;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.ss.SpreadsheetVersion;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.DataValidationConstraint;
 import org.apache.poi.ss.usermodel.DataValidationHelper;
@@ -103,6 +105,13 @@ public class StaffWorkbookPopulator extends AbstractWorkbookPopulator {
         staffSheet.setColumnWidth(StaffConstants.JOINED_ON_COL, TemplatePopulateImportConstants.SMALL_COL_SIZE);
         staffSheet.setColumnWidth(StaffConstants.EXTERNAL_ID_COL, TemplatePopulateImportConstants.SMALL_COL_SIZE);
         staffSheet.setColumnWidth(StaffConstants.IS_ACTIVE_COL, TemplatePopulateImportConstants.SMALL_COL_SIZE);
+
+        Workbook workbook = staffSheet.getWorkbook();
+        CellStyle textStyle = workbook.createCellStyle();
+        DataFormat format = workbook.createDataFormat();
+        textStyle.setDataFormat(format.getFormat("@"));
+        staffSheet.setDefaultColumnStyle(StaffConstants.MOBILE_NO_COL, textStyle);
+
         writeString(StaffConstants.OFFICE_NAME_COL, rowHeader, "Office Name *");
         writeString(StaffConstants.FIRST_NAME_COL, rowHeader, "First Name *");
         writeString(StaffConstants.LAST_NAME_COL, rowHeader, "Last Name *");

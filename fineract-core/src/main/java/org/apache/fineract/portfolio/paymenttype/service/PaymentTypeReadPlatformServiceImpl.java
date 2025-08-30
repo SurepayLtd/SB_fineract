@@ -36,7 +36,6 @@ public class PaymentTypeReadPlatformServiceImpl implements PaymentTypeReadPlatfo
     private final PaymentTypeRepositoryWrapper paymentTypeRepository;
 
     @Override
-    @Cacheable(value = "payment_types", key = "T(org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil).getTenant().getTenantIdentifier().concat('payment_types')")
     public Collection<PaymentTypeData> retrieveAllPaymentTypes() {
         // TODO Auto-generated method stub
         this.context.authenticatedUser();
@@ -46,7 +45,6 @@ public class PaymentTypeReadPlatformServiceImpl implements PaymentTypeReadPlatfo
     }
 
     @Override
-    @Cacheable(value = "paymentTypesWithCode", key = "T(org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil).getTenant().getTenantIdentifier().concat('payment_types')")
     public Collection<PaymentTypeData> retrieveAllPaymentTypesWithCode() {
         // TODO Auto-generated method stub
         this.context.authenticatedUser();

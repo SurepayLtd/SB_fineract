@@ -554,7 +554,8 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         loanAccrualTransactionBusinessEventService.raiseBusinessEventForAccrualTransactions(loan, existingTransactionIds);
 
         // MOMO Payments
-        if (paymentDetail != null && paymentDetail.getPaymentType().getCodeName().equals("SURE_PAY_MOMO_PAYMENT")) {
+                if (paymentDetail != null && paymentDetail.getPaymentType() != null && paymentDetail.getPaymentType().getCodeName() != null
+                && paymentDetail.getPaymentType().getCodeName().equals("SURE_PAY_MOMO_PAYMENT")) {
             LocalDate today = DateUtils.getLocalDateOfTenant();
             if (actualDisbursementDate != null && DateUtils.isBefore(actualDisbursementDate, today)) {
                 final String errorMessage = "The date on which a loan is disbursed cannot be before its Today's date: " + today;

@@ -400,4 +400,30 @@ order by 2 desc,is_reversed "/>
     </changeSet>
 
 
+    <changeSet author="fineract" id="add_client_savings_accounts_table" context="mysql">
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Client Savings Account Table"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_category" value="Savings"/>
+            <column name="report_sql" value="
+            SELECT cl.account_no                as clientAccountNo,
+            sa.account_no                   savingsAccountNo,
+            cl.display_name              as name,
+            cl.mobile_no                 as mobileNo,
+            sa.total_deposits_derived    as totalDeposit,
+            sa.total_withdrawals_derived as totalWithdraw,
+            sa.account_balance_derived      totalBalance
+            FROM m_savings_account sa
+            INNER JOIN m_client cl ON sa.client_id = cl.id
+            WHERE cl.status_enum = 300
+            AND cl.status_enum = 300
+            "/>
+            <column name="description" value="Client Savings Account Table report"/>
+            <column name="core_report" valueBoolean="false"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
 </databaseChangeLog>

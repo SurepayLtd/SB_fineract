@@ -3,10 +3,10 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - surepay-dev
+      - fix_other_reports
   pull_request:
     branches:
-      - surepay-dev
+      - fix_other_reports
 
 env:
   REGISTRY: docker.io

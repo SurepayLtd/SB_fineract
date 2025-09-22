@@ -49,4 +49,8 @@ public interface ClientWritePlatformService {
 
     CommandProcessingResult undoWithdrawal(Long entityId, JsonCommand command);
 
+    CommandProcessingResult activateMomoPayment(Long clientId, JsonCommand command);
+
+    CommandProcessingResult deActivateMomoPayment(Long clientId);
+
 }

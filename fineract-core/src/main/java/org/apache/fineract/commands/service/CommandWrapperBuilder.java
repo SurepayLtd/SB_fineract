@@ -677,6 +677,24 @@ public class CommandWrapperBuilder {
         return this;
     }
 
+    public CommandWrapperBuilder activateMomoPayment(final Long clientId) {
+        this.actionName = "ACTIVATEMOMOPAYMENT";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/activateMomoPayment";
+        return this;
+    }
+
+    public CommandWrapperBuilder deActivateMomoPayment(final Long clientId) {
+        this.actionName = "DEACTIVATEMOMOPAYMENT";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/deActivateMomoPayment";
+        return this;
+    }
+
     public CommandWrapperBuilder createDBDatatable(final String json) {
         this.actionName = "CREATE";
         this.entityName = "DATATABLE";

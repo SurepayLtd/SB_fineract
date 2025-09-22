@@ -32,6 +32,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -208,6 +209,21 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     @ManyToOne(optional = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "reopened_by_userid")
     private AppUser reopenedBy;
+
+    @Column(name = "momo_payment_active", nullable = false)
+    private boolean momoPaymentActive;
+
+    @Column(name = "last_activated_momo_date")
+    private LocalDate lastActivatedMomoDate;
+
+    @Column(name = "last_deactivated_momo_date")
+    private LocalDate lastDeactivatedMomoDate;
+
+    @Column(name = "otp_code")
+    private Integer otpCode;
+
+    @Column(name = "momo_payment_otp_expiry")
+    private LocalDateTime momoPaymentOtpExpiry;
 
     @Column(name = "proposed_transfer_date")
     private LocalDate proposedTransferDate;
@@ -740,5 +756,45 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
             setLastname(null);
             setDisplayName(null);
         }
+    }
+
+    public boolean isMomoPaymentActive() {
+        return this.momoPaymentActive;
+    }
+
+    public void setMomoPaymentActive(final boolean momoPaymentActive) {
+        this.momoPaymentActive = momoPaymentActive;
+    }
+
+    public LocalDate getLastActivatedMomoDate() {
+        return this.lastActivatedMomoDate;
+    }
+
+    public void setLastActivatedMomoDate(final LocalDate lastActivatedMomoDate) {
+        this.lastActivatedMomoDate = lastActivatedMomoDate;
+    }
+
+    public LocalDate getLastDeactivatedMomoDate() {
+        return this.lastDeactivatedMomoDate;
+    }
+
+    public void setLastDeactivatedMomoDate(final LocalDate lastDeactivatedMomoDate) {
+        this.lastDeactivatedMomoDate = lastDeactivatedMomoDate;
+    }
+
+    public Integer getOtpCode() {
+        return otpCode;
+    }
+
+    public void setOtpCode(Integer otpCode) {
+        this.otpCode = otpCode;
+    }
+
+    public LocalDateTime getMomoPaymentOtpExpiry() {
+        return this.momoPaymentOtpExpiry;
+    }
+
+    public void setMomoPaymentOtpExpiry(final LocalDateTime momoPaymentOtpExpiry) {
+        this.momoPaymentOtpExpiry = momoPaymentOtpExpiry;
     }
 }

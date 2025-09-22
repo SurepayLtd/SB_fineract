@@ -52,6 +52,9 @@ public class ClientApiConstants {
     public static final String CLIENT_CHARGE_COMMAND_INACTIVATE_CHARGE = "inactivate";
     public static final String CLIENT_TRANSACTION_COMMAND_UNDO = "undo";
 
+    public static final String ACTIVATE_MOMO_PAYMENT_COMMAND = "activateMomoPayment";
+    public static final String DEACTIVATE_MOMO_PAYMENT_COMMAND = "deActivateMomoPayment";
+
     public static final String CLIENT_CLOSURE_REASON = "ClientClosureReason";
     public static final String CLIENT_ACTION_REASON = "ClientActionReason";
     public static final String CLIENT_REJECT_REASON = "ClientRejectReason";

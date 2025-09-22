@@ -1101,4 +1101,63 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 .withEntityExternalId(client.getExternalId()) //
                 .build();
     }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult activateMomoPayment(final Long clientId, final JsonCommand command) {
+        try {
+            final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+
+            Integer otp;
+            do {
+                otp = new java.util.Random().nextInt(90000) + 10000;
+            } while (this.clientRepository.findByOtpCode(otp) != null);
+
+            client.setMomoPaymentActive(true);
+            client.setLastActivatedMomoDate(DateUtils.getBusinessLocalDate());
+            client.setOtpCode(otp);
+            final Integer otpExpiryMinutes = this.configurationDomainService.retrieveMomoPaymentOtpExpiryMinutes();
+            client.setMomoPaymentOtpExpiry(DateUtils.getLocalDateTimeOfTenant().plusMinutes(otpExpiryMinutes));
+            this.clientRepository.saveAndFlush(client);
+            //TODO
+            // Send sms message with otp token
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityExternalId(client.getExternalId()) //
+                    .withOfficeId(client.officeId()) //
+                    .withClientId(clientId) //
+                    .withEntityId(clientId) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult deActivateMomoPayment(final Long clientId) {
+        try {
+            final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+            client.setMomoPaymentActive(false);
+            client.setLastDeactivatedMomoDate(DateUtils.getBusinessLocalDate());
+            this.clientRepository.saveAndFlush(client);
+            //Send sms message to client about momo being de-activated
+            return new CommandProcessingResultBuilder() //
+                    .withEntityExternalId(client.getExternalId()) //
+                    .withOfficeId(client.officeId()) //
+                    .withClientId(clientId) //
+                    .withEntityId(clientId) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            return CommandProcessingResult.empty();
+        }
+    }
 }

@@ -71,5 +71,12 @@
             <column name="description" value="Configure surepay mobile money otp expiry"/>
         </insert>
     </changeSet>
+    <changeSet author="johnbosco" id="add_pin_code_column_to_m_client">
+        <addColumn tableName="m_client">
+            <column name="pin_code"  type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
 
 </databaseChangeLog>

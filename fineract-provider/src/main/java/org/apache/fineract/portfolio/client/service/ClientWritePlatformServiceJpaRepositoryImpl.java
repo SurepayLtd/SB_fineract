@@ -44,6 +44,7 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
@@ -56,6 +57,7 @@ import org.apache.fineract.infrastructure.event.business.domain.client.ClientCre
 import org.apache.fineract.infrastructure.event.business.domain.client.ClientRejectBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.infrastructure.security.service.HashingPasswordEncoder;
 import org.apache.fineract.organisation.office.domain.Office;
 import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
 import org.apache.fineract.organisation.staff.domain.Staff;
@@ -1139,15 +1141,13 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
         }
     }
 
-    @Transactional
-    @Override
     public CommandProcessingResult deActivateMomoPayment(final Long clientId) {
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
             client.setMomoPaymentActive(false);
             client.setLastDeactivatedMomoDate(DateUtils.getBusinessLocalDate());
             this.clientRepository.saveAndFlush(client);
-            //Send sms message to client about momo being de-activated
+
             return new CommandProcessingResultBuilder() //
                     .withEntityExternalId(client.getExternalId()) //
                     .withOfficeId(client.officeId()) //
@@ -1157,6 +1157,97 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
         } catch (final JpaSystemException | DataIntegrityViolationException dve) {
             return CommandProcessingResult.empty();
         } catch (final PersistenceException dve) {
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    public CommandProcessingResult validateOtpCode(final Long clientId, final JsonCommand command) {
+        try {
+            final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+            final Integer otpCode = command.integerValueOfParameterNamed(ClientApiConstants.otpCodeParamName);
+
+            if (client.getOtpCode() == null || !client.getOtpCode().equals(otpCode)) {
+                throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.invalid", "Invalid OTP", "otpCode", otpCode);
+            }
+
+            if (DateUtils.isAfter(DateUtils.getLocalDateTimeOfTenant(), client.getMomoPaymentOtpExpiry())) {
+                throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.expired", "OTP has expired", "otpCode", otpCode);
+            }
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityExternalId(client.getExternalId()) //
+                    .withOfficeId(client.officeId()) //
+                    .withClientId(clientId) //
+                    .withEntityId(clientId) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult createClientPin(final Long clientId, final JsonCommand command) {
+        try {
+            final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+            final Integer pinCode = command.integerValueOfParameterNamed("pinCode");
+
+            final String salt = client.getId() + client.getMobileNo();
+            final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
+
+            client.setPinCode(hashedPassword);
+            this.clientRepository.saveAndFlush(client);
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityExternalId(client.getExternalId()) //
+                    .withOfficeId(client.officeId()) //
+                    .withClientId(clientId) //
+                    .withEntityId(clientId) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult validateClientPin(final Long clientId, final JsonCommand command) {
+        try {
+            final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+            final Integer pinCode = command.integerValueOfParameterNamed("pinCode");
+
+            final String salt = client.getId() + client.getMobileNo();
+            final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
+
+            if (client.getPinCode() == null || !client.getPinCode().equals(hashedPassword)) {
+                throw new GeneralPlatformDomainRuleException("validation.msg.client.pin.invalid", "Invalid PIN", "pinCode", pinCode);
+            }
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityExternalId(client.getExternalId()) //
+                    .withOfficeId(client.officeId()) //
+                    .withClientId(clientId) //
+                    .withEntityId(clientId) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
             return CommandProcessingResult.empty();
         }
     }

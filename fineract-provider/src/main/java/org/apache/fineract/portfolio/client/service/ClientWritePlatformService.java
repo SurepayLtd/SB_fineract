@@ -53,4 +53,10 @@ public interface ClientWritePlatformService {
 
     CommandProcessingResult deActivateMomoPayment(Long clientId);
 
+    CommandProcessingResult validateOtpCode(Long clientId, JsonCommand command);
+
+    CommandProcessingResult createClientPin(Long clientId, JsonCommand command);
+
+    CommandProcessingResult validateClientPin(Long clientId, JsonCommand command);
+
 }

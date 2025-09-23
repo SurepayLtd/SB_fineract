@@ -40,20 +40,19 @@ import org.apache.fineract.commands.annotation.CommandType;
 import org.apache.fineract.commands.handler.NewCommandSourceHandler;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
-import org.apache.fineract.portfolio.client.api.ClientApiConstants;
 import org.apache.fineract.portfolio.client.service.ClientWritePlatformService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@CommandType(entity = "CLIENT", action = "ACTIVATEMOMOPAYMENT")
-public class ActivateMomoPaymentCommandHandler implements NewCommandSourceHandler {
+@CommandType(entity = "CLIENT", action = "VALIDATEOTP")
+public class ValidateOtpCommandHandler implements NewCommandSourceHandler {
 
     private final ClientWritePlatformService clientWritePlatformService;
 
     @Autowired
-    public ActivateMomoPaymentCommandHandler(final ClientWritePlatformService clientWritePlatformService) {
+    public ValidateOtpCommandHandler(final ClientWritePlatformService clientWritePlatformService) {
         this.clientWritePlatformService = clientWritePlatformService;
     }
 
@@ -61,6 +60,6 @@ public class ActivateMomoPaymentCommandHandler implements NewCommandSourceHandle
     @Override
     public CommandProcessingResult processCommand(final JsonCommand command) {
 
-        return this.clientWritePlatformService.activateMomoPayment(command.entityId(), command);
+        return this.clientWritePlatformService.validateOtpCode(command.entityId(), command);
     }
 }

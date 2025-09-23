@@ -54,6 +54,13 @@ public class ClientApiConstants {
 
     public static final String ACTIVATE_MOMO_PAYMENT_COMMAND = "activateMomoPayment";
     public static final String DEACTIVATE_MOMO_PAYMENT_COMMAND = "deActivateMomoPayment";
+    public static final String VALIDATE_OTP_COMMAND = "validateOtp";
+
+    public static final String CREATE_CLIENT_PIN_COMMAND = "createClientPin";
+    public static final String VALIDATE_CLIENT_PIN_COMMAND = "validateClientPin";
+    public static final String pinCodeParamName = "pinCode";
+
+    public static final String otpCodeParamName = "otpCode";
 
     public static final String CLIENT_CLOSURE_REASON = "ClientClosureReason";
     public static final String CLIENT_ACTION_REASON = "ClientActionReason";

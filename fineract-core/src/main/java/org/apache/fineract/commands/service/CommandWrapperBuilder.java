@@ -691,7 +691,34 @@ public class CommandWrapperBuilder {
         this.entityName = "CLIENT";
         this.entityId = clientId;
         this.clientId = clientId;
-        this.href = "/clients/" + clientId + "/deActivateMomoPayment";
+        this.href = "/clients/" + clientId + "/momopayment";
+        return this;
+    }
+
+    public CommandWrapperBuilder validateOtpCode(final Long clientId) {
+        this.actionName = "VALIDATEOTP";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/validateotp";
+        return this;
+    }
+
+    public CommandWrapperBuilder createClientPin(final Long clientId) {
+        this.actionName = "CREATECLIENTPIN";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/createpin";
+        return this;
+    }
+
+    public CommandWrapperBuilder validateClientPin(final Long clientId) {
+        this.actionName = "VALIDATECLIENTPIN";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/validatepin";
         return this;
     }
 

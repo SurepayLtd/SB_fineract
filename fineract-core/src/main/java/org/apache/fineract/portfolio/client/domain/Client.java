@@ -225,6 +225,9 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     @Column(name = "momo_payment_otp_expiry")
     private LocalDateTime momoPaymentOtpExpiry;
 
+    @Column(name = "pin_code")
+    private String pinCode;
+
     @Column(name = "proposed_transfer_date")
     private LocalDate proposedTransferDate;
 
@@ -796,5 +799,13 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
     public void setMomoPaymentOtpExpiry(final LocalDateTime momoPaymentOtpExpiry) {
         this.momoPaymentOtpExpiry = momoPaymentOtpExpiry;
+    }
+
+    public String getPinCode() {
+        return this.pinCode;
+    }
+
+    public void setPinCode(final String pinCode) {
+        this.pinCode = pinCode;
     }
 }

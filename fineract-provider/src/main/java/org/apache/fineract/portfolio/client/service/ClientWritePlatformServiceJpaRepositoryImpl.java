@@ -1224,6 +1224,8 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
 
             client.setPinCode(hashedPassword);
+            final Integer pinExpiryMonths = this.configurationDomainService.retrieveMomoPaymentPinExpiryMonths();
+            client.setPinExpiryDate(DateUtils.getBusinessLocalDate().plusMonths(pinExpiryMonths));
             this.clientRepository.saveAndFlush(client);
 
             return new CommandProcessingResultBuilder() //

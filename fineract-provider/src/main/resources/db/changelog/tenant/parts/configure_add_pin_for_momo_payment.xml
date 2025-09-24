@@ -78,5 +78,30 @@
             </column>
         </addColumn>
     </changeSet>
+    <changeSet author="johnbosco" id="add_pin_expiry_date_column_to-the_m_client">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="m_client" columnName="pin_expiry_date"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="m_client">
+            <column name="pin_expiry_date"  type="DATE">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet author="johnbosco" id="surepay-momo-payment-pin-expiry-months">
+        <insert tableName="c_configuration">
+            <column name="name" value="surepay-momo-payment-pin-expiry-months"/>
+            <column name="value" value="6"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="true"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Configure surepay momo Payment pin expiry in months"/>
+        </insert>
+    </changeSet>
+
 
 </databaseChangeLog>

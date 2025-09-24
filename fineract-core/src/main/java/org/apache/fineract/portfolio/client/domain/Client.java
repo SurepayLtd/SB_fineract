@@ -228,6 +228,9 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     @Column(name = "pin_code")
     private String pinCode;
 
+    @Column(name = "pin_expiry_date")
+    private LocalDate pinExpiryDate;
+
     @Column(name = "proposed_transfer_date")
     private LocalDate proposedTransferDate;
 

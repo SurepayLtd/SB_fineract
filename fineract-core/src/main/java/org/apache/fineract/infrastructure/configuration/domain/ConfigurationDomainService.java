@@ -146,5 +146,6 @@ public interface ConfigurationDomainService {
     boolean isImmediateChargeAccrualPostMaturityEnabled();
 
     Integer retrieveMomoPaymentOtpExpiryMinutes();
+    Integer retrieveMomoPaymentPinExpiryMonths();
 
 }

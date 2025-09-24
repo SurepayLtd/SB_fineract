@@ -38,7 +38,10 @@ import org.apache.fineract.infrastructure.accountnumberformat.domain.AccountNumb
 import org.apache.fineract.infrastructure.accountnumberformat.domain.EntityAccountType;
 import org.apache.fineract.infrastructure.codes.domain.CodeValue;
 import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrapper;
+import org.apache.fineract.infrastructure.configuration.api.GlobalConfigurationConstants;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
+import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationProperty;
+import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
@@ -58,6 +61,8 @@ import org.apache.fineract.infrastructure.event.business.domain.client.ClientRej
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.infrastructure.security.service.HashingPasswordEncoder;
+import org.apache.fineract.notification.data.SmsNotificationData;
+import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
 import org.apache.fineract.organisation.office.domain.Office;
 import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
 import org.apache.fineract.organisation.staff.domain.Staff;
@@ -126,6 +131,8 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     private final BusinessEventNotifierService businessEventNotifierService;
     private final EntityDatatableChecksWritePlatformService entityDatatableChecksWritePlatformService;
     private final ExternalIdFactory externalIdFactory;
+    private final GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper;
+    private final SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService;
 
     @Transactional
     @Override
@@ -1115,12 +1122,19 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 otp = new java.util.Random().nextInt(90000) + 10000;
             } while (this.clientRepository.findByOtpCode(otp) != null);
 
+            // Send sms message with otp token
+            final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
+                    .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
+            if(!property.isEnabled()){
+                throw new GeneralPlatformDomainRuleException("error.msg.sms.is.not.enabled","Sms is not enabled on this platform. Activate it to proceed");
+            }
+//            smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Otp :- "+otp, "Activate Momo Payment"));
+
+
             client.setOtpCode(otp);
             final Integer otpExpiryMinutes = this.configurationDomainService.retrieveMomoPaymentOtpExpiryMinutes();
             client.setMomoPaymentOtpExpiry(DateUtils.getLocalDateTimeOfTenant().plusMinutes(otpExpiryMinutes));
             this.clientRepository.saveAndFlush(client);
-            //TODO
-            // Send sms message with otp token
 
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //
@@ -1144,6 +1158,10 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
             client.setMomoPaymentActive(false);
             client.setLastDeactivatedMomoDate(DateUtils.getBusinessLocalDate());
+
+            client.setMomoPaymentOtpExpiry(null);
+            client.setOtpCode(null);
+            client.setPinCode(null);
             this.clientRepository.saveAndFlush(client);
 
             return new CommandProcessingResultBuilder() //

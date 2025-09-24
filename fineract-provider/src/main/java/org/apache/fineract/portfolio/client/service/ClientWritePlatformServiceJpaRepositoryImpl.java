@@ -1115,8 +1115,6 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 otp = new java.util.Random().nextInt(90000) + 10000;
             } while (this.clientRepository.findByOtpCode(otp) != null);
 
-            client.setMomoPaymentActive(true);
-            client.setLastActivatedMomoDate(DateUtils.getBusinessLocalDate());
             client.setOtpCode(otp);
             final Integer otpExpiryMinutes = this.configurationDomainService.retrieveMomoPaymentOtpExpiryMinutes();
             client.setMomoPaymentOtpExpiry(DateUtils.getLocalDateTimeOfTenant().plusMinutes(otpExpiryMinutes));
@@ -1173,6 +1171,12 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             if (DateUtils.isAfter(DateUtils.getLocalDateTimeOfTenant(), client.getMomoPaymentOtpExpiry())) {
                 throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.expired", "OTP has expired", "otpCode", otpCode);
             }
+
+
+            client.setMomoPaymentActive(true);
+            client.setLastActivatedMomoDate(DateUtils.getBusinessLocalDate());
+            this.clientRepository.saveAndFlush(client);
+
 
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //

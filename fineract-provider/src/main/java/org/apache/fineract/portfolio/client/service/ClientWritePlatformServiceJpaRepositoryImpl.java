@@ -1114,6 +1114,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     @Transactional
     @Override
     public CommandProcessingResult activateMomoPayment(final Long clientId, final JsonCommand command) {
+        this.context.authenticatedUser();
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
 
@@ -1154,6 +1155,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     }
 
     public CommandProcessingResult deActivateMomoPayment(final Long clientId) {
+        this.context.authenticatedUser();
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
             client.setMomoPaymentActive(false);
@@ -1178,10 +1180,14 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     }
 
     public CommandProcessingResult validateOtpCode(final Long clientId, final JsonCommand command) {
+        this.context.authenticatedUser();
+        this.fromApiJsonDeserializer.validateOtpCode(command);
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
             final Integer otpCode = command.integerValueOfParameterNamed(ClientApiConstants.otpCodeParamName);
-
+            if (!client.isActive()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            }
             if (client.getOtpCode() == null || !client.getOtpCode().equals(otpCode)) {
                 throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.invalid", "Invalid OTP", "otpCode", otpCode);
             }
@@ -1216,9 +1222,19 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     @Transactional
     @Override
     public CommandProcessingResult createClientPin(final Long clientId, final JsonCommand command) {
+        this.context.authenticatedUser();
+        this.fromApiJsonDeserializer.validatCreateClientPin(command);
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
-            final Integer pinCode = command.integerValueOfParameterNamed("pinCode");
+            final Integer pinCode = command.integerValueOfParameterNamed(ClientApiConstants.pinCodeParamName);
+            final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
+            if (!client.isActive()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            }
+            if(!mobileNo.equals(client.getMobileNo())){
+                throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
+            }
+
 
             final String salt = client.getId() + client.getMobileNo();
             final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
@@ -1248,9 +1264,19 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     @Transactional
     @Override
     public CommandProcessingResult validateClientPin(final Long clientId, final JsonCommand command) {
+        this.context.authenticatedUser();
+        this.fromApiJsonDeserializer.validatCreateClientPin(command);
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
             final Integer pinCode = command.integerValueOfParameterNamed("pinCode");
+
+            final String mobileNo = command.stringValueOfParameterNamed("mobileNo");
+            if (!client.isActive()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            }
+            if(!mobileNo.equals(client.getMobileNo())){
+                throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
+            }
 
             final String salt = client.getId() + client.getMobileNo();
             final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);

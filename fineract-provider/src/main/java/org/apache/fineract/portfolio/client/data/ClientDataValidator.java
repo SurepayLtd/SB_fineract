@@ -857,4 +857,58 @@ public final class ClientDataValidator {
 
     }
 
+    public void validateOtpCode(final JsonCommand command) {
+
+        final String json = command.json();
+
+        if (StringUtils.isBlank(json)) {
+            throw new InvalidJsonException();
+        }
+
+        final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
+        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json,
+                ClientApiCollectionConstants.VALIDATE_OTP_REQUEST_DATA_PARAMETERS);
+
+        final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
+                .resource(ClientApiCollectionConstants.CLIENT_RESOURCE_NAME);
+
+        final JsonElement element = command.parsedJson();
+
+        final String otpCode = this.fromApiJsonHelper.extractStringNamed(ClientApiConstants.otpCodeParamName, element);
+        baseDataValidator.reset().parameter(ClientApiConstants.otpCodeParamName).value(otpCode).notExceedingLengthOf(5);
+
+        final String mobileNo = this.fromApiJsonHelper.extractStringNamed(ClientApiConstants.mobileNoParamName, element);
+        baseDataValidator.reset().parameter(ClientApiConstants.mobileNoParamName).value(mobileNo).ignoreIfNull()
+                .notExceedingLengthOf(50);
+
+        throwExceptionIfValidationWarningsExist(dataValidationErrors);
+
+    }
+
+    public void validatCreateClientPin(final JsonCommand command) {
+
+        final String json = command.json();
+
+        if (StringUtils.isBlank(json)) {
+            throw new InvalidJsonException();
+        }
+
+        final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
+        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json,
+                ClientApiCollectionConstants.VALIDATE_CLIENT_PIN_REQUEST_DATA_PARAMETERS);
+
+        final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
+                .resource(ClientApiCollectionConstants.CLIENT_RESOURCE_NAME);
+
+        final JsonElement element = command.parsedJson();
+
+        final String pinCode = this.fromApiJsonHelper.extractStringNamed(ClientApiConstants.pinCodeParamName, element);
+        baseDataValidator.reset().parameter(ClientApiConstants.pinCodeParamName).value(pinCode).notExceedingLengthOf(5);
+
+        throwExceptionIfValidationWarningsExist(dataValidationErrors);
+
+    }
+
 }

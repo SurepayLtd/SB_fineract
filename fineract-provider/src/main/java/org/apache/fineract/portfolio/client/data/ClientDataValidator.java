@@ -907,6 +907,9 @@ public final class ClientDataValidator {
         final String pinCode = this.fromApiJsonHelper.extractStringNamed(ClientApiConstants.pinCodeParamName, element);
         baseDataValidator.reset().parameter(ClientApiConstants.pinCodeParamName).value(pinCode).notExceedingLengthOf(5);
 
+        final String mobileNo = this.fromApiJsonHelper.extractStringNamed(ClientApiConstants.mobileNoParamName, element);
+        baseDataValidator.reset().parameter(ClientApiConstants.mobileNoParamName).value(mobileNo).notExceedingLengthOf(20);
+
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
 
     }

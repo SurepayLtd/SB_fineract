@@ -266,7 +266,7 @@ public class ClientsApiResource {
     }
 
     @POST
-    @Path("{clientId}/createpin")
+    @Path("{clientId}/createPin")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Create Client PIN", description = "Creates a PIN for a client.")
@@ -286,7 +286,7 @@ public class ClientsApiResource {
     }
 
     @POST
-    @Path("{clientId}/validatepin")
+    @Path("{clientId}/validatePin")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Validate Client PIN", description = "Validates the PIN for a client.")

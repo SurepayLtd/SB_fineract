@@ -1123,13 +1123,17 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 otp = new java.util.Random().nextInt(90000) + 10000;
             } while (this.clientRepository.findByOtpCode(otp) != null);
 
+            if (!client.isActive()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            }
+
             // Send sms message with otp token
             final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
                     .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
             if(!property.isEnabled()){
                 throw new GeneralPlatformDomainRuleException("error.msg.sms.is.not.enabled","Sms is not enabled on this platform. Activate it to proceed");
             }
-//            smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Otp :- "+otp, "Activate Momo Payment"));
+            smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Otp :- "+otp, "Activate Momo Payment"));
 
 
             client.setOtpCode(otp);
@@ -1158,6 +1162,11 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
         this.context.authenticatedUser();
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+
+            if (!client.isActive()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            }
+
             client.setMomoPaymentActive(false);
             client.setLastDeactivatedMomoDate(DateUtils.getBusinessLocalDate());
 
@@ -1165,6 +1174,8 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             client.setOtpCode(null);
             client.setPinCode(null);
             this.clientRepository.saveAndFlush(client);
+
+            smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Momo Payment has been de-activated from you're account", "Momo Payment deactivated"));
 
             return new CommandProcessingResultBuilder() //
                     .withEntityExternalId(client.getExternalId()) //
@@ -1228,11 +1239,21 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
             final Integer pinCode = command.integerValueOfParameterNamed(ClientApiConstants.pinCodeParamName);
             final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
+
             if (!client.isActive()) {
                 throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
             }
             if(!mobileNo.equals(client.getMobileNo())){
                 throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
+            }
+
+            if(client.getOtpCode() == null || !client.isMomoPaymentActive()){
+                throw new GeneralPlatformDomainRuleException("error.msg.client.momo.payment.is.not.active","Client account's momo payment is not active");
+
+            }
+            if(client.getPinCode() != null){
+                throw new GeneralPlatformDomainRuleException("error.msg.invalid.action","Pin setup is blocked. Inquiry from you bank/sacco for help.");
+
             }
 
 
@@ -1243,6 +1264,9 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final Integer pinExpiryMonths = this.configurationDomainService.retrieveMomoPaymentPinExpiryMonths();
             client.setPinExpiryDate(DateUtils.getBusinessLocalDate().plusMonths(pinExpiryMonths));
             this.clientRepository.saveAndFlush(client);
+
+            smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Momo Payment PIN has been setup successfully", "Momo Payment PIN setup"));
+
 
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //

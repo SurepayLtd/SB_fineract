@@ -103,5 +103,51 @@
         </insert>
     </changeSet>
 
+    <changeSet author="johnbosco" id="add_activate_momo-payments">
+    <insert tableName="m_permission">
+        <column name="grouping" value="portfolio" />
+        <column name="code" value="ACTIVATEMOMOPAYMENT_CLIENT" />
+        <column name="entity_name" value="CLIENT" />
+        <column name="action_name" value="ACTIVATEMOMOPAYMENT" />
+        <column name="can_maker_checker" valueBoolean="false" />
+    </insert>
+    </changeSet>
+    <changeSet author="johnbosco" id="add_DEACTIVATEMOMOPAYMENT_momo-payments">
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="DEACTIVATEMOMOPAYMENT_CLIENT" />
+            <column name="entity_name" value="CLIENT" />
+            <column name="action_name" value="DEACTIVATEMOMOPAYMENT" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+    </changeSet>
+    <changeSet author="johnbosco" id="add_VALIDATEOTP_momo-payments">
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="VALIDATEOTP_CLIENT" />
+            <column name="entity_name" value="CLIENT" />
+            <column name="action_name" value="VALIDATEOTP" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+    </changeSet>
+    <changeSet author="johnbosco" id="add_VALIDATECLIENTPIN_momo-payments">
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="VALIDATECLIENTPIN_CLIENT" />
+            <column name="entity_name" value="CLIENT" />
+            <column name="action_name" value="VALIDATECLIENTPIN" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+    </changeSet>
+    <changeSet author="johnbosco" id="add_CREATECLIENTPIN_momo-payments">
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="CREATECLIENTPIN_CLIENT" />
+            <column name="entity_name" value="CLIENT" />
+            <column name="action_name" value="CREATECLIENTPIN" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+    </changeSet>
+
 
 </databaseChangeLog>

@@ -677,6 +677,51 @@ public class CommandWrapperBuilder {
         return this;
     }
 
+    public CommandWrapperBuilder activateMomoPayment(final Long clientId) {
+        this.actionName = "ACTIVATEMOMOPAYMENT";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/activateMomoPayment";
+        return this;
+    }
+
+    public CommandWrapperBuilder deActivateMomoPayment(final Long clientId) {
+        this.actionName = "DEACTIVATEMOMOPAYMENT";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/momopayment";
+        return this;
+    }
+
+    public CommandWrapperBuilder validateOtpCode(final Long clientId) {
+        this.actionName = "VALIDATEOTP";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/validateotp";
+        return this;
+    }
+
+    public CommandWrapperBuilder createClientPin(final Long clientId) {
+        this.actionName = "CREATECLIENTPIN";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/createpin";
+        return this;
+    }
+
+    public CommandWrapperBuilder validateClientPin(final Long clientId) {
+        this.actionName = "VALIDATECLIENTPIN";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/validatepin";
+        return this;
+    }
+
     public CommandWrapperBuilder createDBDatatable(final String json) {
         this.actionName = "CREATE";
         this.entityName = "DATATABLE";

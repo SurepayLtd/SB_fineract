@@ -104,4 +104,9 @@ public class ClientRepositoryWrapper {
         return this.repository.findIdByExternalId(externalId);
     }
 
+
+    public Client findByOtpCode(final Integer otpCode) {
+        return this.repository.findByOtpCode(otpCode);
+    }
+
 }

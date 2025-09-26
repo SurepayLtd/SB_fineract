@@ -527,4 +527,34 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
     public boolean isImmediateChargeAccrualPostMaturityEnabled() {
         return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_IMMEDIATE_CHARGE_ACCRUAL_POST_MATURITY).isEnabled();
     }
+
+    @Override
+    public Integer retrieveMomoPaymentOtpExpiryMinutes() {
+        final String propertyName = "surepay-mobile-money-payment-otp-expiry-minutes";
+        final GlobalConfigurationPropertyData property = getGlobalConfigurationPropertyData(propertyName);
+        int defaultValue = 15;
+        if(property.isEnabled()){
+            int value = property.getValue().intValue();
+            if (value < 1) {
+                return defaultValue;
+            }
+            return value;
+        }
+        return defaultValue;
+    }
+
+    @Override
+    public Integer retrieveMomoPaymentPinExpiryMonths() {
+        final String propertyName = "surepay-momo-payment-pin-expiry-months";
+        final GlobalConfigurationPropertyData property = getGlobalConfigurationPropertyData(propertyName);
+        int defaultValue = 15;
+        if(property.isEnabled()){
+            int value = property.getValue().intValue();
+            if (value < 1) {
+                return defaultValue;
+            }
+            return value;
+        }
+        return defaultValue;
+    }
 }

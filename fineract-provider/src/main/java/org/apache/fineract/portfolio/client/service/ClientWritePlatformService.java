@@ -49,4 +49,14 @@ public interface ClientWritePlatformService {
 
     CommandProcessingResult undoWithdrawal(Long entityId, JsonCommand command);
 
+    CommandProcessingResult activateMomoPayment(Long clientId, JsonCommand command);
+
+    CommandProcessingResult deActivateMomoPayment(Long clientId);
+
+    CommandProcessingResult validateOtpCode(Long clientId, JsonCommand command);
+
+    CommandProcessingResult createClientPin(Long clientId, JsonCommand command);
+
+    CommandProcessingResult validateClientPin(Long clientId, JsonCommand command);
+
 }

@@ -46,4 +46,7 @@ public interface ClientRepository extends JpaRepository<Client, Long>, JpaSpecif
     @Query("SELECT c.id FROM Client c WHERE c.externalId = :externalId")
     Long findIdByExternalId(@Param("externalId") ExternalId externalId);
 
+    @Query("select client from Client client where client.otpCode = :otpCode")
+    Client findByOtpCode(@Param("otpCode") Integer otpCode);
+
 }

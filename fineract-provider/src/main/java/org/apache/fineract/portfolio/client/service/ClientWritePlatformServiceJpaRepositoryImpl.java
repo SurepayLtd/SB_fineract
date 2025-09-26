@@ -38,12 +38,16 @@ import org.apache.fineract.infrastructure.accountnumberformat.domain.AccountNumb
 import org.apache.fineract.infrastructure.accountnumberformat.domain.EntityAccountType;
 import org.apache.fineract.infrastructure.codes.domain.CodeValue;
 import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrapper;
+import org.apache.fineract.infrastructure.configuration.api.GlobalConfigurationConstants;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
+import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationProperty;
+import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
@@ -56,6 +60,9 @@ import org.apache.fineract.infrastructure.event.business.domain.client.ClientCre
 import org.apache.fineract.infrastructure.event.business.domain.client.ClientRejectBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.infrastructure.security.service.HashingPasswordEncoder;
+import org.apache.fineract.notification.data.SmsNotificationData;
+import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
 import org.apache.fineract.organisation.office.domain.Office;
 import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
 import org.apache.fineract.organisation.staff.domain.Staff;
@@ -124,6 +131,8 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     private final BusinessEventNotifierService businessEventNotifierService;
     private final EntityDatatableChecksWritePlatformService entityDatatableChecksWritePlatformService;
     private final ExternalIdFactory externalIdFactory;
+    private final GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper;
+    private final SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService;
 
     @Transactional
     @Override
@@ -1100,5 +1109,220 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 .withEntityId(entityId) //
                 .withEntityExternalId(client.getExternalId()) //
                 .build();
+    }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult activateMomoPayment(final Long clientId, final JsonCommand command) {
+        this.context.authenticatedUser();
+        try {
+            final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+
+            Integer otp;
+            do {
+                otp = new java.util.Random().nextInt(90000) + 10000;
+            } while (this.clientRepository.findByOtpCode(otp) != null);
+
+            if (!client.isActive()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            }
+
+            // Send sms message with otp token
+            final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
+                    .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
+            if(!property.isEnabled()){
+                throw new GeneralPlatformDomainRuleException("error.msg.sms.is.not.enabled","Sms is not enabled on this platform. Activate it to proceed");
+            }
+            smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Otp :- "+otp, "Activate Momo Payment"));
+
+
+            client.setOtpCode(otp);
+            final Integer otpExpiryMinutes = this.configurationDomainService.retrieveMomoPaymentOtpExpiryMinutes();
+            client.setMomoPaymentOtpExpiry(DateUtils.getLocalDateTimeOfTenant().plusMinutes(otpExpiryMinutes));
+            this.clientRepository.saveAndFlush(client);
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityExternalId(client.getExternalId()) //
+                    .withOfficeId(client.officeId()) //
+                    .withClientId(clientId) //
+                    .withEntityId(clientId) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    public CommandProcessingResult deActivateMomoPayment(final Long clientId) {
+        this.context.authenticatedUser();
+        try {
+            final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+
+            if (!client.isActive()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            }
+
+            client.setMomoPaymentActive(false);
+            client.setLastDeactivatedMomoDate(DateUtils.getBusinessLocalDate());
+
+            client.setMomoPaymentOtpExpiry(null);
+            client.setOtpCode(null);
+            client.setPinCode(null);
+            this.clientRepository.saveAndFlush(client);
+
+            smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Momo Payment has been de-activated from you're account", "Momo Payment deactivated"));
+
+            return new CommandProcessingResultBuilder() //
+                    .withEntityExternalId(client.getExternalId()) //
+                    .withOfficeId(client.officeId()) //
+                    .withClientId(clientId) //
+                    .withEntityId(clientId) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    public CommandProcessingResult validateOtpCode(final Long clientId, final JsonCommand command) {
+        this.context.authenticatedUser();
+        this.fromApiJsonDeserializer.validateOtpCode(command);
+        try {
+            final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+            final Integer otpCode = command.integerValueOfParameterNamed(ClientApiConstants.otpCodeParamName);
+            if (!client.isActive()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            }
+            if (client.getOtpCode() == null || !client.getOtpCode().equals(otpCode)) {
+                throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.invalid", "Invalid OTP", "otpCode", otpCode);
+            }
+
+            if (DateUtils.isAfter(DateUtils.getLocalDateTimeOfTenant(), client.getMomoPaymentOtpExpiry())) {
+                throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.expired", "OTP has expired", "otpCode", otpCode);
+            }
+
+
+            client.setMomoPaymentActive(true);
+            client.setLastActivatedMomoDate(DateUtils.getBusinessLocalDate());
+            this.clientRepository.saveAndFlush(client);
+
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityExternalId(client.getExternalId()) //
+                    .withOfficeId(client.officeId()) //
+                    .withClientId(clientId) //
+                    .withEntityId(clientId) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult createClientPin(final Long clientId, final JsonCommand command) {
+        this.context.authenticatedUser();
+        this.fromApiJsonDeserializer.validatCreateClientPin(command);
+        try {
+            final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+            final Integer pinCode = command.integerValueOfParameterNamed(ClientApiConstants.pinCodeParamName);
+            final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
+
+            if (!client.isActive()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            }
+            if(!mobileNo.equals(client.getMobileNo())){
+                throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
+            }
+
+            if(client.getOtpCode() == null || !client.isMomoPaymentActive()){
+                throw new GeneralPlatformDomainRuleException("error.msg.client.momo.payment.is.not.active","Client account's momo payment is not active");
+
+            }
+            if(client.getPinCode() != null){
+                throw new GeneralPlatformDomainRuleException("error.msg.invalid.action","Pin setup is blocked. Inquiry from you bank/sacco for help.");
+
+            }
+
+
+            final String salt = client.getId() + client.getMobileNo();
+            final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
+
+            client.setPinCode(hashedPassword);
+            final Integer pinExpiryMonths = this.configurationDomainService.retrieveMomoPaymentPinExpiryMonths();
+            client.setPinExpiryDate(DateUtils.getBusinessLocalDate().plusMonths(pinExpiryMonths));
+            this.clientRepository.saveAndFlush(client);
+
+            smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Momo Payment PIN has been setup successfully", "Momo Payment PIN setup"));
+
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityExternalId(client.getExternalId()) //
+                    .withOfficeId(client.officeId()) //
+                    .withClientId(clientId) //
+                    .withEntityId(clientId) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult validateClientPin(final Long clientId, final JsonCommand command) {
+        this.context.authenticatedUser();
+        this.fromApiJsonDeserializer.validatCreateClientPin(command);
+        try {
+            final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+            final Integer pinCode = command.integerValueOfParameterNamed("pinCode");
+
+            final String mobileNo = command.stringValueOfParameterNamed("mobileNo");
+            if (!client.isActive()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            }
+            if(!mobileNo.equals(client.getMobileNo())){
+                throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
+            }
+
+            final String salt = client.getId() + client.getMobileNo();
+            final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
+
+            if (client.getPinCode() == null || !client.getPinCode().equals(hashedPassword)) {
+                throw new GeneralPlatformDomainRuleException("validation.msg.client.pin.invalid", "Invalid PIN", "pinCode", pinCode);
+            }
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityExternalId(client.getExternalId()) //
+                    .withOfficeId(client.officeId()) //
+                    .withClientId(clientId) //
+                    .withEntityId(clientId) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return CommandProcessingResult.empty();
+        }
     }
 }

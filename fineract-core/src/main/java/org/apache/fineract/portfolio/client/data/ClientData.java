@@ -125,6 +125,12 @@ public final class ClientData implements Comparable<ClientData>, Serializable {
     private Long legalFormId;
     private LocalDate submittedOnDate;
 
+    private boolean momoPaymentActive;
+    private LocalDate lastActivatedMomoDate;
+    private LocalDate lastDeactivatedMomoDate;
+    private String momoPaymentOtpExpiry;
+
+
     public static ClientData importClientEntityInstance(Long legalFormId, Integer rowIndex, String fullname, Long officeId,
             Long clientTypeId, Long clientClassificationId, Long staffId, Boolean active, LocalDate activationDate,
             LocalDate submittedOnDate, ExternalId externalId, LocalDate dateOfBirth, String mobileNo,
@@ -364,7 +370,7 @@ public final class ClientData implements Comparable<ClientData>, Serializable {
 
     public static ClientData setParentGroups(final ClientData clientData, final Collection<GroupGeneralData> parentGroups,
             final Set<ClientCollateralManagementData> clientCollateralManagements) {
-        return new ClientData(clientData.accountNo, clientData.status, clientData.subStatus, clientData.officeId, clientData.officeName,
+        ClientData client =  new ClientData(clientData.accountNo, clientData.status, clientData.subStatus, clientData.officeId, clientData.officeName,
                 clientData.transferToOfficeId, clientData.transferToOfficeName, clientData.id, clientData.firstname, clientData.middlename,
                 clientData.lastname, clientData.fullname, clientData.displayName, clientData.externalId, clientData.mobileNo,
                 clientData.emailAddress, clientData.dateOfBirth, clientData.gender, clientData.activationDate, clientData.imageId,
@@ -375,6 +381,13 @@ public final class ClientData implements Comparable<ClientData>, Serializable {
                 clientData.clientNonPersonMainBusinessLineOptions, clientData.clientNonPersonDetails, clientData.clientLegalFormOptions,
                 clientData.familyMemberOptions, clientData.legalForm, clientData.address, clientData.isAddressEnabled, null,
                 clientData.isStaff, clientCollateralManagements);
+
+        client.setMomoPaymentActive(clientData.isMomoPaymentActive());
+        client.setLastActivatedMomoDate(clientData.getLastActivatedMomoDate());
+        client.setLastDeactivatedMomoDate(clientData.getLastActivatedMomoDate());
+        client.setMomoPaymentOtpExpiry(clientData.getMomoPaymentOtpExpiry());
+
+        return client;
 
     }
 

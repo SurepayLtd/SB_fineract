@@ -74,6 +74,7 @@ import org.apache.fineract.infrastructure.event.business.domain.savings.SavingsA
 import org.apache.fineract.infrastructure.event.business.domain.savings.SavingsCloseBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.savings.SavingsPostInterestBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
+import org.apache.fineract.infrastructure.security.service.HashingPasswordEncoder;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
@@ -311,7 +312,10 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         final String routingCode = command.stringValueOfParameterNamed("routingCode");
         final Integer paymentTypeId = command.integerValueOfParameterNamed("paymentTypeId");
 
-        validateMomoIntegration(routingCode, paymentTypeId);
+        final Integer pinCode = command.integerValueOfParameterNamed("pinCode");
+        final String mobileNo = command.stringValueOfParameterNamed("mobileNo");
+
+        validateMomoIntegration(routingCode, paymentTypeId,account.getClient(),mobileNo,pinCode);
 
         this.savingsAccountTransactionDataValidator.validateTransactionWithPivotDate(transactionDate, account);
 
@@ -372,8 +376,9 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         final BigDecimal transactionAmount = command.bigDecimalValueOfParameterNamed("transactionAmount");
         final String routingCode = command.stringValueOfParameterNamed("routingCode");
         final Integer paymentTypeId = command.integerValueOfParameterNamed("paymentTypeId");
+        final Integer pinCode = command.integerValueOfParameterNamed("pinCode");
+        final String mobileNo = command.stringValueOfParameterNamed("mobileNo");
 
-        validateMomoIntegration(routingCode, paymentTypeId);
 
         final Locale locale = command.extractLocale();
         final DateTimeFormatter fmt = DateTimeFormatter.ofPattern(command.dateFormat()).withLocale(locale);
@@ -384,6 +389,8 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         final boolean backdatedTxnsAllowedTill = this.savingAccountAssembler.getPivotConfigStatus();
 
         final SavingsAccount account = this.savingAccountAssembler.assembleFrom(savingsId, backdatedTxnsAllowedTill);
+
+        validateMomoIntegration(routingCode, paymentTypeId,account.getClient(),mobileNo,pinCode);
 
         if (account.getGsim() != null) {
             isGsim = true;
@@ -426,7 +433,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
                 .build();
     }
 
-    private void validateMomoIntegration(String routingCode, Integer paymentTypeId) {
+    private void validateMomoIntegration(String routingCode, Integer paymentTypeId,Client client, String mobileNo, Integer pinCode) {
         List<PaymentDetail> payments = paymentDetailRepository.findPaymentDetailByRoutingCode(routingCode);
 
         if (!org.apache.commons.collections4.CollectionUtils.isEmpty(payments) && paymentTypeId == 100) {
@@ -441,6 +448,11 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
             throw new GeneralPlatformDomainRuleException("error.msg.momo.payments.is.disabled",
                     "Surepay Mobile Money payments is disabled");
         }
+        if (property.isEnabled() && paymentTypeId == 100) {
+            validatePinCode(client,mobileNo,pinCode);
+
+        }
+
     }
 
     @Transactional
@@ -1944,6 +1956,28 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
     private void validateReasonForHold(String reasonForBlock) {
         if (StringUtils.isBlank(reasonForBlock)) {
             throw new PlatformDataIntegrityException("Reason For Block is Mandatory", "error.msg.reason.for.block.mandatory");
+        }
+    }
+
+    public void validatePinCode(Client client, String mobileNo, Integer pinCode) {
+        if(mobileNo == null){
+            throw new GeneralPlatformDomainRuleException("error.msg.client.mobile.no.is.missing","Client Mobile Number is required");
+        }
+        if(pinCode == null){
+            throw new GeneralPlatformDomainRuleException("error.msg.client.pinCode.is.missing","Client pinCode is required");
+        }
+        if (!client.isActive()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+        }
+        if(!mobileNo.equals(client.getMobileNo())){
+            throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
+        }
+
+        final String salt = client.getId() + client.getMobileNo();
+        final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
+
+        if (client.getPinCode() == null || !client.getPinCode().equals(hashedPassword)) {
+            throw new GeneralPlatformDomainRuleException("validation.msg.client.pin.invalid", "Invalid PIN", "pinCode", pinCode);
         }
     }
 }

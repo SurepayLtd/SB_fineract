@@ -1138,7 +1138,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             }
             messageId = String.format("ACTIVATED-PIN-%s", UUID.randomUUID());
             if (client.getMobileNo() != null && messageId != null) {
-                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),  "Hello "+client.getFullname()+", Here is the OTP to Activate you're account on Surebanker "+otp, messageId));
+                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),  "Hello "+client.getDisplayName()+", Here is the OTP to Activate you're account on Surebanker "+otp, messageId));
             }
 
 
@@ -1185,7 +1185,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             messageId = String.format("DEACTIVATED-PIN-%s", UUID.randomUUID());
             if (client.getMobileNo() != null && messageId != null) {
-                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Hello "+client.getFullname()+",  Momo Payment has been de-activated from you're account !", messageId));
+                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Hello "+client.getDisplayName()+",  Momo Payment has been de-activated from you're account !", messageId));
             }
 
             return new CommandProcessingResultBuilder() //
@@ -1279,7 +1279,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             messageId = String.format("CREATE-PIN-%s", UUID.randomUUID());
             if (mobileNo != null && messageId != null) {
-                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Hello "+client.getFullname()+",  Momo Payment PIN has been setup successfully on Surebanker !", messageId));
+                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Hello "+client.getDisplayName()+",  Momo Payment PIN has been setup successfully on Surebanker !", messageId));
             }
 
 
@@ -1310,19 +1310,8 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final Integer pinCode = command.integerValueOfParameterNamed("pinCode");
 
             final String mobileNo = command.stringValueOfParameterNamed("mobileNo");
-            if (!client.isActive()) {
-                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
-            }
-            if(!mobileNo.equals(client.getMobileNo())){
-                throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
-            }
 
-            final String salt = client.getId() + client.getMobileNo();
-            final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
-
-            if (client.getPinCode() == null || !client.getPinCode().equals(hashedPassword)) {
-                throw new GeneralPlatformDomainRuleException("validation.msg.client.pin.invalid", "Invalid PIN", "pinCode", pinCode);
-            }
+            validatePinCode(client, mobileNo, pinCode);
 
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //
@@ -1338,6 +1327,28 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
             handleDataIntegrityIssues(command, throwable, dve);
             return CommandProcessingResult.empty();
+        }
+    }
+
+    public void validatePinCode(Client client, String mobileNo, Integer pinCode) {
+        if(mobileNo == null){
+            throw new GeneralPlatformDomainRuleException("error.msg.client.mobile.no.is.missing","Client Mobile Number is required");
+        }
+        if(pinCode == null){
+            throw new GeneralPlatformDomainRuleException("error.msg.client.pinCode.is.missing","Client pinCode is required");
+        }
+        if (!client.isActive()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+        }
+        if(!mobileNo.equals(client.getMobileNo())){
+            throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
+        }
+
+        final String salt = client.getId() + client.getMobileNo();
+        final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
+
+        if (client.getPinCode() == null || !client.getPinCode().equals(hashedPassword)) {
+            throw new GeneralPlatformDomainRuleException("validation.msg.client.pin.invalid", "Invalid PIN", "pinCode", pinCode);
         }
     }
 }

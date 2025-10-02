@@ -312,10 +312,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         final String routingCode = command.stringValueOfParameterNamed("routingCode");
         final Integer paymentTypeId = command.integerValueOfParameterNamed("paymentTypeId");
 
-        final Integer pinCode = command.integerValueOfParameterNamed("pinCode");
-        final String mobileNo = command.stringValueOfParameterNamed("mobileNo");
-
-        validateMomoIntegration(routingCode, paymentTypeId,account.getClient(),mobileNo,pinCode);
+        validateMomoIntegration(routingCode, paymentTypeId);
 
         this.savingsAccountTransactionDataValidator.validateTransactionWithPivotDate(transactionDate, account);
 
@@ -370,6 +367,10 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
 
         this.savingsAccountTransactionDataValidator.validate(command);
 
+        final boolean backdatedTxnsAllowedTill = this.savingAccountAssembler.getPivotConfigStatus();
+
+        final SavingsAccount account = this.savingAccountAssembler.assembleFrom(savingsId, backdatedTxnsAllowedTill);
+
         boolean isGsim = false;
 
         final LocalDate transactionDate = command.localDateValueOfParameterNamed("transactionDate");
@@ -384,13 +385,11 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         final DateTimeFormatter fmt = DateTimeFormatter.ofPattern(command.dateFormat()).withLocale(locale);
 
         final Map<String, Object> changes = new LinkedHashMap<>();
+
+        validateMomoIntegration(routingCode, paymentTypeId);
+        validateMomoPin(paymentTypeId, account.getClient(), mobileNo, pinCode);
+
         final PaymentDetail paymentDetail = this.paymentDetailWritePlatformService.createAndPersistPaymentDetail(command, changes);
-
-        final boolean backdatedTxnsAllowedTill = this.savingAccountAssembler.getPivotConfigStatus();
-
-        final SavingsAccount account = this.savingAccountAssembler.assembleFrom(savingsId, backdatedTxnsAllowedTill);
-
-        validateMomoIntegration(routingCode, paymentTypeId,account.getClient(),mobileNo,pinCode);
 
         if (account.getGsim() != null) {
             isGsim = true;
@@ -433,14 +432,19 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
                 .build();
     }
 
-    private void validateMomoIntegration(String routingCode, Integer paymentTypeId,Client client, String mobileNo, Integer pinCode) {
-        List<PaymentDetail> payments = paymentDetailRepository.findPaymentDetailByRoutingCode(routingCode);
+    private void validateMomoIntegration(String routingCode, Integer paymentTypeId) {
+        List<PaymentDetail> payments = this.paymentDetailRepository.findPaymentDetailByRoutingCode(routingCode);
 
         if (!org.apache.commons.collections4.CollectionUtils.isEmpty(payments) && paymentTypeId == 100) {
             throw new GeneralPlatformDomainRuleException("error.mgs.transaction.already.exist",
                     "Duplicate Transaction detected. Ref :-" + routingCode);
         }
 
+
+
+    }
+
+    private void validateMomoPin(Integer paymentTypeId, Client client, String mobileNo, Integer pinCode) {
         final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
                 .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SURE_MOBILE_MONEY_PAYMENT);
 
@@ -449,10 +453,9 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
                     "Surepay Mobile Money payments is disabled");
         }
         if (property.isEnabled() && paymentTypeId == 100) {
-            validatePinCode(client,mobileNo,pinCode);
+            validatePinCode(client, mobileNo, pinCode);
 
         }
-
     }
 
     @Transactional

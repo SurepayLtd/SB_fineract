@@ -724,7 +724,11 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         if (savingsAccountTransaction == null) {
             throw new SavingsAccountTransactionNotFoundException(savingsId, transactionId);
         }
-
+        if(savingsAccountTransaction.getPaymentDetail() != null
+                && savingsAccountTransaction.getPaymentDetail().getPaymentType() != null
+                && savingsAccountTransaction.getPaymentDetail().getPaymentType().getId() == 100){
+            throw new GeneralPlatformDomainRuleException("error.msg.undo.revoked.due.mobile.money.integration","This Transaction can not be reversed because it's from Momo integration.");
+        }
         this.savingsAccountTransactionDataValidator.validateTransactionWithPivotDate(savingsAccountTransaction.getTransactionDate(),
                 account);
 

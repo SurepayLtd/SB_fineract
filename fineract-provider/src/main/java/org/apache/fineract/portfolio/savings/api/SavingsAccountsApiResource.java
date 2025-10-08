@@ -53,24 +53,32 @@ import org.apache.fineract.commands.service.PortfolioCommandSourceWritePlatformS
 import org.apache.fineract.infrastructure.bulkimport.data.GlobalEntityType;
 import org.apache.fineract.infrastructure.bulkimport.service.BulkImportWorkbookPopulatorService;
 import org.apache.fineract.infrastructure.bulkimport.service.BulkImportWorkbookService;
+import org.apache.fineract.infrastructure.configuration.api.GlobalConfigurationConstants;
+import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationProperty;
+import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.api.ApiParameterHelper;
 import org.apache.fineract.infrastructure.core.api.ApiRequestParameterHelper;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.UploadRequest;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.UnrecognizedQueryParamException;
 import org.apache.fineract.infrastructure.core.serialization.ApiRequestJsonSerializationSettings;
 import org.apache.fineract.infrastructure.core.serialization.DefaultToApiJsonSerializer;
 import org.apache.fineract.infrastructure.core.service.ExternalIdFactory;
 import org.apache.fineract.infrastructure.core.service.Page;
 import org.apache.fineract.infrastructure.core.service.SearchParameters;
+import org.apache.fineract.infrastructure.security.service.HashingPasswordEncoder;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.infrastructure.security.service.SqlValidator;
+import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.savings.DepositAccountType;
 import org.apache.fineract.portfolio.savings.SavingsApiConstants;
 import org.apache.fineract.portfolio.savings.data.SavingsAccountChargeData;
 import org.apache.fineract.portfolio.savings.data.SavingsAccountData;
 import org.apache.fineract.portfolio.savings.data.SavingsAccountTransactionData;
+import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
+import org.apache.fineract.portfolio.savings.domain.SavingsAccountAssembler;
 import org.apache.fineract.portfolio.savings.exception.SavingsAccountNotFoundException;
 import org.apache.fineract.portfolio.savings.service.SavingsAccountChargeReadPlatformService;
 import org.apache.fineract.portfolio.savings.service.SavingsAccountReadPlatformService;
@@ -94,6 +102,8 @@ public class SavingsAccountsApiResource {
     private final BulkImportWorkbookService bulkImportWorkbookService;
     private final BulkImportWorkbookPopulatorService bulkImportWorkbookPopulatorService;
     private final SqlValidator sqlValidator;
+    private final GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper;
+    private final SavingsAccountAssembler savingAccountAssembler;
 
     @GET
     @Path("template")
@@ -481,7 +491,15 @@ public class SavingsAccountsApiResource {
                 uploadedInputStream, fileDetail, locale, dateFormat);
         return toApiJsonSerializer.serialize(importDocumentId);
     }
+    private String retrieveSavingAccountSecured(Long accountId, String externalId, boolean staffInSelectedOfficeOnly, String chargeStatus,
+                                         UriInfo uriInfo,String mobileNo,Integer pinCode) {
 
+        final boolean backdatedTxnsAllowedTill = this.savingAccountAssembler.getPivotConfigStatus();
+        final SavingsAccount account = this.savingAccountAssembler.assembleFrom(accountId, backdatedTxnsAllowedTill);
+
+        validateMomoPin(account.getClient(),mobileNo,pinCode);
+        return retrieveSavingAccount(accountId, null, staffInSelectedOfficeOnly, chargeStatus, uriInfo);
+    }
     private String retrieveSavingAccount(Long accountId, String externalId, boolean staffInSelectedOfficeOnly, String chargeStatus,
             UriInfo uriInfo) {
         context.authenticatedUser().validateHasReadPermission(SavingsApiConstants.SAVINGS_ACCOUNT_RESOURCE_NAME);
@@ -668,4 +686,59 @@ public class SavingsAccountsApiResource {
 
         return SavingsAccountData.withTemplateOptions(savingsAccount, templateData, transactions, charges);
     }
+
+    @GET
+    @Path("secured/{accountId}/{mobileNo}/{pinCode}")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Retrieve a savings application/account", description = "Retrieves a savings application/account\n\n"
+            + "Example Requests :\n" + "\n" + "savingsaccounts/1\n" + "\n" + "\n" + "savingsaccounts/1?associations=all")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = SavingsAccountsApiResourceSwagger.GetSavingsAccountsAccountIdResponse.class))) })
+    public String retrieveOneSecured(@PathParam("accountId") @Parameter(description = "accountId") final Long accountId,
+                              @DefaultValue("false") @QueryParam("staffInSelectedOfficeOnly") @Parameter(description = "staffInSelectedOfficeOnly") final boolean staffInSelectedOfficeOnly,
+                              @DefaultValue("all") @QueryParam("chargeStatus") @Parameter(description = "chargeStatus") final String chargeStatus,
+                              @PathParam("mobileNo") @Parameter(description = "mobileNo") final String mobileNo,
+                              @PathParam("pinCode") @Parameter(description = "pinCode") final Integer pinCode,
+                              @Context final UriInfo uriInfo) {
+
+        return retrieveSavingAccountSecured(accountId, null, staffInSelectedOfficeOnly, chargeStatus, uriInfo,mobileNo,pinCode);
+    }
+
+    private void validateMomoPin(Client client, String mobileNo, Integer pinCode) {
+        final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
+                .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SURE_MOBILE_MONEY_PAYMENT);
+
+        if (!property.isEnabled()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.momo.payments.is.disabled",
+                    "Surepay Mobile Money payments is disabled");
+        }
+        if (property.isEnabled()) {
+            validatePinCode(client, mobileNo, pinCode);
+
+        }
+    }
+
+    public void validatePinCode(Client client, String mobileNo, Integer pinCode) {
+        if(mobileNo == null){
+            throw new GeneralPlatformDomainRuleException("error.msg.client.mobile.no.is.missing","Client Mobile Number is required");
+        }
+        if(pinCode == null){
+            throw new GeneralPlatformDomainRuleException("error.msg.client.pinCode.is.missing","Client pinCode is required");
+        }
+        if (!client.isActive()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+        }
+        if(!mobileNo.equals(client.getMobileNo())){
+            throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
+        }
+
+        final String salt = client.getId() + client.getMobileNo();
+        final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
+
+        if (client.getPinCode() == null || !client.getPinCode().equals(hashedPassword)) {
+            throw new GeneralPlatformDomainRuleException("validation.msg.client.pin.invalid", "Invalid PIN", "pinCode", pinCode);
+        }
+    }
+
 }

@@ -45,6 +45,7 @@ import org.apache.fineract.infrastructure.core.serialization.ToApiJsonSerializer
 import org.apache.fineract.infrastructure.security.constants.TwoFactorConstants;
 import org.apache.fineract.infrastructure.security.data.AuthenticatedUserData;
 import org.apache.fineract.infrastructure.security.service.SpringSecurityPlatformSecurityContext;
+import org.apache.fineract.infrastructure.security.service.jwt.JwtIssuerService;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
 import org.apache.fineract.useradministration.data.RoleData;
 import org.apache.fineract.useradministration.domain.AppUser;
@@ -79,6 +80,7 @@ public class AuthenticationApiResource {
     private final ToApiJsonSerializer<AuthenticatedUserData> apiJsonSerializerService;
     private final SpringSecurityPlatformSecurityContext springSecurityPlatformSecurityContext;
     private final ClientReadPlatformService clientReadPlatformService;
+    private final JwtIssuerService jwtIssuerService;
 
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -147,7 +149,8 @@ public class AuthenticationApiResource {
                         .setAuthenticated(true)
                         .setBase64EncodedAuthenticationKey(new String(base64EncodedAuthenticationKey, StandardCharsets.UTF_8))
                         .setTwoFactorAuthenticationRequired(isTwoFactorRequired)
-                        .setClients(returnClientList ? clientReadPlatformService.retrieveUserClients(userId) : null);
+                        .setClients(returnClientList ? clientReadPlatformService.retrieveUserClients(userId) : null)
+                        .setToken(jwtIssuerService.issueToken(principal));
 
             }
 

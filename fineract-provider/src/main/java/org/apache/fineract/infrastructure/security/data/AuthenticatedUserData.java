@@ -63,4 +63,6 @@ public class AuthenticatedUserData {
 
     @SuppressWarnings("unused")
     private boolean isTwoFactorAuthenticationRequired;
+
+    private String token;
 }

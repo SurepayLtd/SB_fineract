@@ -45,11 +45,9 @@ import org.apache.fineract.infrastructure.security.data.PlatformRequestLog;
 import org.apache.fineract.infrastructure.security.filter.InsecureTwoFactorAuthenticationFilter;
 import org.apache.fineract.infrastructure.security.filter.TenantAwareBasicAuthenticationFilter;
 import org.apache.fineract.infrastructure.security.filter.TwoFactorAuthenticationFilter;
-import org.apache.fineract.infrastructure.security.service.BasicAuthTenantDetailsService;
-import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
-import org.apache.fineract.infrastructure.security.service.TenantAwareJpaPlatformUserDetailsService;
-import org.apache.fineract.infrastructure.security.service.TwoFactorService;
+import org.apache.fineract.infrastructure.security.service.*;
 import org.apache.fineract.notification.service.UserNotificationService;
+import org.apache.fineract.useradministration.domain.AppUserRepositoryWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
@@ -118,6 +116,12 @@ public class SecurityConfig {
     private PlatformSecurityContext context;
     @Autowired
     private IdempotencyStoreHelper idempotencyStoreHelper;
+    @Autowired
+    private JwtHelper jwtTokenUtil;
+    @Autowired
+    private TenantAwareJpaPlatformUserDetailsService jwtUserDetailsService;
+    @Autowired
+    private AppUserRepositoryWrapper userRepository;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -193,7 +197,7 @@ public class SecurityConfig {
     public TenantAwareBasicAuthenticationFilter tenantAwareBasicAuthenticationFilter() throws Exception {
         TenantAwareBasicAuthenticationFilter filter = new TenantAwareBasicAuthenticationFilter(authenticationManagerBean(),
                 basicAuthenticationEntryPoint(), toApiJsonSerializer, configurationDomainService, cacheWritePlatformService,
-                userNotificationService, basicAuthTenantDetailsService, businessDateReadPlatformService);
+                userNotificationService, basicAuthTenantDetailsService, businessDateReadPlatformService,jwtTokenUtil,jwtUserDetailsService,userRepository);
         filter.setRequestMatcher(antMatcher("/api/**"));
         return filter;
     }

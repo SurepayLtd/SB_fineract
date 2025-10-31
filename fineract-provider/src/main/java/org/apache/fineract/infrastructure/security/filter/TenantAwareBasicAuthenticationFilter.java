@@ -19,6 +19,7 @@
 package org.apache.fineract.infrastructure.security.filter;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,8 +27,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.HashMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.StopWatch;
@@ -42,8 +41,13 @@ import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.infrastructure.security.data.PlatformRequestLog;
 import org.apache.fineract.infrastructure.security.exception.InvalidTenantIdentifierException;
 import org.apache.fineract.infrastructure.security.service.BasicAuthTenantDetailsService;
+import org.apache.fineract.infrastructure.security.service.JwtHelper;
+import org.apache.fineract.infrastructure.security.service.TenantAwareJpaPlatformUserDetailsService;
 import org.apache.fineract.notification.service.UserNotificationService;
 import org.apache.fineract.useradministration.domain.AppUser;
+import org.apache.fineract.useradministration.domain.AppUserRepositoryWrapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
@@ -53,10 +57,6 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.apache.fineract.useradministration.domain.AppUserRepositoryWrapper;
-import org.apache.fineract.infrastructure.security.service.JwtHelper;
-import org.apache.fineract.infrastructure.security.service.TenantAwareJpaPlatformUserDetailsService;
-import io.jsonwebtoken.ExpiredJwtException;
 
 /**
  * A customised version of spring security's {@link BasicAuthenticationFilter}.
@@ -95,7 +95,7 @@ public class TenantAwareBasicAuthenticationFilter extends OncePerRequestFilter {
             final AuthenticationEntryPoint authenticationEntryPoint, ToApiJsonSerializer<PlatformRequestLog> toApiJsonSerializer,
             ConfigurationDomainService configurationDomainService, CacheWritePlatformService cacheWritePlatformService,
             UserNotificationService userNotificationService, BasicAuthTenantDetailsService basicAuthTenantDetailsService,
-            BusinessDateReadPlatformService businessDateReadPlatformService,final JwtHelper jwtTokenUtil,
+            BusinessDateReadPlatformService businessDateReadPlatformService, final JwtHelper jwtTokenUtil,
             final TenantAwareJpaPlatformUserDetailsService jwtUserDetailsService, final AppUserRepositoryWrapper userRepository) {
         super();
         this.toApiJsonSerializer = toApiJsonSerializer;
@@ -146,7 +146,7 @@ public class TenantAwareBasicAuthenticationFilter extends OncePerRequestFilter {
                     HashMap<BusinessDateType, LocalDate> businessDates = businessDateReadPlatformService.getBusinessDates();
                     ThreadLocalContextUtil.setBusinessDates(businessDates);
 
-                    //set JWT token if present
+                    // set JWT token if present
 
                     final String requestTokenHeader = request.getHeader("Authorization");
                     String pathURL = request.getRequestURI();
@@ -171,8 +171,6 @@ public class TenantAwareBasicAuthenticationFilter extends OncePerRequestFilter {
                             onAuthenticationFailureJwt(response, "JWT Token does not begin with Bearer String");
                         }
                     }
-
-
 
                     if (!FIRST_REQUEST_PROCESSED) {
                         final String baseUrl = request.getRequestURL().toString().replace(request.getPathInfo(), "/");
@@ -201,11 +199,9 @@ public class TenantAwareBasicAuthenticationFilter extends OncePerRequestFilter {
             task.stop();
             final PlatformRequestLog msg = PlatformRequestLog.from(task, request);
             log.debug("{}", toApiJsonSerializer.serialize(msg));
-            
 
         }
     }
-
 
     protected void onSuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, Authentication authResult)
             throws IOException {
@@ -227,6 +223,7 @@ public class TenantAwareBasicAuthenticationFilter extends OncePerRequestFilter {
             throw new BadCredentialsException("User not authorised to use the requested resource.");
         }
     }
+
     public void onAuthenticationFailureJwt(HttpServletResponse response, String errorMessage) throws IOException {
         LOG.error(errorMessage);
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, errorMessage);

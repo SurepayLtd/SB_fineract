@@ -34,9 +34,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -44,11 +42,14 @@ import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.core.serialization.ToApiJsonSerializer;
 import org.apache.fineract.infrastructure.security.constants.TwoFactorConstants;
 import org.apache.fineract.infrastructure.security.data.AuthenticatedUserData;
+import org.apache.fineract.infrastructure.security.service.JwtHelper;
 import org.apache.fineract.infrastructure.security.service.SpringSecurityPlatformSecurityContext;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
 import org.apache.fineract.useradministration.data.RoleData;
 import org.apache.fineract.useradministration.domain.AppUser;
 import org.apache.fineract.useradministration.domain.Role;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -57,9 +58,6 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.fineract.infrastructure.security.service.JwtHelper;
 
 @Component
 @ConditionalOnProperty("fineract.security.basicauth.enabled")
@@ -67,6 +65,7 @@ import org.apache.fineract.infrastructure.security.service.JwtHelper;
 @Tag(name = "Authentication HTTP Basic", description = "An API capability that allows client applications to verify authentication details using HTTP Basic Authentication.")
 @RequiredArgsConstructor
 public class AuthenticationApiResource {
+
     private static final Logger log = LoggerFactory.getLogger(AuthenticationApiResource.class);
 
     @Value("${fineract.security.2fa.enabled}")
@@ -119,7 +118,6 @@ public class AuthenticationApiResource {
                 permissions.add(grantedAuthority.getAuthority());
             }
 
-
             final AppUser principal = (AppUser) authenticationCheck.getPrincipal();
 
             final String base64EncodedAuthenticationKey = jwtTokenUtil.generateToken(principal);
@@ -144,16 +142,15 @@ public class AuthenticationApiResource {
             if (this.springSecurityPlatformSecurityContext.doesPasswordHasToBeRenewed(principal)) {
 
                 authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setUserId(userId)
-                        .setBase64EncodedAuthenticationKey(base64EncodedAuthenticationKey)
-                        .setAuthenticated(true).setShouldRenewPassword(true).setTwoFactorAuthenticationRequired(isTwoFactorRequired);
+                        .setBase64EncodedAuthenticationKey(base64EncodedAuthenticationKey).setAuthenticated(true)
+                        .setShouldRenewPassword(true).setTwoFactorAuthenticationRequired(isTwoFactorRequired);
 
             } else {
 
                 authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setOfficeId(officeId)
                         .setOfficeName(officeName).setStaffId(staffId).setStaffDisplayName(staffDisplayName)
                         .setOrganisationalRole(organisationalRole).setRoles(roles).setPermissions(permissions).setUserId(principal.getId())
-                        .setAuthenticated(true)
-                        .setBase64EncodedAuthenticationKey(base64EncodedAuthenticationKey)
+                        .setAuthenticated(true).setBase64EncodedAuthenticationKey(base64EncodedAuthenticationKey)
                         .setTwoFactorAuthenticationRequired(isTwoFactorRequired)
                         .setClients(returnClientList ? clientReadPlatformService.retrieveUserClients(userId) : null);
 

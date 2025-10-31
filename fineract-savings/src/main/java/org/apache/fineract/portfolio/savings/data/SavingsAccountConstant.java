@@ -46,10 +46,10 @@ public class SavingsAccountConstant extends SavingsApiConstants {
      * get response parameters to match those of request parameters.
      */
 
-    protected static final Set<String> SAVINGS_ACCOUNT_TRANSACTION_REQUEST_DATA_PARAMETERS = new HashSet<>(
-            Arrays.asList(localeParamName, dateFormatParamName, transactionDateParamName, transactionAmountParamName,
-                    paymentTypeIdParamName, transactionAccountNumberParamName, checkNumberParamName, routingCodeParamName,
-                    receiptNumberParamName, bankNumberParamName, retailEntriesParamName, childAccountIdParamName, noteParamName,MOBILE_NUMBER_PARAM,PIN_CODE_PARAM));
+    protected static final Set<String> SAVINGS_ACCOUNT_TRANSACTION_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName,
+            dateFormatParamName, transactionDateParamName, transactionAmountParamName, paymentTypeIdParamName,
+            transactionAccountNumberParamName, checkNumberParamName, routingCodeParamName, receiptNumberParamName, bankNumberParamName,
+            retailEntriesParamName, childAccountIdParamName, noteParamName, MOBILE_NUMBER_PARAM, PIN_CODE_PARAM));
 
     protected static final Set<String> SAVINGS_ACCOUNT_TRANSACTION_RESPONSE_DATA_PARAMETERS = new HashSet<>(
             Arrays.asList(idParamName, accountNoParamName));

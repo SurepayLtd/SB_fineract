@@ -879,8 +879,7 @@ public final class ClientDataValidator {
         baseDataValidator.reset().parameter(ClientApiConstants.otpCodeParamName).value(otpCode).notExceedingLengthOf(5);
 
         final String mobileNo = this.fromApiJsonHelper.extractStringNamed(ClientApiConstants.mobileNoParamName, element);
-        baseDataValidator.reset().parameter(ClientApiConstants.mobileNoParamName).value(mobileNo).ignoreIfNull()
-                .notExceedingLengthOf(50);
+        baseDataValidator.reset().parameter(ClientApiConstants.mobileNoParamName).value(mobileNo).ignoreIfNull().notExceedingLengthOf(50);
 
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
 

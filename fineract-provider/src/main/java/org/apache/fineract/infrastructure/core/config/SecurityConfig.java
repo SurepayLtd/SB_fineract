@@ -197,7 +197,8 @@ public class SecurityConfig {
     public TenantAwareBasicAuthenticationFilter tenantAwareBasicAuthenticationFilter() throws Exception {
         TenantAwareBasicAuthenticationFilter filter = new TenantAwareBasicAuthenticationFilter(authenticationManagerBean(),
                 basicAuthenticationEntryPoint(), toApiJsonSerializer, configurationDomainService, cacheWritePlatformService,
-                userNotificationService, basicAuthTenantDetailsService, businessDateReadPlatformService,jwtTokenUtil,jwtUserDetailsService,userRepository);
+                userNotificationService, basicAuthTenantDetailsService, businessDateReadPlatformService, jwtTokenUtil,
+                jwtUserDetailsService, userRepository);
         filter.setRequestMatcher(antMatcher("/api/**"));
         return filter;
     }

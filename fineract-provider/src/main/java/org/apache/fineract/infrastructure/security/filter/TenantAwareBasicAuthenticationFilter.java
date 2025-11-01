@@ -57,6 +57,10 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+
 
 /**
  * A customised version of spring security's {@link BasicAuthenticationFilter}.
@@ -114,6 +118,7 @@ public class TenantAwareBasicAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        Exception exception = null;
         final StopWatch task = new StopWatch();
         task.start();
 
@@ -184,6 +189,27 @@ public class TenantAwareBasicAuthenticationFilter extends OncePerRequestFilter {
                         }
                         TenantAwareBasicAuthenticationFilter.FIRST_REQUEST_PROCESSED = true;
                     }
+
+                    if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                        UserDetails userDetails = this.jwtUserDetailsService.loadUserByUsername(username);
+                        AppUser user = this.userRepository.fetchUserByUsername(username);
+                        if (jwtTokenUtil.validateToken(jwtToken, userDetails) ) {
+
+                            UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities());
+
+                            usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+
+                            // Deal with Notification and Refresh Token
+                            onSuccessfulAuthentication(request, response);
+
+                        } else {
+                            onAuthenticationFailureJwt(response, "JWT Token not authorized !!");
+                        }
+
+                    }
+
                 }
 
                 filterChain.doFilter(request, response);
@@ -194,31 +220,35 @@ public class TenantAwareBasicAuthenticationFilter extends OncePerRequestFilter {
 
             response.addHeader("WWW-Authenticate", "Basic realm=\"" + "Fineract Platform API" + "\"");
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+        } catch (final Exception e) {
+        exception = e;
         } finally {
             ThreadLocalContextUtil.reset();
             task.stop();
             final PlatformRequestLog msg = PlatformRequestLog.from(task, request);
             log.debug("{}", toApiJsonSerializer.serialize(msg));
 
+            if (exception != null) {
+                try {
+                    throw exception;
+                } catch (Exception e) {
+                    LOG.error(e.getMessage());
+                }
+            }
         }
     }
 
-    protected void onSuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, Authentication authResult)
-            throws IOException {
-
-        AppUser user = (AppUser) authResult.getPrincipal();
+    private void onSuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response) {
+        AppUser user = this.userRepository.fetchSystemUser();
 
         if (userNotificationService.hasUnreadUserNotifications(user.getId())) {
             response.addHeader("X-Notification-Refresh", "true");
         } else {
             response.addHeader("X-Notification-Refresh", "false");
         }
-
         String pathURL = request.getRequestURI();
         boolean isSelfServiceRequest = pathURL != null && pathURL.contains("/self/");
-
         boolean notAllowed = (isSelfServiceRequest && !user.isSelfServiceUser()) || (!isSelfServiceRequest && user.isSelfServiceUser());
-
         if (notAllowed) {
             throw new BadCredentialsException("User not authorised to use the requested resource.");
         }

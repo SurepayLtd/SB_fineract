@@ -44,6 +44,7 @@ import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.core.serialization.ToApiJsonSerializer;
 import org.apache.fineract.infrastructure.security.constants.TwoFactorConstants;
 import org.apache.fineract.infrastructure.security.data.AuthenticatedUserData;
+import org.apache.fineract.infrastructure.security.service.JwtTokenUtil;
 import org.apache.fineract.infrastructure.security.service.SpringSecurityPlatformSecurityContext;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
 import org.apache.fineract.useradministration.data.RoleData;
@@ -114,8 +115,9 @@ public class AuthenticationApiResource {
                 permissions.add(grantedAuthority.getAuthority());
             }
 
-            final byte[] base64EncodedAuthenticationKey = Base64.getEncoder()
-                    .encode((request.username + ":" + request.password).getBytes(StandardCharsets.UTF_8));
+            // Generate JWT token and encode it in Base64
+            String jwtToken = JwtTokenUtil.generateToken(request.username);
+            String base64JwtToken = Base64.getEncoder().encodeToString(jwtToken.getBytes(StandardCharsets.UTF_8));
 
             final AppUser principal = (AppUser) authenticationCheck.getPrincipal();
             final Collection<RoleData> roles = new ArrayList<>();
@@ -137,20 +139,17 @@ public class AuthenticationApiResource {
             Long userId = principal.getId();
             if (this.springSecurityPlatformSecurityContext.doesPasswordHasToBeRenewed(principal)) {
                 authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setUserId(userId)
-                        .setBase64EncodedAuthenticationKey(new String(base64EncodedAuthenticationKey, StandardCharsets.UTF_8))
+                        .setBase64EncodedAuthenticationKey(base64JwtToken)
                         .setAuthenticated(true).setShouldRenewPassword(true).setTwoFactorAuthenticationRequired(isTwoFactorRequired);
             } else {
-
                 authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setOfficeId(officeId)
                         .setOfficeName(officeName).setStaffId(staffId).setStaffDisplayName(staffDisplayName)
                         .setOrganisationalRole(organisationalRole).setRoles(roles).setPermissions(permissions).setUserId(principal.getId())
                         .setAuthenticated(true)
-                        .setBase64EncodedAuthenticationKey(new String(base64EncodedAuthenticationKey, StandardCharsets.UTF_8))
+                        .setBase64EncodedAuthenticationKey(base64JwtToken)
                         .setTwoFactorAuthenticationRequired(isTwoFactorRequired)
                         .setClients(returnClientList ? clientReadPlatformService.retrieveUserClients(userId) : null);
-
             }
-
         }
 
         return this.apiJsonSerializerService.serialize(authenticatedUserData);

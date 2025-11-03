@@ -116,7 +116,7 @@ public class AuthenticationApiResource {
             }
 
             // Generate JWT token and encode it in Base64
-            String jwtToken = JwtTokenUtil.generateToken(request.username);
+            String jwtToken = JwtTokenUtil.generateToken(request.username, permissions);
             String base64JwtToken = Base64.getEncoder().encodeToString(jwtToken.getBytes(StandardCharsets.UTF_8));
 
             final AppUser principal = (AppUser) authenticationCheck.getPrincipal();
@@ -140,6 +140,7 @@ public class AuthenticationApiResource {
             if (this.springSecurityPlatformSecurityContext.doesPasswordHasToBeRenewed(principal)) {
                 authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setUserId(userId)
                         .setBase64EncodedAuthenticationKey(base64JwtToken)
+                        .setJwtToken(jwtToken)
                         .setAuthenticated(true).setShouldRenewPassword(true).setTwoFactorAuthenticationRequired(isTwoFactorRequired);
             } else {
                 authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setOfficeId(officeId)
@@ -147,6 +148,7 @@ public class AuthenticationApiResource {
                         .setOrganisationalRole(organisationalRole).setRoles(roles).setPermissions(permissions).setUserId(principal.getId())
                         .setAuthenticated(true)
                         .setBase64EncodedAuthenticationKey(base64JwtToken)
+                        .setJwtToken(jwtToken)
                         .setTwoFactorAuthenticationRequired(isTwoFactorRequired)
                         .setClients(returnClientList ? clientReadPlatformService.retrieveUserClients(userId) : null);
             }

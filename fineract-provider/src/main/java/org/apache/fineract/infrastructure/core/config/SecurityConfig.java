@@ -51,6 +51,7 @@ import org.apache.fineract.infrastructure.security.service.PlatformSecurityConte
 import org.apache.fineract.infrastructure.security.service.TenantAwareJpaPlatformUserDetailsService;
 import org.apache.fineract.infrastructure.security.service.TwoFactorService;
 import org.apache.fineract.notification.service.UserNotificationService;
+import org.apache.fineract.useradministration.domain.AppUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
@@ -120,6 +121,14 @@ public class SecurityConfig {
     @Autowired
     private IdempotencyStoreHelper idempotencyStoreHelper;
 
+    @Autowired
+    private AppUserRepository appUserRepository;
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(appUserRepository);
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http //
@@ -140,7 +149,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults()).csrf((csrf) -> csrf.disable()) // NOSONAR only creating a service that
                                                                                 // is used by non-browser clients
                 .sessionManagement((smc) -> smc.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //
-                .addFilterBefore(new JwtAuthenticationFilter(), TenantAwareBasicAuthenticationFilter.class) // JWT filter before Basic Auth
+                .addFilterBefore(jwtAuthenticationFilter(), TenantAwareBasicAuthenticationFilter.class) // Use the bean
                 .addFilterBefore(tenantAwareBasicAuthenticationFilter(), SecurityContextHolderFilter.class) //
                 .addFilterAfter(requestResponseFilter(), ExceptionTranslationFilter.class) //
                 .addFilterAfter(correlationHeaderFilter(), RequestResponseFilter.class) //

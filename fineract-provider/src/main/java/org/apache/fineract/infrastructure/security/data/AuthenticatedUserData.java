@@ -63,4 +63,11 @@ public class AuthenticatedUserData {
 
     @SuppressWarnings("unused")
     private boolean isTwoFactorAuthenticationRequired;
+
+    private String jwtToken;
+
+    public AuthenticatedUserData setJwtToken(String jwtToken) {
+        this.jwtToken = jwtToken;
+        return this;
+    }
 }

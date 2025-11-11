@@ -1,7 +1,6 @@
 package org.apache.fineract.infrastructure.security.service;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,10 +30,11 @@ public class JwtTokenUtil {
         key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
     }
 
-    public static String generateToken(String username, Collection<String> authorities) {
+    public static String generateToken(String username, Long userId, Collection<String> roles) {
         return Jwts.builder()
                 .setSubject(username)
-                .claim("authorities", authorities)
+                .claim("userId", userId)
+                .claim("roles", roles)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(key)
@@ -46,11 +46,24 @@ public class JwtTokenUtil {
                 .parseClaimsJws(token).getBody().getSubject();
     }
 
-    public static List<String> getAuthoritiesFromToken(String token) {
-        Object authorities = Jwts.parserBuilder().setSigningKey(key).build()
-                .parseClaimsJws(token).getBody().get("authorities");
-        if (authorities instanceof List<?>) {
-            return ((List<?>) authorities).stream().map(Object::toString).toList();
+    public static Long getUserIdFromToken(String token) {
+        Object userId = Jwts.parserBuilder().setSigningKey(key).build()
+                .parseClaimsJws(token).getBody().get("userId");
+        if (userId instanceof Number) {
+            return ((Number) userId).longValue();
+        }
+        try {
+            return Long.parseLong(userId.toString());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static List<String> getRolesFromToken(String token) {
+        Object roles = Jwts.parserBuilder().setSigningKey(key).build()
+                .parseClaimsJws(token).getBody().get("roles");
+        if (roles instanceof List<?>) {
+            return ((List<?>) roles).stream().map(Object::toString).toList();
         }
         return List.of();
     }

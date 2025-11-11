@@ -47,7 +47,6 @@ import org.apache.fineract.infrastructure.security.data.AuthenticatedUserData;
 import org.apache.fineract.infrastructure.security.service.JwtTokenUtil;
 import org.apache.fineract.infrastructure.security.service.SpringSecurityPlatformSecurityContext;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
-import org.apache.fineract.useradministration.data.RoleData;
 import org.apache.fineract.useradministration.domain.AppUser;
 import org.apache.fineract.useradministration.domain.Role;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -111,20 +110,18 @@ public class AuthenticationApiResource {
 
         if (authenticationCheck.isAuthenticated()) {
             final Collection<GrantedAuthority> authorities = new ArrayList<>(authenticationCheck.getAuthorities());
+            final Collection<String> rolesForJwt = new ArrayList<>();
             for (final GrantedAuthority grantedAuthority : authorities) {
                 permissions.add(grantedAuthority.getAuthority());
             }
-
-            // Generate JWT token and encode it in Base64
-            String jwtToken = JwtTokenUtil.generateToken(request.username, permissions);
-            String base64JwtToken = Base64.getEncoder().encodeToString(jwtToken.getBytes(StandardCharsets.UTF_8));
-
             final AppUser principal = (AppUser) authenticationCheck.getPrincipal();
-            final Collection<RoleData> roles = new ArrayList<>();
             final Set<Role> userRoles = principal.getRoles();
             for (final Role role : userRoles) {
-                roles.add(role.toData());
+                rolesForJwt.add(role.getName()); // Use role name or ID for JWT
             }
+            // Generate JWT token and encode it in Base64
+            String jwtToken = JwtTokenUtil.generateToken(request.username, principal.getId(), rolesForJwt);
+            String base64JwtToken = Base64.getEncoder().encodeToString(jwtToken.getBytes(StandardCharsets.UTF_8));
 
             final Long officeId = principal.getOffice().getId();
             final String officeName = principal.getOffice().getName();
@@ -145,7 +142,10 @@ public class AuthenticationApiResource {
             } else {
                 authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setOfficeId(officeId)
                         .setOfficeName(officeName).setStaffId(staffId).setStaffDisplayName(staffDisplayName)
-                        .setOrganisationalRole(organisationalRole).setRoles(roles).setPermissions(permissions).setUserId(principal.getId())
+                        .setOrganisationalRole(organisationalRole)
+                        .setRoles(new ArrayList<>(principal.getRoles().stream().map(Role::toData).toList())) // Convert Set<Role> to Collection<RoleData>
+                        .setPermissions(permissions)
+                        .setUserId(principal.getId())
                         .setAuthenticated(true)
                         .setBase64EncodedAuthenticationKey(base64JwtToken)
                         .setJwtToken(jwtToken)

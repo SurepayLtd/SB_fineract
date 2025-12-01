@@ -454,9 +454,6 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         }
         if (property.isEnabled() && paymentTypeId == 100) {
             validatePinCode(client, mobileNo, pinCode);
-
-            throw new GeneralPlatformDomainRuleException("error.msg.momo.payments.savings.account.withdraw.is.disabled",
-                    "Surepay Mobile Money payments savings account withdraw is disabled");
         }
 
     }

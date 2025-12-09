@@ -52,10 +52,13 @@ public class ApplyChargeToOverdueLoanInstallmentTasklet implements Tasklet {
         final Boolean backdatePenalties = configurationDomainService.isBackdatePenaltiesEnabled();
         final Collection<OverdueLoanScheduleData> overdueLoanScheduledInstallments = loanReadPlatformService
                 .retrieveAllLoansWithOverdueInstallments(penaltyWaitPeriodValue, backdatePenalties);
+        log.info("Total overdue loan installments found: {}", overdueLoanScheduledInstallments.size());
 
         if (!overdueLoanScheduledInstallments.isEmpty()) {
             final Map<Long, Collection<OverdueLoanScheduleData>> overdueScheduleData = new HashMap<>();
             for (final OverdueLoanScheduleData overdueInstallment : overdueLoanScheduledInstallments) {
+                log.info("Processing overdue installment for loanId: {}, Amount: {} ChargeId : {} ", overdueInstallment.getLoanId(),
+                        overdueInstallment.getAmount(),overdueInstallment.getChargeId());
                 if (overdueScheduleData.containsKey(overdueInstallment.getLoanId())) {
                     overdueScheduleData.get(overdueInstallment.getLoanId()).add(overdueInstallment);
                 } else {
@@ -64,10 +67,11 @@ public class ApplyChargeToOverdueLoanInstallmentTasklet implements Tasklet {
                     overdueScheduleData.put(overdueInstallment.getLoanId(), loanData);
                 }
             }
-
+            log.info("Total overdue loans to process for applying charges: {}", overdueScheduleData.size());
             List<Throwable> exceptions = new ArrayList<>();
             for (Map.Entry<Long, Collection<OverdueLoanScheduleData>> entry : overdueScheduleData.entrySet()) {
                 try {
+                    log.info("Applying charges for overdue loanId: {}", entry.getKey());
                     if (!entry.getValue().isEmpty()) {
                         loanChargeWritePlatformService.applyOverdueChargesForLoan(entry.getKey(), entry.getValue());
                     }

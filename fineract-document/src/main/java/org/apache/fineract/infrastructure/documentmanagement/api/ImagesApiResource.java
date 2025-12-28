@@ -83,6 +83,11 @@ public class ImagesApiResource {
             @HeaderParam("Content-Length") final Long fileSize, @FormDataParam("file") final InputStream inputStream,
             @FormDataParam("file") final FormDataContentDisposition fileDetails, @FormDataParam("file") final FormDataBodyPart bodyPart) {
         validateEntityTypeforImage(entityName);
+        if (EntityTypeForImages.CLIENTS.toString().equalsIgnoreCase(entityName)) {
+            this.context.authenticatedUser().validateHasCreatePermission("CLIENTIMAGE");
+        } else if (EntityTypeForImages.STAFF.toString().equalsIgnoreCase(entityName)) {
+            this.context.authenticatedUser().validateHasCreatePermission("STAFFIMAGE");
+        }
         fileUploadValidator.validate(fileSize, inputStream, fileDetails, bodyPart);
         // TODO: vishwas might need more advances validation (like reading magic
         // number) for handling malicious clients
@@ -105,6 +110,11 @@ public class ImagesApiResource {
     public String addNewClientImage(@PathParam("entity") final String entityName, @PathParam("entityId") final Long entityId,
             final String jsonRequestBody) {
         validateEntityTypeforImage(entityName);
+        if (EntityTypeForImages.CLIENTS.toString().equalsIgnoreCase(entityName)) {
+            this.context.authenticatedUser().validateHasCreatePermission("CLIENTIMAGE");
+        } else if (EntityTypeForImages.STAFF.toString().equalsIgnoreCase(entityName)) {
+            this.context.authenticatedUser().validateHasCreatePermission("STAFFIMAGE");
+        }
 
         final Base64EncodedImage base64EncodedImage = ContentRepositoryUtils.extractImageFromDataURL(jsonRequestBody);
 
@@ -200,6 +210,11 @@ public class ImagesApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     public String deleteClientImage(@PathParam("entity") final String entityName, @PathParam("entityId") final Long entityId) {
         validateEntityTypeforImage(entityName);
+        if (EntityTypeForImages.CLIENTS.toString().equalsIgnoreCase(entityName)) {
+            this.context.authenticatedUser().validateHasDeletePermission("CLIENTIMAGE");
+        } else if (EntityTypeForImages.STAFF.toString().equalsIgnoreCase(entityName)) {
+            this.context.authenticatedUser().validateHasDeletePermission("STAFFIMAGE");
+        }
         this.imageWritePlatformService.deleteImage(entityName, entityId);
         return this.toApiJsonSerializer.serialize(CommandProcessingResult.resourceResult(entityId));
     }

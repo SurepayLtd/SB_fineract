@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -61,8 +60,8 @@ import org.apache.fineract.infrastructure.event.business.domain.client.ClientAct
 import org.apache.fineract.infrastructure.event.business.domain.client.ClientCreateBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.client.ClientRejectBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
-import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.infrastructure.security.service.HashingPasswordEncoder;
+import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.notification.data.SmsNotificationData;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
 import org.apache.fineract.organisation.office.domain.Office;
@@ -1127,20 +1126,22 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             } while (this.clientRepository.findByOtpCode(otp) != null);
 
             if (!client.isActive()) {
-                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");
             }
 
             // Send sms message with otp token
             final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
                     .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
-            if(!property.isEnabled()){
-                throw new GeneralPlatformDomainRuleException("error.msg.sms.is.not.enabled","Sms is not enabled on this platform. Activate it to proceed");
+            if (!property.isEnabled()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.sms.is.not.enabled",
+                        "Sms is not enabled on this platform. Activate it to proceed");
             }
             messageId = String.format("ACTIVATED-PIN-%s", UUID.randomUUID());
             if (client.getMobileNo() != null && messageId != null) {
-                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),  "Hello "+client.getDisplayName()+", Here is the OTP to Activate you're account on Surebanker "+otp, messageId));
+                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),
+                        "Hello " + client.getDisplayName() + ", Here is the OTP to Activate you're account on Surebanker " + otp,
+                        messageId));
             }
-
 
             client.setOtpCode(otp);
             final Integer otpExpiryMinutes = this.configurationDomainService.retrieveMomoPaymentOtpExpiryMinutes();
@@ -1171,7 +1172,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
 
             if (!client.isActive()) {
-                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");
             }
 
             client.setMomoPaymentActive(false);
@@ -1182,10 +1183,10 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             client.setPinCode(null);
             this.clientRepository.saveAndFlush(client);
 
-
             messageId = String.format("DEACTIVATED-PIN-%s", UUID.randomUUID());
             if (client.getMobileNo() != null && messageId != null) {
-                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Hello "+client.getDisplayName()+",  Momo Payment has been de-activated from you're account !", messageId));
+                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),
+                        "Hello " + client.getDisplayName() + ",  Momo Payment has been de-activated from you're account !", messageId));
             }
 
             return new CommandProcessingResultBuilder() //
@@ -1208,7 +1209,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
             final Integer otpCode = command.integerValueOfParameterNamed(ClientApiConstants.otpCodeParamName);
             if (!client.isActive()) {
-                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");
             }
             if (client.getOtpCode() == null || !client.getOtpCode().equals(otpCode)) {
                 throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.invalid", "Invalid OTP", "otpCode", otpCode);
@@ -1218,11 +1219,9 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.expired", "OTP has expired", "otpCode", otpCode);
             }
 
-
             client.setMomoPaymentActive(true);
             client.setLastActivatedMomoDate(DateUtils.getBusinessLocalDate());
             this.clientRepository.saveAndFlush(client);
-
 
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //
@@ -1253,21 +1252,24 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
 
             if (!client.isActive()) {
-                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");
             }
-            if(!mobileNo.equals(client.getMobileNo())){
-                throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
-            }
-
-            if(client.getOtpCode() == null || !client.isMomoPaymentActive()){
-                throw new GeneralPlatformDomainRuleException("error.msg.client.momo.payment.is.not.active","Client account's momo payment is not active");
-
-            }
-            if(client.getPinCode() != null){
-                throw new GeneralPlatformDomainRuleException("error.msg.invalid.action","Pin setup is blocked. Inquiry from you bank/sacco for help.");
-
+            if (!mobileNo.equals(client.getMobileNo())) {
+                throw new GeneralPlatformDomainRuleException(
+                        "error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number",
+                        "Mobile Number submitted is invalid");
             }
 
+            if (client.getOtpCode() == null || !client.isMomoPaymentActive()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.momo.payment.is.not.active",
+                        "Client account's momo payment is not active");
+
+            }
+            if (client.getPinCode() != null) {
+                throw new GeneralPlatformDomainRuleException("error.msg.invalid.action",
+                        "Pin setup is blocked. Inquiry from you bank/sacco for help.");
+
+            }
 
             final String salt = client.getId() + client.getMobileNo();
             final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
@@ -1279,9 +1281,9 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             messageId = String.format("CREATE-PIN-%s", UUID.randomUUID());
             if (mobileNo != null && messageId != null) {
-                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),"Hello "+client.getDisplayName()+",  Momo Payment PIN has been setup successfully on Surebanker !", messageId));
+                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),
+                        "Hello " + client.getDisplayName() + ",  Momo Payment PIN has been setup successfully on Surebanker !", messageId));
             }
-
 
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //
@@ -1331,17 +1333,18 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     }
 
     public void validatePinCode(Client client, String mobileNo, Integer pinCode) {
-        if(mobileNo == null){
-            throw new GeneralPlatformDomainRuleException("error.msg.client.mobile.no.is.missing","Client Mobile Number is required");
+        if (mobileNo == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.mobile.no.is.missing", "Client Mobile Number is required");
         }
-        if(pinCode == null){
-            throw new GeneralPlatformDomainRuleException("error.msg.client.pinCode.is.missing","Client pinCode is required");
+        if (pinCode == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.pinCode.is.missing", "Client pinCode is required");
         }
         if (!client.isActive()) {
-            throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");
         }
-        if(!mobileNo.equals(client.getMobileNo())){
-            throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
+        if (!mobileNo.equals(client.getMobileNo())) {
+            throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number",
+                    "Mobile Number submitted is invalid");
         }
 
         final String salt = client.getId() + client.getMobileNo();

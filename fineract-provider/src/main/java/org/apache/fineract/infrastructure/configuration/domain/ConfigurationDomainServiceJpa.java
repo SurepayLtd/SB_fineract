@@ -533,7 +533,7 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
         final String propertyName = "surepay-mobile-money-payment-otp-expiry-minutes";
         final GlobalConfigurationPropertyData property = getGlobalConfigurationPropertyData(propertyName);
         int defaultValue = 15;
-        if(property.isEnabled()){
+        if (property.isEnabled()) {
             int value = property.getValue().intValue();
             if (value < 1) {
                 return defaultValue;
@@ -548,7 +548,7 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
         final String propertyName = "surepay-momo-payment-pin-expiry-months";
         final GlobalConfigurationPropertyData property = getGlobalConfigurationPropertyData(propertyName);
         int defaultValue = 15;
-        if(property.isEnabled()){
+        if (property.isEnabled()) {
             int value = property.getValue().intValue();
             if (value < 1) {
                 return defaultValue;

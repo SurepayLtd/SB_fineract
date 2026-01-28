@@ -81,10 +81,9 @@ public class ClientApiCollectionConstants extends ClientApiConstants {
             checkNumberParamName, routingCodeParamName, receiptNumberParamName, bankNumberParamName, externalIdParamName));
 
     protected static final Set<String> VALIDATE_OTP_REQUEST_DATA_PARAMETERS = new HashSet<>(
-            Arrays.asList(otpCodeParamName,localeParamName));
+            Arrays.asList(otpCodeParamName, localeParamName));
 
     protected static final Set<String> VALIDATE_CLIENT_PIN_REQUEST_DATA_PARAMETERS = new HashSet<>(
-            Arrays.asList(pinCodeParamName,mobileNoParamName,localeParamName));
-
+            Arrays.asList(pinCodeParamName, mobileNoParamName, localeParamName));
 
 }

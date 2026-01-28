@@ -136,19 +136,18 @@ public class AuthenticationApiResource {
             Long userId = principal.getId();
             if (this.springSecurityPlatformSecurityContext.doesPasswordHasToBeRenewed(principal)) {
                 authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setUserId(userId)
-                        .setBase64EncodedAuthenticationKey(base64JwtToken)
-                        .setJwtToken(jwtToken)
-                        .setAuthenticated(true).setShouldRenewPassword(true).setTwoFactorAuthenticationRequired(isTwoFactorRequired);
+                        .setBase64EncodedAuthenticationKey(base64JwtToken).setJwtToken(jwtToken).setAuthenticated(true)
+                        .setShouldRenewPassword(true).setTwoFactorAuthenticationRequired(isTwoFactorRequired);
             } else {
                 authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setOfficeId(officeId)
                         .setOfficeName(officeName).setStaffId(staffId).setStaffDisplayName(staffDisplayName)
                         .setOrganisationalRole(organisationalRole)
-                        .setRoles(new ArrayList<>(principal.getRoles().stream().map(Role::toData).toList())) // Convert Set<Role> to Collection<RoleData>
-                        .setPermissions(permissions)
-                        .setUserId(principal.getId())
-                        .setAuthenticated(true)
-                        .setBase64EncodedAuthenticationKey(base64JwtToken)
-                        .setJwtToken(jwtToken)
+                        .setRoles(new ArrayList<>(principal.getRoles().stream().map(Role::toData).toList())) // Convert
+                                                                                                             // Set<Role>
+                                                                                                             // to
+                                                                                                             // Collection<RoleData>
+                        .setPermissions(permissions).setUserId(principal.getId()).setAuthenticated(true)
+                        .setBase64EncodedAuthenticationKey(base64JwtToken).setJwtToken(jwtToken)
                         .setTwoFactorAuthenticationRequired(isTwoFactorRequired)
                         .setClients(returnClientList ? clientReadPlatformService.retrieveUserClients(userId) : null);
             }

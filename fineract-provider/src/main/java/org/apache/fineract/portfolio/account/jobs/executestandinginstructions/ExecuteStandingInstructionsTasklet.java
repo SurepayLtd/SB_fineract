@@ -64,59 +64,65 @@ public class ExecuteStandingInstructionsTasklet implements Tasklet {
         Collection<StandingInstructionData> instructionData = standingInstructionReadPlatformService
                 .retrieveAll(StandingInstructionStatus.ACTIVE.getValue());
         List<Throwable> errors = new ArrayList<>();
+        // Track errors per instruction, but do not stop processing others
         for (StandingInstructionData data : instructionData) {
-            boolean isDueForTransfer = false;
-            AccountTransferRecurrenceType recurrenceType = data.recurrenceType();
-            StandingInstructionType instructionType = data.instructionType();
-            LocalDate transactionDate = DateUtils.getBusinessLocalDate();
-            if (recurrenceType.isPeriodicRecurrence()) {
-                final ScheduledDateGenerator scheduledDateGenerator = new DefaultScheduledDateGenerator();
-                PeriodFrequencyType frequencyType = data.recurrenceFrequency();
-                LocalDate startDate = data.validFrom();
-                if (frequencyType.isMonthly()) {
-                    startDate = startDate.withDayOfMonth(data.recurrenceOnDay());
-                    if (DateUtils.isBefore(startDate, data.validFrom())) {
-                        startDate = startDate.plusMonths(1);
+            try {
+                boolean isDueForTransfer = false;
+                AccountTransferRecurrenceType recurrenceType = data.recurrenceType();
+                StandingInstructionType instructionType = data.instructionType();
+                LocalDate transactionDate = DateUtils.getBusinessLocalDate();
+                if (recurrenceType.isPeriodicRecurrence()) {
+                    final ScheduledDateGenerator scheduledDateGenerator = new DefaultScheduledDateGenerator();
+                    PeriodFrequencyType frequencyType = data.recurrenceFrequency();
+                    LocalDate startDate = data.validFrom();
+                    if (frequencyType.isMonthly()) {
+                        startDate = startDate.withDayOfMonth(data.recurrenceOnDay());
+                        if (DateUtils.isBefore(startDate, data.validFrom())) {
+                            startDate = startDate.plusMonths(1);
+                        }
+                    } else if (frequencyType.isYearly()) {
+                        startDate = startDate.withDayOfMonth(data.recurrenceOnDay()).withMonth(data.recurrenceOnMonth());
+                        if (DateUtils.isBefore(startDate, data.validFrom())) {
+                            startDate = startDate.plusYears(1);
+                        }
                     }
-                } else if (frequencyType.isYearly()) {
-                    startDate = startDate.withDayOfMonth(data.recurrenceOnDay()).withMonth(data.recurrenceOnMonth());
-                    if (DateUtils.isBefore(startDate, data.validFrom())) {
-                        startDate = startDate.plusYears(1);
+                    isDueForTransfer = scheduledDateGenerator.isDateFallsInSchedule(frequencyType, data.recurrenceInterval(), startDate,
+                            transactionDate);
+
+                }
+                BigDecimal transactionAmount = data.amount();
+                if (data.toAccountType().isLoanAccount()
+                        && (recurrenceType.isDuesRecurrence() || (isDueForTransfer && instructionType.isDuesAmoutTransfer()))) {
+                    StandingInstructionDuesData standingInstructionDuesData = standingInstructionReadPlatformService
+                            .retriveLoanDuesData(data.toAccount().getId());
+                    if (data.instructionType().isDuesAmoutTransfer()) {
+                        transactionAmount = standingInstructionDuesData.totalDueAmount();
+                    }
+                    if (recurrenceType.isDuesRecurrence()) {
+                        isDueForTransfer = isDueForTransfer(standingInstructionDuesData);
                     }
                 }
-                isDueForTransfer = scheduledDateGenerator.isDateFallsInSchedule(frequencyType, data.recurrenceInterval(), startDate,
-                        transactionDate);
 
-            }
-            BigDecimal transactionAmount = data.amount();
-            if (data.toAccountType().isLoanAccount()
-                    && (recurrenceType.isDuesRecurrence() || (isDueForTransfer && instructionType.isDuesAmoutTransfer()))) {
-                StandingInstructionDuesData standingInstructionDuesData = standingInstructionReadPlatformService
-                        .retriveLoanDuesData(data.toAccount().getId());
-                if (data.instructionType().isDuesAmoutTransfer()) {
-                    transactionAmount = standingInstructionDuesData.totalDueAmount();
+                if (isDueForTransfer && transactionAmount != null && transactionAmount.compareTo(BigDecimal.ZERO) > 0) {
+                    final SavingsAccount fromSavingsAccount = null;
+                    final boolean isRegularTransaction = true;
+                    final boolean isExceptionForBalanceCheck = false;
+                    AccountTransferDTO accountTransferDTO = new AccountTransferDTO(transactionDate, transactionAmount,
+                            data.fromAccountType(), data.toAccountType(), data.fromAccount().getId(), data.toAccount().getId(),
+                            data.name() + " Standing instruction trasfer ", null, null, null, null, data.toTransferType(), null, null,
+                            data.transferType().getValue(), null, null, ExternalId.empty(), null, null, fromSavingsAccount,
+                            isRegularTransaction, isExceptionForBalanceCheck);
+                    final boolean transferCompleted = transferAmount(errors, accountTransferDTO, data.getId());
+
+                    if (transferCompleted) {
+                        final String updateQuery = "UPDATE m_account_transfer_standing_instructions SET last_run_date = ? where id = ?";
+                        jdbcTemplate.update(updateQuery, transactionDate, data.getId());
+                    }
                 }
-                if (recurrenceType.isDuesRecurrence()) {
-                    isDueForTransfer = isDueForTransfer(standingInstructionDuesData);
-                }
-            }
-
-            if (isDueForTransfer && transactionAmount != null && transactionAmount.compareTo(BigDecimal.ZERO) > 0) {
-                final SavingsAccount fromSavingsAccount = null;
-                final boolean isRegularTransaction = true;
-                final boolean isExceptionForBalanceCheck = false;
-                AccountTransferDTO accountTransferDTO = new AccountTransferDTO(transactionDate, transactionAmount, data.fromAccountType(),
-                        data.toAccountType(), data.fromAccount().getId(), data.toAccount().getId(),
-                        data.name() + " Standing instruction trasfer ", null, null, null, null, data.toTransferType(), null, null,
-                        data.transferType().getValue(), null, null, ExternalId.empty(), null, null, fromSavingsAccount,
-                        isRegularTransaction, isExceptionForBalanceCheck);
-                final boolean transferCompleted = transferAmount(errors, accountTransferDTO, data.getId());
-
-                if (transferCompleted) {
-                    final String updateQuery = "UPDATE m_account_transfer_standing_instructions SET last_run_date = ? where id = ?";
-                    jdbcTemplate.update(updateQuery, transactionDate, data.getId());
-                }
-
+            } catch (Exception ex) {
+                // Log and collect error, but continue with next instruction
+                log.error("Error processing standing instruction id {}: {}", data.getId(), ex.getMessage(), ex);
+                errors.add(new Exception("Error processing standing instruction id " + data.getId() + ": " + ex.getMessage(), ex));
             }
         }
         if (!errors.isEmpty()) {

@@ -58,7 +58,7 @@ public class ApplyChargeToOverdueLoanInstallmentTasklet implements Tasklet {
             final Map<Long, Collection<OverdueLoanScheduleData>> overdueScheduleData = new HashMap<>();
             for (final OverdueLoanScheduleData overdueInstallment : overdueLoanScheduledInstallments) {
                 log.info("Processing overdue installment for loanId: {}, Amount: {} ChargeId : {} ", overdueInstallment.getLoanId(),
-                        overdueInstallment.getAmount(),overdueInstallment.getChargeId());
+                        overdueInstallment.getAmount(), overdueInstallment.getChargeId());
                 if (overdueScheduleData.containsKey(overdueInstallment.getLoanId())) {
                     overdueScheduleData.get(overdueInstallment.getLoanId()).add(overdueInstallment);
                 } else {

@@ -380,7 +380,6 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         final Integer pinCode = command.integerValueOfParameterNamed("pinCode");
         final String mobileNo = command.stringValueOfParameterNamed("mobileNo");
 
-
         final Locale locale = command.extractLocale();
         final DateTimeFormatter fmt = DateTimeFormatter.ofPattern(command.dateFormat()).withLocale(locale);
 
@@ -439,8 +438,6 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
             throw new GeneralPlatformDomainRuleException("error.mgs.transaction.already.exist",
                     "Duplicate Transaction detected. Ref :-" + routingCode);
         }
-
-
 
     }
 
@@ -724,10 +721,10 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         if (savingsAccountTransaction == null) {
             throw new SavingsAccountTransactionNotFoundException(savingsId, transactionId);
         }
-        if(savingsAccountTransaction.getPaymentDetail() != null
-                && savingsAccountTransaction.getPaymentDetail().getPaymentType() != null
-                && savingsAccountTransaction.getPaymentDetail().getPaymentType().getId() == 100){
-            throw new GeneralPlatformDomainRuleException("error.msg.undo.revoked.due.mobile.money.integration","This Transaction can not be reversed because it's from Momo integration.");
+        if (savingsAccountTransaction.getPaymentDetail() != null && savingsAccountTransaction.getPaymentDetail().getPaymentType() != null
+                && savingsAccountTransaction.getPaymentDetail().getPaymentType().getId() == 100) {
+            throw new GeneralPlatformDomainRuleException("error.msg.undo.revoked.due.mobile.money.integration",
+                    "This Transaction can not be reversed because it's from Momo integration.");
         }
         this.savingsAccountTransactionDataValidator.validateTransactionWithPivotDate(savingsAccountTransaction.getTransactionDate(),
                 account);
@@ -1967,17 +1964,18 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
     }
 
     public void validatePinCode(Client client, String mobileNo, Integer pinCode) {
-        if(mobileNo == null){
-            throw new GeneralPlatformDomainRuleException("error.msg.client.mobile.no.is.missing","Client Mobile Number is required");
+        if (mobileNo == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.mobile.no.is.missing", "Client Mobile Number is required");
         }
-        if(pinCode == null){
-            throw new GeneralPlatformDomainRuleException("error.msg.client.pinCode.is.missing","Client pinCode is required");
+        if (pinCode == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.pinCode.is.missing", "Client pinCode is required");
         }
         if (!client.isActive()) {
-            throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");
         }
-        if(!mobileNo.equals(client.getMobileNo())){
-            throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
+        if (!mobileNo.equals(client.getMobileNo())) {
+            throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number",
+                    "Mobile Number submitted is invalid");
         }
 
         final String salt = client.getId() + client.getMobileNo();

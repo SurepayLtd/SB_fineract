@@ -517,13 +517,13 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
             final SavingsAccount fromSavingsAccount = null;
             final boolean isRegularTransaction = true;
             final boolean isExceptionForBalanceCheck = false;
-            if(savingAccountData != null){
-            final AccountTransferDTO accountTransferDTO = new AccountTransferDTO(actualDisbursementDate, entrySet.getValue(),
-                    PortfolioAccountType.SAVINGS, PortfolioAccountType.LOAN, savingAccountData.getId(), loanId, "Loan Charge Payment",
-                    locale, fmt, null, null, LoanTransactionType.REPAYMENT_AT_DISBURSEMENT.getValue(), entrySet.getKey(), null,
-                    AccountTransferType.CHARGE_PAYMENT.getValue(), null, null, ExternalId.empty(), null, null, fromSavingsAccount,
-                    isRegularTransaction, isExceptionForBalanceCheck);
-            this.accountTransfersWritePlatformService.transferFunds(accountTransferDTO);
+            if (savingAccountData != null) {
+                final AccountTransferDTO accountTransferDTO = new AccountTransferDTO(actualDisbursementDate, entrySet.getValue(),
+                        PortfolioAccountType.SAVINGS, PortfolioAccountType.LOAN, savingAccountData.getId(), loanId, "Loan Charge Payment",
+                        locale, fmt, null, null, LoanTransactionType.REPAYMENT_AT_DISBURSEMENT.getValue(), entrySet.getKey(), null,
+                        AccountTransferType.CHARGE_PAYMENT.getValue(), null, null, ExternalId.empty(), null, null, fromSavingsAccount,
+                        isRegularTransaction, isExceptionForBalanceCheck);
+                this.accountTransfersWritePlatformService.transferFunds(accountTransferDTO);
             }
         }
         updateRecurringCalendarDatesForInterestRecalculation(loan);
@@ -556,7 +556,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         loanAccrualTransactionBusinessEventService.raiseBusinessEventForAccrualTransactions(loan, existingTransactionIds);
 
         // MOMO Payments
-                if (paymentDetail != null && paymentDetail.getPaymentType() != null && paymentDetail.getPaymentType().getCodeName() != null
+        if (paymentDetail != null && paymentDetail.getPaymentType() != null && paymentDetail.getPaymentType().getCodeName() != null
                 && paymentDetail.getPaymentType().getCodeName().equals("SURE_PAY_MOMO_PAYMENT")) {
             LocalDate today = DateUtils.getLocalDateOfTenant();
             if (actualDisbursementDate != null && DateUtils.isBefore(actualDisbursementDate, today)) {

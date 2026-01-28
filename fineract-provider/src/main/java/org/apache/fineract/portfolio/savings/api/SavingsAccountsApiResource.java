@@ -491,15 +491,17 @@ public class SavingsAccountsApiResource {
                 uploadedInputStream, fileDetail, locale, dateFormat);
         return toApiJsonSerializer.serialize(importDocumentId);
     }
+
     private String retrieveSavingAccountSecured(Long accountId, String externalId, boolean staffInSelectedOfficeOnly, String chargeStatus,
-                                         UriInfo uriInfo,String mobileNo,Integer pinCode) {
+            UriInfo uriInfo, String mobileNo, Integer pinCode) {
 
         final boolean backdatedTxnsAllowedTill = this.savingAccountAssembler.getPivotConfigStatus();
         final SavingsAccount account = this.savingAccountAssembler.assembleFrom(accountId, backdatedTxnsAllowedTill);
 
-        validateMomoPin(account.getClient(),mobileNo,pinCode);
+        validateMomoPin(account.getClient(), mobileNo, pinCode);
         return retrieveSavingAccount(accountId, null, staffInSelectedOfficeOnly, chargeStatus, uriInfo);
     }
+
     private String retrieveSavingAccount(Long accountId, String externalId, boolean staffInSelectedOfficeOnly, String chargeStatus,
             UriInfo uriInfo) {
         context.authenticatedUser().validateHasReadPermission(SavingsApiConstants.SAVINGS_ACCOUNT_RESOURCE_NAME);
@@ -696,13 +698,12 @@ public class SavingsAccountsApiResource {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = SavingsAccountsApiResourceSwagger.GetSavingsAccountsAccountIdResponse.class))) })
     public String retrieveOneSecured(@PathParam("accountId") @Parameter(description = "accountId") final Long accountId,
-                              @DefaultValue("false") @QueryParam("staffInSelectedOfficeOnly") @Parameter(description = "staffInSelectedOfficeOnly") final boolean staffInSelectedOfficeOnly,
-                              @DefaultValue("all") @QueryParam("chargeStatus") @Parameter(description = "chargeStatus") final String chargeStatus,
-                              @PathParam("mobileNo") @Parameter(description = "mobileNo") final String mobileNo,
-                              @PathParam("pinCode") @Parameter(description = "pinCode") final Integer pinCode,
-                              @Context final UriInfo uriInfo) {
+            @DefaultValue("false") @QueryParam("staffInSelectedOfficeOnly") @Parameter(description = "staffInSelectedOfficeOnly") final boolean staffInSelectedOfficeOnly,
+            @DefaultValue("all") @QueryParam("chargeStatus") @Parameter(description = "chargeStatus") final String chargeStatus,
+            @PathParam("mobileNo") @Parameter(description = "mobileNo") final String mobileNo,
+            @PathParam("pinCode") @Parameter(description = "pinCode") final Integer pinCode, @Context final UriInfo uriInfo) {
 
-        return retrieveSavingAccountSecured(accountId, null, staffInSelectedOfficeOnly, chargeStatus, uriInfo,mobileNo,pinCode);
+        return retrieveSavingAccountSecured(accountId, null, staffInSelectedOfficeOnly, chargeStatus, uriInfo, mobileNo, pinCode);
     }
 
     private void validateMomoPin(Client client, String mobileNo, Integer pinCode) {
@@ -720,17 +721,18 @@ public class SavingsAccountsApiResource {
     }
 
     public void validatePinCode(Client client, String mobileNo, Integer pinCode) {
-        if(mobileNo == null){
-            throw new GeneralPlatformDomainRuleException("error.msg.client.mobile.no.is.missing","Client Mobile Number is required");
+        if (mobileNo == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.mobile.no.is.missing", "Client Mobile Number is required");
         }
-        if(pinCode == null){
-            throw new GeneralPlatformDomainRuleException("error.msg.client.pinCode.is.missing","Client pinCode is required");
+        if (pinCode == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.pinCode.is.missing", "Client pinCode is required");
         }
         if (!client.isActive()) {
-            throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate","Client account is not activate");
+            throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");
         }
-        if(!mobileNo.equals(client.getMobileNo())){
-            throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number","Mobile Number submitted is invalid");
+        if (!mobileNo.equals(client.getMobileNo())) {
+            throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number",
+                    "Mobile Number submitted is invalid");
         }
 
         final String salt = client.getId() + client.getMobileNo();

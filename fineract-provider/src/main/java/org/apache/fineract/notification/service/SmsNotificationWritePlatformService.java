@@ -18,12 +18,14 @@
  */
 package org.apache.fineract.notification.service;
 
+import org.apache.fineract.infrastructure.security.data.OTPRequest;
 import org.apache.fineract.notification.data.SmsNotificationData;
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccountTransaction;
+import org.apache.fineract.useradministration.domain.AppUser;
 
 public interface SmsNotificationWritePlatformService {
 
@@ -32,4 +34,6 @@ public interface SmsNotificationWritePlatformService {
     void processLoanSmsNotification(Loan loan, SmsTypeEnum smsType, LoanTransaction transaction);
 
     void processSavingsAccountSmsNotification(SavingsAccount savingsAccount, SmsTypeEnum smsType, SavingsAccountTransaction transaction);
+
+    void processOTPSmsNotification(AppUser user, OTPRequest request);
 }

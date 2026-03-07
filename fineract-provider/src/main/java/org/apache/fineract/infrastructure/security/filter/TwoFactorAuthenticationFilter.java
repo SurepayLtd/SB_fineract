@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.apache.fineract.infrastructure.core.domain.FineractPlatformTenant;
+import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.infrastructure.security.constants.TwoFactorConstants;
 import org.apache.fineract.infrastructure.security.data.FineractJwtAuthenticationToken;
 import org.apache.fineract.infrastructure.security.domain.TFAccessToken;
@@ -79,9 +81,22 @@ public class TwoFactorAuthenticationFilter extends GenericFilterBean {
                 return;
             }
 
+            // Check if 2FA is enabled for the current tenant
+            final FineractPlatformTenant tenant = ThreadLocalContextUtil.getTenant();
+            boolean isTenantTwoFactorEnabled = tenant != null && tenant.isTwoFactorEnabled();
+
+            // If tenant doesn't have 2FA enabled, grant TWOFACTOR_AUTHENTICATED authority and continue
+            if (!isTenantTwoFactorEnabled) {
+                List<GrantedAuthority> updatedAuthorities = new ArrayList<>(authentication.getAuthorities());
+                updatedAuthorities.add(new SimpleGrantedAuthority("TWOFACTOR_AUTHENTICATED"));
+                context.setAuthentication(createUpdatedAuthentication(authentication, updatedAuthorities));
+                chain.doFilter(req, res);
+                return;
+            }
+
+            // Tenant has 2FA enabled, check if user can bypass
             if (!user.hasSpecificPermissionTo(TwoFactorConstants.BYPASS_TWO_FACTOR_PERMISSION)) {
-                // User can't bypass two-factor auth, check two-factor access
-                // token
+                // User can't bypass two-factor auth, check two-factor access token
                 String token = request.getHeader("Fineract-Platform-TFA-Token");
                 if (token != null) {
                     TFAccessToken accessToken = twoFactorService.fetchAccessTokenForUser(user, token);
@@ -92,7 +107,7 @@ public class TwoFactorAuthenticationFilter extends GenericFilterBean {
                         return;
                     }
                 } else {
-                    // No token provided
+                    // No token provided and 2FA is required
                     chain.doFilter(req, res);
                     return;
                 }

@@ -29,7 +29,7 @@ public final class TenantMapper implements RowMapper<FineractPlatformTenant> {
 
     private final boolean isReport;
     private static final String TENANT_SERVER_CONNECTION_BUILDER = " t.id, ts.id as connectionId , "
-            + " t.timezone_id as timezoneId , t.name,t.identifier, ts.schema_name as schemaName, ts.schema_server as schemaServer,"
+            + " t.timezone_id as timezoneId , t.name,t.identifier, t.two_factor_enabled as twoFactorEnabled, ts.schema_name as schemaName, ts.schema_server as schemaServer,"
             + " ts.schema_server_port as schemaServerPort, ts.schema_connection_parameters as schemaConnectionParameters, ts.auto_update as autoUpdate,"
             + " ts.schema_username as schemaUsername, ts.schema_password as schemaPassword , ts.pool_initial_size as initialSize,"
             + " ts.pool_validation_interval as validationInterval, ts.pool_remove_abandoned as removeAbandoned, ts.pool_remove_abandoned_timeout as removeAbandonedTimeout,"
@@ -63,8 +63,9 @@ public final class TenantMapper implements RowMapper<FineractPlatformTenant> {
         final String tenantIdentifier = rs.getString("identifier");
         final String name = rs.getString("name");
         final String timezoneId = rs.getString("timezoneId");
+        final boolean twoFactorEnabled = rs.getBoolean("twoFactorEnabled");
         final FineractPlatformTenantConnection connection = getDBConnection(rs);
-        return new FineractPlatformTenant(id, tenantIdentifier, name, timezoneId, connection);
+        return new FineractPlatformTenant(id, tenantIdentifier, name, timezoneId, connection, twoFactorEnabled);
     }
 
     // gets the DB connection

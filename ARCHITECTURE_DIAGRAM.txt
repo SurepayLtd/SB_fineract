@@ -1,0 +1,252 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                  TENANT-LEVEL 2FA ARCHITECTURE DIAGRAM                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              USER LOGIN REQUEST                              │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      AuthenticationApiResource.java                          │
+│                                                                              │
+│  1. Authenticate user credentials                                           │
+│  2. Check if 2FA is required:                                               │
+│     • Get global flag: fineract.security.2fa.enabled                        │
+│     • Get tenant from ThreadLocalContextUtil.getTenant()                    │
+│     • Check tenant.isTwoFactorEnabled()                                     │
+│     • Check user bypass permission                                          │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                                     ▼
+                    ┌────────────────────────────────┐
+                    │  2FA Required Calculation:     │
+                    │                                │
+                    │  isTwoFactorRequired =         │
+                    │    globalFlag                  │
+                    │    && tenantFlag               │
+                    │    && !bypassPermission        │
+                    └────────────────┬───────────────┘
+                                     │
+                 ┌───────────────────┴────────────────────┐
+                 │                                        │
+            YES  │                                        │  NO
+                 ▼                                        ▼
+    ┌────────────────────────┐              ┌────────────────────────┐
+    │  Require 2FA           │              │  Allow Direct Access   │
+    │                        │              │                        │
+    │  • Request OTP         │              │  • Generate JWT Token  │
+    │  • Validate OTP        │              │  • Return Auth Response│
+    │  • Generate JWT        │              │  • twoFactorAuth: false│
+    │  • twoFactorAuth: true │              └────────────────────────┘
+    └────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         DATABASE STRUCTURE                                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     TENANT STORE DATABASE (fineract_tenants)                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │                     TABLE: tenants                          │
+    ├──────────────┬──────────────┬────────────┬─────────────────┤
+    │ id (BIGINT)  │ identifier   │ name       │ two_factor_     │
+    │              │ (VARCHAR)    │ (VARCHAR)  │ enabled (BOOL) ←┼─ NEW COLUMN
+    ├──────────────┼──────────────┼────────────┼─────────────────┤
+    │ 1            │ default      │ Default    │ false          │
+    │ 2            │ production   │ Production │ true           │
+    │ 3            │ development  │ Dev Tenant │ false          │
+    └──────────────┴──────────────┴────────────┴─────────────────┘
+                                                       │
+                                                       │
+    ┌──────────────────────────────────────────────────┘
+    │  Default Value: false
+    │  Nullable: NOT NULL
+    │  Type: BOOLEAN
+    └─────────────────────────────────────────────────
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         CODE FLOW DIAGRAM                                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+1. TENANT LOADING (On Startup / Login)
+   ┌──────────────────────────────────────────┐
+   │  JdbcTenantDetailsService                │
+   │  loadTenantById(tenantIdentifier)        │
+   └─────────────────┬────────────────────────┘
+                     │
+                     ▼
+   ┌──────────────────────────────────────────┐
+   │  TenantMapper.mapRow()                   │
+   │  • Read all tenant fields                │
+   │  • Read two_factor_enabled ←─ NEW       │
+   │  • Create FineractPlatformTenant         │
+   └─────────────────┬────────────────────────┘
+                     │
+                     ▼
+   ┌──────────────────────────────────────────┐
+   │  FineractPlatformTenant                  │
+   │  • id                                    │
+   │  • tenantIdentifier                      │
+   │  • name                                  │
+   │  • timezoneId                            │
+   │  • twoFactorEnabled ←─ NEW              │
+   │  • connection                            │
+   └─────────────────┬────────────────────────┘
+                     │
+                     ▼
+   ┌──────────────────────────────────────────┐
+   │  ThreadLocalContextUtil.setTenant()      │
+   │  Store in ThreadLocal for request scope  │
+   └──────────────────────────────────────────┘
+
+
+2. AUTHENTICATION CHECK
+   ┌──────────────────────────────────────────┐
+   │  User attempts login                     │
+   └─────────────────┬────────────────────────┘
+                     │
+                     ▼
+   ┌──────────────────────────────────────────┐
+   │  AuthenticationApiResource               │
+   │  • Validate credentials                  │
+   └─────────────────┬────────────────────────┘
+                     │
+                     ▼
+   ┌──────────────────────────────────────────┐
+   │  Get tenant from ThreadLocal             │
+   │  tenant = ThreadLocalContextUtil.        │
+   │           getTenant()                    │
+   └─────────────────┬────────────────────────┘
+                     │
+                     ▼
+   ┌──────────────────────────────────────────┐
+   │  Check 2FA requirements                  │
+   │  1. globalFlag = @Value                  │
+   │  2. tenantFlag = tenant.is2FAEnabled()   │
+   │  3. bypassPerm = user.hasPermission()    │
+   │                                          │
+   │  require2FA = globalFlag && tenantFlag   │
+   │               && !bypassPerm             │
+   └─────────────────┬────────────────────────┘
+                     │
+                     ▼
+   ┌──────────────────────────────────────────┐
+   │  Return AuthenticationResponse           │
+   │  • twoFactorAuthenticationRequired       │
+   │  • accessToken (if applicable)           │
+   └──────────────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    DECISION MATRIX                                           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────┬──────────────┬────────────────┬─────────────────────┐
+│ Global Flag  │ Tenant Flag  │ Bypass Perm    │  2FA Required?      │
+├──────────────┼──────────────┼────────────────┼─────────────────────┤
+│ FALSE        │ FALSE        │ NO             │  ✗ NO               │
+│ FALSE        │ FALSE        │ YES            │  ✗ NO               │
+│ FALSE        │ TRUE         │ NO             │  ✗ NO               │
+│ FALSE        │ TRUE         │ YES            │  ✗ NO               │
+│ TRUE         │ FALSE        │ NO             │  ✗ NO               │
+│ TRUE         │ FALSE        │ YES            │  ✗ NO               │
+│ TRUE         │ TRUE         │ NO             │  ✓ YES  ← ONLY CASE │
+│ TRUE         │ TRUE         │ YES            │  ✗ NO               │
+└──────────────┴──────────────┴────────────────┴─────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    MULTI-TENANT SCENARIO                                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Configuration:
+  • fineract.security.2fa.enabled = TRUE (Global)
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │                    TENANT: production                        │
+  │                    two_factor_enabled: TRUE                  │
+  │                                                              │
+  │  User1 Login → 2FA REQUIRED ✓                              │
+  │  User2 Login → 2FA REQUIRED ✓                              │
+  │  AdminUser (with bypass) → NO 2FA ✗                        │
+  └──────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │                    TENANT: development                       │
+  │                    two_factor_enabled: FALSE                 │
+  │                                                              │
+  │  User1 Login → NO 2FA ✗                                    │
+  │  User2 Login → NO 2FA ✗                                    │
+  │  AdminUser → NO 2FA ✗                                      │
+  └──────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │                    TENANT: staging                           │
+  │                    two_factor_enabled: TRUE                  │
+  │                                                              │
+  │  User1 Login → 2FA REQUIRED ✓                              │
+  │  User2 Login → 2FA REQUIRED ✓                              │
+  └──────────────────────────────────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         FILE CHANGES SUMMARY                                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+DATABASE MIGRATION
+  📄 0011_add_two_factor_enabled_column.xml
+     └─ Adds two_factor_enabled BOOLEAN column to tenants table
+
+DOMAIN MODEL
+  📄 FineractPlatformTenant.java
+     ├─ Added: private final boolean twoFactorEnabled
+     ├─ Added: constructor with twoFactorEnabled parameter
+     └─ Added: public boolean isTwoFactorEnabled()
+
+DATA MAPPER
+  📄 TenantMapper.java
+     ├─ Updated: SQL query to include t.two_factor_enabled
+     └─ Updated: mapRow() to read and set twoFactorEnabled
+
+AUTHENTICATION
+  📄 AuthenticationApiResource.java
+     ├─ Added: import ThreadLocalContextUtil
+     ├─ Added: import FineractPlatformTenant
+     └─ Updated: 2FA check logic to include tenant flag
+
+  📄 UserDetailsApiResource.java
+     ├─ Added: import ThreadLocalContextUtil
+     ├─ Added: import FineractPlatformTenant
+     └─ Updated: 2FA check logic to include tenant flag
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      MIGRATION & DEPLOYMENT                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+STEP 1: Build
+  ./gradlew clean build
+
+STEP 2: Deploy & Restart
+  # Liquibase migration runs automatically
+  # Adds two_factor_enabled column with default: false
+
+STEP 3: Configure Tenants
+  UPDATE tenants SET two_factor_enabled = true
+  WHERE identifier IN ('production', 'main');
+
+STEP 4: Test
+  • Login to production tenant → Should require 2FA
+  • Login to other tenants → Should NOT require 2FA
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Implementation Complete ✓
+Ready for Testing & Deployment
+
+═══════════════════════════════════════════════════════════════════════════════

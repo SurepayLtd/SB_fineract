@@ -31,14 +31,21 @@ public class FineractPlatformTenant implements Serializable {
     private final String name;
     private final String timezoneId;
     private final FineractPlatformTenantConnection connection;
+    private final boolean twoFactorEnabled;
 
     public FineractPlatformTenant(final Long id, final String tenantIdentifier, final String name, final String timezoneId,
             final FineractPlatformTenantConnection connection) {
+        this(id, tenantIdentifier, name, timezoneId, connection, false);
+    }
+
+    public FineractPlatformTenant(final Long id, final String tenantIdentifier, final String name, final String timezoneId,
+            final FineractPlatformTenantConnection connection, final boolean twoFactorEnabled) {
         this.id = id;
         this.tenantIdentifier = tenantIdentifier;
         this.name = name;
         this.timezoneId = timezoneId;
         this.connection = connection;
+        this.twoFactorEnabled = twoFactorEnabled;
     }
 
     public Long getId() {
@@ -59,5 +66,9 @@ public class FineractPlatformTenant implements Serializable {
 
     public FineractPlatformTenantConnection getConnection() {
         return connection;
+    }
+
+    public boolean isTwoFactorEnabled() {
+        return twoFactorEnabled;
     }
 }

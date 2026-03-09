@@ -41,7 +41,9 @@ import java.util.Collection;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
+import org.apache.fineract.infrastructure.core.domain.FineractPlatformTenant;
 import org.apache.fineract.infrastructure.core.serialization.ToApiJsonSerializer;
+import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.infrastructure.security.constants.TwoFactorConstants;
 import org.apache.fineract.infrastructure.security.data.AuthenticatedUserData;
 import org.apache.fineract.infrastructure.security.service.JwtTokenUtil;
@@ -131,7 +133,13 @@ public class AuthenticationApiResource {
 
             final EnumOptionData organisationalRole = principal.organisationalRoleData();
 
-            boolean isTwoFactorRequired = this.twoFactorEnabled
+            // Get tenant-specific 2FA configuration
+            final FineractPlatformTenant tenant = ThreadLocalContextUtil.getTenant();
+            boolean isTenantTwoFactorEnabled = tenant != null && tenant.isTwoFactorEnabled();
+
+            // 2FA is required if BOTH global flag is enabled AND tenant has it enabled
+            // AND user doesn't have bypass permission
+            boolean isTwoFactorRequired = this.twoFactorEnabled && isTenantTwoFactorEnabled
                     && !principal.hasSpecificPermissionTo(TwoFactorConstants.BYPASS_TWO_FACTOR_PERMISSION);
             Long userId = principal.getId();
             if (this.springSecurityPlatformSecurityContext.doesPasswordHasToBeRenewed(principal)) {

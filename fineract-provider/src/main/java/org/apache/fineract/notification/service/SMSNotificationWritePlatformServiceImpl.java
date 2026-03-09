@@ -36,12 +36,15 @@ import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurati
 import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
+import org.apache.fineract.infrastructure.security.data.OTPRequest;
+import org.apache.fineract.infrastructure.security.service.TwoFactorConfigurationService;
 import org.apache.fineract.notification.data.SmsNotificationData;
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccountTransaction;
+import org.apache.fineract.useradministration.domain.AppUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 
@@ -53,6 +56,8 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
     private Environment env;
     @Autowired
     private final GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper;
+    @Autowired
+    private TwoFactorConfigurationService twoFactorConfigurationService;
     public static final String FORM_URL_CONTENT_TYPE = "application/json";
 
     @Override
@@ -269,6 +274,34 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         if (mobileNo != null && messageId != null) {
             sendSms(new SmsNotificationData(mobileNo, message, messageId));
         }
+    }
+
+    @Override
+    public void processOTPSmsNotification(AppUser user, OTPRequest request) {
+
+        final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
+                .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
+        log.info(" :: -> Generated OTP message for user {} is {}", user.getUsername(), request.getToken());
+        if (!property.isEnabled()) {
+            log.info("** SMS Notification is disabled for this Tenant :-> " + ThreadLocalContextUtil.getTenant().getName());
+            return;
+        }
+
+        if (user.getStaff() == null) {
+            log.warn("User {} does not have staff associated, cannot send OTP SMS", user.getUsername());
+            return;
+        }
+
+        String mobileNo = user.getStaff().mobileNo();
+        if (mobileNo == null) {
+            log.warn("User {} staff does not have mobile number, cannot send OTP SMS", user.getUsername());
+            return;
+        }
+
+        String message = twoFactorConfigurationService.getFormattedSmsTextFor(user, request);
+        String messageId = String.format("OTP-TOKEN-%s", user.getId());
+        log.info("Generated OTP message for user {} is {}", user.getUsername(), message);
+        sendSms(new SmsNotificationData(mobileNo, message, messageId));
     }
 
 }

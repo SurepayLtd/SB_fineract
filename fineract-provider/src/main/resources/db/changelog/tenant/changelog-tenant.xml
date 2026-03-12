@@ -187,4 +187,5 @@
     <include file="parts/0166_transaction_summary_with_asset_owner_report_charge_adjustment_fix.xml" relativeToChangelogFile="true" />
     <include file="parts/Surepay-001-Loan-sms-implementation.xml" relativeToChangelogFile="true" />
     <include file="parts/configure_add_pin_for_momo_payment.xml" relativeToChangelogFile="true" />
+    <include file="parts/SurePay-OTC-MoMo-Reports.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

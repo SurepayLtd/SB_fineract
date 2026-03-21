@@ -291,9 +291,12 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sql.append("SELECT COALESCE(SUM(l.principal_outstanding_derived + l.interest_outstanding_derived ");
         sql.append("+ l.fee_charges_outstanding_derived + l.penalty_charges_outstanding_derived), 0) ");
         sql.append("FROM m_loan l ");
+        if (officeId != null) {
+            sql.append("JOIN m_client c ON l.client_id = c.id ");
+        }
         sql.append("WHERE l.loan_status_id = ? ");
         if (officeId != null) {
-            sql.append("AND l.office_id = ? ");
+            sql.append("AND c.office_id = ? ");
             return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class,
                     LoanStatus.ACTIVE.getValue(), officeId);
         }
@@ -304,9 +307,12 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COALESCE(SUM(sa.account_balance_derived), 0) ");
         sql.append("FROM m_savings_account sa ");
+        if (officeId != null) {
+            sql.append("JOIN m_client c ON sa.client_id = c.id ");
+        }
         sql.append("WHERE sa.status_enum = ? ");
         if (officeId != null) {
-            sql.append("AND sa.office_id = ? ");
+            sql.append("AND c.office_id = ? ");
             return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class,
                     SavingsAccountStatusType.ACTIVE.getValue(), officeId);
         }
@@ -330,6 +336,9 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COALESCE(SUM(lt.amount), 0) FROM m_loan_transaction lt ");
         sql.append("JOIN m_loan l ON lt.loan_id = l.id ");
+        if (officeId != null) {
+            sql.append("JOIN m_client c ON l.client_id = c.id ");
+        }
         sql.append("WHERE lt.transaction_type_enum IN (?, ?, ?) ");
         sql.append("AND lt.is_reversed = false ");
         sql.append("AND lt.transaction_date BETWEEN ? AND ? ");
@@ -342,7 +351,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND l.office_id = ? ");
+            sql.append("AND c.office_id = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
@@ -352,6 +361,9 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COALESCE(SUM(st.amount), 0) FROM m_savings_account_transaction st ");
         sql.append("JOIN m_savings_account sa ON st.savings_account_id = sa.id ");
+        if (officeId != null) {
+            sql.append("JOIN m_client c ON sa.client_id = c.id ");
+        }
         sql.append("WHERE st.transaction_type_enum = ? ");
         sql.append("AND st.is_reversed = false ");
         sql.append("AND st.transaction_date BETWEEN ? AND ? ");
@@ -362,7 +374,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND sa.office_id = ? ");
+            sql.append("AND c.office_id = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
@@ -372,6 +384,9 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COALESCE(SUM(lt.amount), 0) FROM m_loan_transaction lt ");
         sql.append("JOIN m_loan l ON lt.loan_id = l.id ");
+        if (officeId != null) {
+            sql.append("JOIN m_client c ON l.client_id = c.id ");
+        }
         sql.append("WHERE lt.transaction_type_enum = ? ");
         sql.append("AND lt.is_reversed = false ");
         sql.append("AND lt.transaction_date BETWEEN ? AND ? ");
@@ -382,7 +397,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND l.office_id = ? ");
+            sql.append("AND c.office_id = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
@@ -392,6 +407,9 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COALESCE(SUM(st.amount), 0) FROM m_savings_account_transaction st ");
         sql.append("JOIN m_savings_account sa ON st.savings_account_id = sa.id ");
+        if (officeId != null) {
+            sql.append("JOIN m_client c ON sa.client_id = c.id ");
+        }
         sql.append("WHERE st.transaction_type_enum = ? ");
         sql.append("AND st.is_reversed = false ");
         sql.append("AND st.transaction_date BETWEEN ? AND ? ");
@@ -402,7 +420,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND sa.office_id = ? ");
+            sql.append("AND c.office_id = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
@@ -414,11 +432,14 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sql.append("+ l.fee_charges_outstanding_derived + l.penalty_charges_outstanding_derived), 0) ");
         sql.append("FROM m_loan l ");
         sql.append("JOIN m_loan_arrears_aging laa ON l.id = laa.loan_id ");
+        if (officeId != null) {
+            sql.append("JOIN m_client c ON l.client_id = c.id ");
+        }
         sql.append("WHERE l.loan_status_id = ? ");
         sql.append("AND laa.overdue_since_date_derived <= DATE_SUB(CURDATE(), INTERVAL ? DAY) ");
 
         if (officeId != null) {
-            sql.append("AND l.office_id = ? ");
+            sql.append("AND c.office_id = ? ");
             return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class,
                     LoanStatus.ACTIVE.getValue(), daysOverdue, officeId);
         }
@@ -436,9 +457,12 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         baseSql.append("SELECT COALESCE(SUM(laa.total_overdue_derived), 0), COUNT(*) ");
         baseSql.append("FROM m_loan l ");
         baseSql.append("JOIN m_loan_arrears_aging laa ON l.id = laa.loan_id ");
+        if (officeId != null) {
+            baseSql.append("JOIN m_client c ON l.client_id = c.id ");
+        }
         baseSql.append("WHERE l.loan_status_id = ? AND laa.overdue_since_date_derived ");
 
-        String officeFilter = officeId != null ? " AND l.office_id = " + officeId : "";
+        String officeFilter = officeId != null ? " AND c.office_id = " + officeId : "";
 
         // 1-30 days
         String sql1to30 = baseSql.toString() + "> ? AND laa.overdue_since_date_derived <= ?" + officeFilter;
@@ -489,6 +513,9 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sql.append("+ COALESCE(lrs.fee_charges_amount, 0) + COALESCE(lrs.penalty_charges_amount, 0)), 0) ");
         sql.append("FROM m_loan_repayment_schedule lrs ");
         sql.append("JOIN m_loan l ON lrs.loan_id = l.id ");
+        if (officeId != null) {
+            sql.append("JOIN m_client c ON l.client_id = c.id ");
+        }
         sql.append("WHERE l.loan_status_id = ? ");
         sql.append("AND lrs.duedate BETWEEN ? AND ? ");
 
@@ -498,7 +525,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND l.office_id = ? ");
+            sql.append("AND c.office_id = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
@@ -533,10 +560,13 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         // Approved but pending disbursements
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COALESCE(SUM(l.approved_principal), 0) FROM m_loan l ");
+        if (officeId != null) {
+            sql.append("JOIN m_client c ON l.client_id = c.id ");
+        }
         sql.append("WHERE l.loan_status_id = ? ");
 
         if (officeId != null) {
-            sql.append("AND l.office_id = ? ");
+            sql.append("AND c.office_id = ? ");
             return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class,
                     LoanStatus.APPROVED.getValue(), officeId);
         }
@@ -548,6 +578,9 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COUNT(DISTINCT lt.loan_id) FROM m_loan_transaction lt ");
         sql.append("JOIN m_loan l ON lt.loan_id = l.id ");
+        if (officeId != null) {
+            sql.append("JOIN m_client c ON l.client_id = c.id ");
+        }
         sql.append("WHERE lt.transaction_type_enum = ? ");
         sql.append("AND lt.is_reversed = false ");
         sql.append("AND lt.transaction_date BETWEEN ? AND ? ");
@@ -558,7 +591,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND l.office_id = ? ");
+            sql.append("AND c.office_id = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
@@ -611,10 +644,13 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
     private Long getMembersWithActiveLoans(Long officeId) {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COUNT(DISTINCT l.client_id) FROM m_loan l ");
+        if (officeId != null) {
+            sql.append("JOIN m_client c ON l.client_id = c.id ");
+        }
         sql.append("WHERE l.loan_status_id = ? ");
 
         if (officeId != null) {
-            sql.append("AND l.office_id = ? ");
+            sql.append("AND c.office_id = ? ");
             return this.jdbcTemplate.queryForObject(sql.toString(), Long.class,
                     LoanStatus.ACTIVE.getValue(), officeId);
         }

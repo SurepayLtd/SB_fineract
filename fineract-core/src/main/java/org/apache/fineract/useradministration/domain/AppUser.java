@@ -119,6 +119,9 @@ public class AppUser extends AbstractPersistableCustom<Long> implements Platform
     @Column(name = "cannot_change_password", nullable = true)
     private Boolean cannotChangePassword;
 
+    @Column(name = "bypass_two_factor", nullable = false)
+    private boolean bypassTwoFactor;
+
     public static AppUser fromJson(final Office userOffice, final Staff linkedStaff, final Set<Role> allRoles,
             final Collection<Client> clients, final JsonCommand command) {
 
@@ -134,6 +137,11 @@ public class AppUser extends AbstractPersistableCustom<Long> implements Platform
 
         if (command.parameterExists(AppUserConstants.PASSWORD_NEVER_EXPIRES)) {
             passwordNeverExpire = command.booleanPrimitiveValueOfParameterNamed(AppUserConstants.PASSWORD_NEVER_EXPIRES);
+        }
+
+        boolean bypassTwoFactor = false;
+        if (command.parameterExists(AppUserConstants.BYPASS_TWO_FACTOR)) {
+            bypassTwoFactor = command.booleanPrimitiveValueOfParameterNamed(AppUserConstants.BYPASS_TWO_FACTOR);
         }
 
         final boolean userEnabled = true;
@@ -155,7 +163,7 @@ public class AppUser extends AbstractPersistableCustom<Long> implements Platform
         final boolean isSelfServiceUser = command.booleanPrimitiveValueOfParameterNamed(AppUserConstants.IS_SELF_SERVICE_USER);
 
         return new AppUser(userOffice, user, allRoles, email, firstname, lastname, linkedStaff, passwordNeverExpire, isSelfServiceUser,
-                clients, cannotChangePassword);
+                clients, cannotChangePassword, bypassTwoFactor);
     }
 
     protected AppUser() {
@@ -166,7 +174,7 @@ public class AppUser extends AbstractPersistableCustom<Long> implements Platform
 
     public AppUser(final Office office, final User user, final Set<Role> roles, final String email, final String firstname,
             final String lastname, final Staff staff, final boolean passwordNeverExpire, final boolean isSelfServiceUser,
-            final Collection<Client> clients, final Boolean cannotChangePassword) {
+            final Collection<Client> clients, final Boolean cannotChangePassword, final boolean bypassTwoFactor) {
         this.office = office;
         this.email = email.trim();
         this.username = user.getUsername().trim();
@@ -185,6 +193,7 @@ public class AppUser extends AbstractPersistableCustom<Long> implements Platform
         this.isSelfServiceUser = isSelfServiceUser;
         this.appUserClientMappings = createAppUserClientMappings(clients);
         this.cannotChangePassword = cannotChangePassword;
+        this.bypassTwoFactor = bypassTwoFactor;
     }
 
     public EnumOptionData organisationalRoleData() {
@@ -314,6 +323,14 @@ public class AppUser extends AbstractPersistableCustom<Long> implements Platform
                 final boolean newValue = command.booleanPrimitiveValueOfParameterNamed(AppUserConstants.IS_SELF_SERVICE_USER);
                 actualChanges.put(AppUserConstants.IS_SELF_SERVICE_USER, newValue);
                 this.isSelfServiceUser = newValue;
+            }
+        }
+
+        if (command.hasParameter(AppUserConstants.BYPASS_TWO_FACTOR)) {
+            if (command.isChangeInBooleanParameterNamed(AppUserConstants.BYPASS_TWO_FACTOR, this.bypassTwoFactor)) {
+                final boolean newValue = command.booleanPrimitiveValueOfParameterNamed(AppUserConstants.BYPASS_TWO_FACTOR);
+                actualChanges.put(AppUserConstants.BYPASS_TWO_FACTOR, newValue);
+                this.bypassTwoFactor = newValue;
             }
         }
 
@@ -711,6 +728,10 @@ public class AppUser extends AbstractPersistableCustom<Long> implements Platform
 
     public boolean isSelfServiceUser() {
         return this.isSelfServiceUser;
+    }
+
+    public boolean isBypassTwoFactor() {
+        return this.bypassTwoFactor;
     }
 
     public Set<AppUserClientMapping> getAppUserClientMappings() {

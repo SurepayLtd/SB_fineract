@@ -63,7 +63,8 @@ public final class UserDataValidator {
      */
     private static final Set<String> SUPPORTED_PARAMETERS = new HashSet<>(
             Arrays.asList(USERNAME, FIRSTNAME, LASTNAME, PASSWORD, REPEAT_PASSWORD, EMAIL, OFFICE_ID, NOT_SELECTED_ROLES, ROLES,
-                    SEND_PASSWORD_TO_EMAIL, STAFF_ID, PASSWORD_NEVER_EXPIRES, AppUserConstants.IS_SELF_SERVICE_USER, CLIENTS));
+                    SEND_PASSWORD_TO_EMAIL, STAFF_ID, PASSWORD_NEVER_EXPIRES, AppUserConstants.IS_SELF_SERVICE_USER, CLIENTS,
+                    AppUserConstants.BYPASS_TWO_FACTOR));
     public static final String PASSWORD_NEVER_EXPIRE = "passwordNeverExpire";
 
     private final FromJsonHelper fromApiJsonHelper;
@@ -160,6 +161,11 @@ public final class UserDataValidator {
 
         final String[] roles = this.fromApiJsonHelper.extractArrayNamed(ROLES, element);
         baseDataValidator.reset().parameter(ROLES).value(roles).arrayNotEmpty();
+
+        if (this.fromApiJsonHelper.parameterExists(AppUserConstants.BYPASS_TWO_FACTOR, element)) {
+            final Boolean bypassTwoFactor = this.fromApiJsonHelper.extractBooleanNamed(AppUserConstants.BYPASS_TWO_FACTOR, element);
+            baseDataValidator.reset().parameter(AppUserConstants.BYPASS_TWO_FACTOR).value(bypassTwoFactor).validateForBooleanValue();
+        }
 
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
     }
@@ -286,6 +292,11 @@ public final class UserDataValidator {
                     baseDataValidator.reset().parameter(CLIENTS).value(clientId).longGreaterThanZero();
                 }
             }
+        }
+
+        if (this.fromApiJsonHelper.parameterExists(AppUserConstants.BYPASS_TWO_FACTOR, element)) {
+            final Boolean bypassTwoFactor = this.fromApiJsonHelper.extractBooleanNamed(AppUserConstants.BYPASS_TWO_FACTOR, element);
+            baseDataValidator.reset().parameter(AppUserConstants.BYPASS_TWO_FACTOR).value(bypassTwoFactor).validateForBooleanValue();
         }
 
         throwExceptionIfValidationWarningsExist(dataValidationErrors);

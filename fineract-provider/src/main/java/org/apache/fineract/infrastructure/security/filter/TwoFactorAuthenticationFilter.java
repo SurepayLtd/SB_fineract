@@ -95,7 +95,8 @@ public class TwoFactorAuthenticationFilter extends GenericFilterBean {
             }
 
             // Tenant has 2FA enabled, check if user can bypass
-            if (!user.hasSpecificPermissionTo(TwoFactorConstants.BYPASS_TWO_FACTOR_PERMISSION)) {
+            // User can bypass 2FA if they have the BYPASS_TWO_FACTOR_PERMISSION or if bypassTwoFactor flag is true
+            if (!user.hasSpecificPermissionTo(TwoFactorConstants.BYPASS_TWO_FACTOR_PERMISSION) && !user.isBypassTwoFactor()) {
                 // User can't bypass two-factor auth, check two-factor access token
                 String token = request.getHeader("Fineract-Platform-TFA-Token");
                 if (token != null) {

@@ -188,4 +188,5 @@
     <include file="parts/Surepay-001-Loan-sms-implementation.xml" relativeToChangelogFile="true" />
     <include file="parts/configure_add_pin_for_momo_payment.xml" relativeToChangelogFile="true" />
     <include file="parts/SurePay-OTC-MoMo-Reports.xml" relativeToChangelogFile="true"/>
+    <include file="parts/0167_add_bypass_two_factor_to_appuser.xml" relativeToChangelogFile="true" />
 </databaseChangeLog>

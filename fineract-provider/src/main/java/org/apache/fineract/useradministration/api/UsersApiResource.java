@@ -76,7 +76,7 @@ public class UsersApiResource {
      * The set of parameters that are supported in response for {@link AppUserData}.
      */
     private static final Set<String> RESPONSE_DATA_PARAMETERS = new HashSet<>(Arrays.asList("id", "officeId", "officeName", "username",
-            "firstname", "lastname", "email", "allowedOffices", "availableRoles", "selectedRoles", "staff"));
+            "firstname", "lastname", "email", "allowedOffices", "availableRoles", "selectedRoles", "staff", "bypassTwoFactor"));
 
     private static final String RESOURCE_NAME_FOR_PERMISSIONS = "USER";
 

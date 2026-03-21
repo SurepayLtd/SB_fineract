@@ -57,6 +57,8 @@ final class UsersApiResourceSwagger {
         public String email;
         @Schema(example = "false")
         public Boolean passwordNeverExpires;
+        @Schema(example = "false", description = "If true, user can bypass two-factor authentication")
+        public Boolean bypassTwoFactor;
         public StaffData staff;
         public Collection<RoleData> selectedRoles;
 
@@ -85,6 +87,8 @@ final class UsersApiResourceSwagger {
         public String email;
         @Schema(example = "false")
         public Boolean passwordNeverExpires;
+        @Schema(example = "false", description = "If true, user can bypass two-factor authentication")
+        public Boolean bypassTwoFactor;
         public StaffData staff;
         public Collection<RoleData> availableRoles;
         public Collection<RoleData> selectedRoles;
@@ -136,6 +140,8 @@ final class UsersApiResourceSwagger {
         public Boolean passwordNeverExpires;
         @Schema(example = "true")
         public Boolean isSelfServiceUser;
+        @Schema(example = "false", description = "If true, user can bypass two-factor authentication")
+        public Boolean bypassTwoFactor;
     }
 
     @Schema(description = "PostUsersResponse")
@@ -180,6 +186,8 @@ final class UsersApiResourceSwagger {
         public Boolean sendPasswordToEmail;
         @Schema(example = "true")
         public Boolean isSelfServiceUser;
+        @Schema(example = "false", description = "If true, user can bypass two-factor authentication")
+        public Boolean bypassTwoFactor;
     }
 
     @Schema(description = "PutUsersUserIdResponse")

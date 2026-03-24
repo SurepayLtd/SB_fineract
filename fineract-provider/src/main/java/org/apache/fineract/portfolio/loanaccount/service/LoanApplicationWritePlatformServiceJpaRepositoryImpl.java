@@ -553,6 +553,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
         return result;
     }
 
+
     @Transactional
     @Override
     public CommandProcessingResult approveApplication(final Long loanId, final JsonCommand command) {

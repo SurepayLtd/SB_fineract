@@ -19,6 +19,8 @@
 
 package org.apache.fineract.portfolio.loanaccount.data;
 
+import org.apache.fineract.infrastructure.core.data.EnumOptionData;
+
 import java.math.BigDecimal;
 
 public final class GlimRepaymentTemplate {
@@ -41,9 +43,11 @@ public final class GlimRepaymentTemplate {
 
     private final BigDecimal childPrincipalAmount;
 
+    private final EnumOptionData childLoanStatus;
+
     private GlimRepaymentTemplate(final BigDecimal glimId, final BigDecimal groupId, final BigDecimal clientId, final String clientName,
             final BigDecimal childLoanId, final String parentAccountNo, final BigDecimal parentPrincipalAmount,
-            final String childLoanAccountNo, final BigDecimal childPrincipalAmount) {
+            final String childLoanAccountNo, final BigDecimal childPrincipalAmount, final EnumOptionData childLoanStatus) {
         this.glimId = glimId;
         this.groupId = groupId;
         this.clientId = clientId;
@@ -53,13 +57,14 @@ public final class GlimRepaymentTemplate {
         this.parentPrincipalAmount = parentPrincipalAmount;
         this.childLoanAccountNo = childLoanAccountNo;
         this.childPrincipalAmount = childPrincipalAmount;
+        this.childLoanStatus = childLoanStatus;
     }
 
     public static GlimRepaymentTemplate getInstance(final BigDecimal glimId, final BigDecimal groupId, final BigDecimal clientId,
             final String clientName, final BigDecimal childLoanId, final String parentAccountNo, final BigDecimal parentPrincipalAmount,
-            final String childLoanAccountNo, final BigDecimal childPrincipalAmount) {
+            final String childLoanAccountNo, final BigDecimal childPrincipalAmount, final EnumOptionData childLoanStatus) {
         return new GlimRepaymentTemplate(glimId, groupId, clientId, clientName, childLoanId, parentAccountNo, parentPrincipalAmount,
-                childLoanAccountNo, childPrincipalAmount);
+                childLoanAccountNo, childPrincipalAmount, childLoanStatus);
     }
 
     public BigDecimal getGlimId() {
@@ -98,4 +103,7 @@ public final class GlimRepaymentTemplate {
         return childPrincipalAmount;
     }
 
+    public EnumOptionData getChildLoanStatus() {
+        return childLoanStatus;
+    }
 }

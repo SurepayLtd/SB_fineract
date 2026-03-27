@@ -38,6 +38,8 @@ final class OfficesApiResourceSwagger {
         public Long id;
         @Schema(example = "Head Office")
         public String name;
+        @Schema(example = "HO")
+        public String shortName;
         @Schema(example = "Head Office")
         public String nameDecorated;
         @Schema(example = "1")
@@ -75,6 +77,8 @@ final class OfficesApiResourceSwagger {
 
         @Schema(example = "Good Friday")
         public String name;
+        @Schema(example = "GF")
+        public String shortName;
         @Schema(example = "dd MMMM yyyy")
         public String dateFormat;
         @Schema(example = "en")
@@ -110,7 +114,8 @@ final class OfficesApiResourceSwagger {
 
         @Schema(example = "Name is updated")
         public String name;
-
+        @Schema(example = "Short Name is updated")
+        public String shortName;
         @Schema(example = "dd MMMM yyyy")
         public String dateFormat;
         @Schema(example = "en")

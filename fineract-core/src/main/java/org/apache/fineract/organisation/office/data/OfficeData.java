@@ -39,6 +39,7 @@ public class OfficeData implements Serializable {
     private final String hierarchy;
     private final Long parentId;
     private final String parentName;
+    private final String shortName;
     private final Collection<OfficeData> allowedParents;
 
     // import fields
@@ -48,7 +49,7 @@ public class OfficeData implements Serializable {
 
     public static OfficeData importInstance(final String name, final Long parentId, final LocalDate openingDate,
             final ExternalId externalId) {
-        return new OfficeData(null, name, null, externalId, openingDate, null, parentId, null, null);
+        return new OfficeData(null, name, null, null, externalId, openingDate, null, parentId, null, null);
     }
 
     public void setImportFields(final Integer rowIndex, final String locale, final String dateFormat) {
@@ -58,27 +59,28 @@ public class OfficeData implements Serializable {
     }
 
     public static OfficeData testInstance(final Long id, final String name) {
-        return new OfficeData(id, name, null, null, null, null, null, null, null);
+        return new OfficeData(id, name, null, null, null, null, null, null, null, null);
     }
 
     public static OfficeData dropdown(final Long id, final String name, final String nameDecorated) {
-        return new OfficeData(id, name, nameDecorated, null, null, null, null, null, null);
+        return new OfficeData(id, name, null, nameDecorated, null, null, null, null, null, null);
     }
 
     public static OfficeData template(final List<OfficeData> parentLookups, final LocalDate defaultOpeningDate) {
-        return new OfficeData(null, null, null, null, defaultOpeningDate, null, null, null, parentLookups);
+        return new OfficeData(null, null, null, null, null, defaultOpeningDate, null, null, null, parentLookups);
     }
 
     public static OfficeData appendedTemplate(final OfficeData office, final Collection<OfficeData> allowedParents) {
-        return new OfficeData(office.id, office.name, office.nameDecorated, office.externalId, office.openingDate, office.hierarchy,
+        return new OfficeData(office.id, office.name, office.getShortName(), office.nameDecorated, office.externalId, office.openingDate, office.hierarchy,
                 office.parentId, office.parentName, allowedParents);
     }
 
-    public OfficeData(final Long id, final String name, final String nameDecorated, final ExternalId externalId,
+    public OfficeData(final Long id, final String name, final String shortName, final String nameDecorated, final ExternalId externalId,
             final LocalDate openingDate, final String hierarchy, final Long parentId, final String parentName,
             final Collection<OfficeData> allowedParents) {
         this.id = id;
         this.name = name;
+        this.shortName = shortName;
         this.nameDecorated = nameDecorated;
         this.externalId = externalId;
         this.openingDate = openingDate;

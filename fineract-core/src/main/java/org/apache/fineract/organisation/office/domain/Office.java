@@ -71,8 +71,11 @@ public class Office extends AbstractPersistableCustom<Long> implements Serializa
     @Column(name = "external_id", length = 100, unique = true)
     private ExternalId externalId;
 
+    @Column(name = "short_name", length = 10, unique = true)
+    private String shortName;
+
     public static Office headOffice(final String name, final LocalDate openingDate, final ExternalId externalId) {
-        return new Office(null, name, openingDate, externalId);
+        return new Office(null, name, null, openingDate, externalId);
     }
 
     public static Office fromJson(final Office parentOffice, final JsonCommand command) {
@@ -80,7 +83,8 @@ public class Office extends AbstractPersistableCustom<Long> implements Serializa
         final String name = command.stringValueOfParameterNamed("name");
         final LocalDate openingDate = command.localDateValueOfParameterNamed("openingDate");
         final String externalId = command.stringValueOfParameterNamed("externalId");
-        return new Office(parentOffice, name, openingDate, ExternalIdFactory.produce(externalId));
+        final String shortName = command.stringValueOfParameterNamed("shortName");
+        return new Office(parentOffice, name, shortName, openingDate, ExternalIdFactory.produce(externalId));
     }
 
     protected Office() {
@@ -88,9 +92,10 @@ public class Office extends AbstractPersistableCustom<Long> implements Serializa
         this.parent = null;
         this.name = null;
         this.externalId = null;
+        this.shortName = null;
     }
 
-    private Office(final Office parent, final String name, final LocalDate openingDate, final ExternalId externalId) {
+    private Office(final Office parent, final String name, final String shortName, final LocalDate openingDate, final ExternalId externalId) {
         this.parent = parent;
         this.openingDate = openingDate;
         if (parent != null) {
@@ -102,6 +107,7 @@ public class Office extends AbstractPersistableCustom<Long> implements Serializa
         } else {
             this.name = null;
         }
+        this.shortName = shortName;
         this.externalId = externalId;
     }
 
@@ -125,6 +131,12 @@ public class Office extends AbstractPersistableCustom<Long> implements Serializa
         if (this.parent != null && command.isChangeInLongParameterNamed(parentIdParamName, this.parent.getId())) {
             final Long newValue = command.longValueOfParameterNamed(parentIdParamName);
             actualChanges.put(parentIdParamName, newValue);
+        }
+
+        if (command.parameterExists("shortName") && command.isChangeInStringParameterNamed("shortName", this.shortName)){
+            final String newValue = command.stringValueOfParameterNamed("shortName");
+            actualChanges.put("shortName", newValue);
+            this.shortName = newValue;
         }
 
         final String openingDateParamName = "openingDate";

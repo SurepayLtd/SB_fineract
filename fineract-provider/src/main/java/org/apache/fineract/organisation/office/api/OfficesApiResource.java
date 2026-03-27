@@ -79,7 +79,7 @@ public class OfficesApiResource {
      * The set of parameters that are supported in response for {@link OfficeData}.
      */
     private static final Set<String> RESPONSE_DATA_PARAMETERS = new HashSet<>(
-            List.of("id", "name", "nameDecorated", "externalId", "openingDate", "hierarchy", "parentId", "parentName", "allowedParents"));
+            List.of("id", "name", "shortName", "nameDecorated", "externalId", "openingDate", "hierarchy", "parentId", "parentName", "allowedParents"));
 
     private static final String RESOURCE_NAME_FOR_PERMISSIONS = "OFFICE";
 

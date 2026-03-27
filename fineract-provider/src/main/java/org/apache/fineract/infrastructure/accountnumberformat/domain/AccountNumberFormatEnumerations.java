@@ -47,18 +47,21 @@ public final class AccountNumberFormatEnumerations {
                     AccountNumberPrefixType.SAVINGS_PRODUCT_SHORT_NAME, AccountNumberPrefixType.PREFIX_SHORT_NAME)));
 
     public static final Set<AccountNumberPrefixType> accountNumberPrefixesForCenters = Collections
-            .unmodifiableSet(new HashSet<>(Collections.singletonList(AccountNumberPrefixType.OFFICE_NAME)));
+            .unmodifiableSet(new HashSet<>(Arrays.asList(AccountNumberPrefixType.OFFICE_NAME,
+                    AccountNumberPrefixType.OFFICE_SHORT_NAME)));
 
     public static final Set<AccountNumberPrefixType> accountNumberPrefixesForGroups = Collections
-            .unmodifiableSet(new HashSet<>(Collections.singletonList(AccountNumberPrefixType.OFFICE_NAME)));
+            .unmodifiableSet(new HashSet<>(Arrays.asList(AccountNumberPrefixType.OFFICE_NAME, AccountNumberPrefixType.OFFICE_SHORT_NAME)));
 
     public enum AccountNumberPrefixType {
 
-        OFFICE_NAME(1, "accountNumberPrefixType.officeName"), CLIENT_TYPE(101,
-                "accountNumberPrefixType.clientType"), LOAN_PRODUCT_SHORT_NAME(201,
-                        "accountNumberPrefixType.loanProductShortName"), SAVINGS_PRODUCT_SHORT_NAME(301,
-                                "accountNumberPrefixType.savingsProductShortName"), PREFIX_SHORT_NAME(401,
-                                        "accountNumberPrefixType.prefixShortName");
+        OFFICE_NAME(1, "accountNumberPrefixType.officeName"),
+        CLIENT_TYPE(101, "accountNumberPrefixType.clientType"),
+        LOAN_PRODUCT_SHORT_NAME(201,"accountNumberPrefixType.loanProductShortName"),
+        SAVINGS_PRODUCT_SHORT_NAME(301,"accountNumberPrefixType.savingsProductShortName"),
+        PREFIX_SHORT_NAME(401,"accountNumberPrefixType.prefixShortName"),
+        OFFICE_SHORT_NAME(501,"accountNumberPrefixType.officeShortName");
+
 
         private final Integer value;
         private final String code;

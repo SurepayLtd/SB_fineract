@@ -26,13 +26,17 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.apache.fineract.infrastructure.core.data.BaseEnumOptionData;
+import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.accountdetails.data.LoanAccountSummaryData;
 import org.apache.fineract.portfolio.accountdetails.service.AccountDetailsReadPlatformService;
 import org.apache.fineract.portfolio.loanaccount.data.GLIMContainer;
 import org.apache.fineract.portfolio.loanaccount.data.GlimRepaymentTemplate;
 import org.apache.fineract.portfolio.loanaccount.data.GroupLoanIndividualMonitoringAccountData;
+import org.apache.fineract.portfolio.loanaccount.data.LoanStatusEnumData;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanStatus;
+import org.apache.fineract.portfolio.loanproduct.service.LoanEnumerations;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -186,7 +190,7 @@ public class GLIMAccountInfoReadPlatformServiceImpl implements GLIMAccountInfoRe
 
         public String schema() {
             return "glim.id as glimId,glim.group_id as groupId,glim.account_number as accountNumber,glim.principal_amount as principalAmount,glim.child_accounts_count as childAccountsCount,"
-                    + "glim.loan_status_id as loanStatus from glim_accounts glim";
+                    + "l.loan_status_id as loanStatus from glim_accounts glim join m_loan l on l.glim_id= glim.id ";
         }
 
         @Override
@@ -212,7 +216,7 @@ public class GLIMAccountInfoReadPlatformServiceImpl implements GLIMAccountInfoRe
 
         public String schema() {
             return "glim.id as glimId,loan.group_id as groupId,client.id as clientId,glim.account_number as parentLoanAccountNo,"
-                    + "glim.principal_amount as parentPrincipalAmount,loan.id as childLoanId,loan.account_no as childLoanAccountNo,loan.approved_principal as childPrincipalAmount,"
+                    + "glim.principal_amount as parentPrincipalAmount, loan.loan_status_id as childLoanStatus, loan.id as childLoanId,loan.account_no as childLoanAccountNo,loan.approved_principal as childPrincipalAmount,"
                     + "client.display_name as clientName from glim_accounts glim left join m_loan loan on loan.glim_id=glim.id "
                     + "left join m_client client on client.id=loan.client_id";
         }
@@ -238,8 +242,13 @@ public class GLIMAccountInfoReadPlatformServiceImpl implements GLIMAccountInfoRe
 
             final BigDecimal childPrincipalAmount = rs.getBigDecimal("childPrincipalAmount");
 
+            final Integer status = rs.getInt("childLoanStatus");
+
+            LoanStatusEnumData data = LoanEnumerations.status(status);
+            EnumOptionData childLoanStatus = LoanEnumerations.status(data);
+
             return GlimRepaymentTemplate.getInstance(glimId, groupId, clientId, clientName, childLoanId, parentLoanAccountNo,
-                    parentPrincipalAmount, childLoanAccountNo, childPrincipalAmount);
+                    parentPrincipalAmount, childLoanAccountNo, childPrincipalAmount, childLoanStatus);
 
         }
     }

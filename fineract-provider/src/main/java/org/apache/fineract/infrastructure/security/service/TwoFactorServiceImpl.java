@@ -20,6 +20,8 @@ package org.apache.fineract.infrastructure.security.service;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.domain.EmailDetail;
@@ -44,6 +46,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @ConditionalOnProperty("fineract.security.2fa.enabled")
+@Slf4j
 public class TwoFactorServiceImpl implements TwoFactorService {
 
     private final AccessTokenGenerationService accessTokenGenerationService;
@@ -202,6 +205,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
         int tokenLiveTime = configurationService.getOTPTokenLiveTime();
         int otpLength = configurationService.getOTPTokenLength();
         String token = new RandomOTPGenerator(otpLength).generate();
+//        log.info("OTP: {}", token);
         return OTPRequest.create(token, tokenLiveTime, extendedAccessToken, deliveryMethod);
     }
 }

@@ -61,7 +61,7 @@ public final class GroupLoanIndividualMonitoringAccountData {
 
     public static GroupLoanIndividualMonitoringAccountData getInstance1(final BigDecimal glimId, final BigDecimal groupId,
             final String accountNumber, final BigDecimal parentPrincipalAmount, final String loanStatus) {
-        return new GroupLoanIndividualMonitoringAccountData(glimId, groupId, accountNumber, null, null, parentPrincipalAmount, null,
+        return new GroupLoanIndividualMonitoringAccountData(glimId, groupId, accountNumber,null, null, parentPrincipalAmount, null,
                 loanStatus);
     }
 
@@ -96,4 +96,5 @@ public final class GroupLoanIndividualMonitoringAccountData {
     public String getLoanStatus() {
         return loanStatus;
     }
+
 }

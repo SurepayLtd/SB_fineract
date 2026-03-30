@@ -45,6 +45,7 @@ public final class OfficeCommandFromApiJsonDeserializer {
 
     public static final String PARENT_ID = "parentId";
     public static final String NAME = "name";
+    public static final String SHORT_NAME = "shortName";
     public static final String OPENING_DATE = "openingDate";
     public static final String EXTERNAL_ID = "externalId";
     public static final String LOCALE = "locale";
@@ -53,7 +54,7 @@ public final class OfficeCommandFromApiJsonDeserializer {
      * The parameters supported for this command.
      */
     private static final Set<String> SUPPORTED_PARAMETERS = new HashSet<>(
-            Arrays.asList(NAME, PARENT_ID, OPENING_DATE, EXTERNAL_ID, LOCALE, DATE_FORMAT));
+            Arrays.asList(NAME, SHORT_NAME, PARENT_ID, OPENING_DATE, EXTERNAL_ID, LOCALE, DATE_FORMAT));
 
     private final FromJsonHelper fromApiJsonHelper;
 
@@ -77,6 +78,9 @@ public final class OfficeCommandFromApiJsonDeserializer {
 
         final String name = this.fromApiJsonHelper.extractStringNamed(NAME, element);
         baseDataValidator.reset().parameter(NAME).value(name).notBlank().notExceedingLengthOf(100);
+
+        final String shortName = this.fromApiJsonHelper.extractStringNamed(SHORT_NAME, element);
+        baseDataValidator.reset().parameter(SHORT_NAME).value(shortName).notBlank().notExceedingLengthOf(10);
 
         final LocalDate openingDate = this.fromApiJsonHelper.extractLocalDateNamed(OPENING_DATE, element);
         baseDataValidator.reset().parameter(OPENING_DATE).value(openingDate).notNull();
@@ -118,6 +122,12 @@ public final class OfficeCommandFromApiJsonDeserializer {
             final String name = this.fromApiJsonHelper.extractStringNamed(NAME, element);
             baseDataValidator.reset().parameter(NAME).value(name).notBlank().notExceedingLengthOf(100);
         }
+
+        if (this.fromApiJsonHelper.parameterExists(SHORT_NAME, element)) {
+            final String shortName = this.fromApiJsonHelper.extractStringNamed(SHORT_NAME, element);
+            baseDataValidator.reset().parameter(SHORT_NAME).value(shortName).notBlank().notExceedingLengthOf(10);
+        }
+
 
         if (this.fromApiJsonHelper.parameterExists(OPENING_DATE, element)) {
             final LocalDate openingDate = this.fromApiJsonHelper.extractLocalDateNamed(OPENING_DATE, element);

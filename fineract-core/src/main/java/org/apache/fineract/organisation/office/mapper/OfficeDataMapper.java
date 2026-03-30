@@ -36,7 +36,7 @@ public interface OfficeDataMapper {
             nameDecorated = hierarchy.substring(0, (hierarchy.length() - hierarchy.replace(".", "").length() - 1) * 4)
                     + Optional.ofNullable(office.getName()).orElse("");
         }
-        return new OfficeData(office.getId(), office.getName(), nameDecorated, office.getExternalId(), office.getOpeningDate(),
+        return new OfficeData(office.getId(), office.getName(), office.getShortName(), nameDecorated, office.getExternalId(), office.getOpeningDate(),
                 office.getHierarchy(), office.getParent() != null ? office.getParent().getId() : null,
                 office.getParent() != null ? office.getParent().getName() : null, null);
     }

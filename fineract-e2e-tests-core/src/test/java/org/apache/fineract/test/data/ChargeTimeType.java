@@ -18,7 +18,8 @@
  */
 package org.apache.fineract.test.data;
 
-public enum ChargeTimeType {
+public enum
+ChargeTimeType {
 
     DISBURSEMENT(1), SPECIFIED_DUE_DATE(2), SAVINGS_ACTIVATION(3), WITHDRAWAL_FEE(5), ANNUAL_FEE(6), MONTHLY_FEE(7), INSTALLMENT_FEE(
             8), OVERDUE_FEES(9), OVERDRAFT_FEE(10), WEEKLY_FEE(11), TRANCHE_DISBURSEMENT(

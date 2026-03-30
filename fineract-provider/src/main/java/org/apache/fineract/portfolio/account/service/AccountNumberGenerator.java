@@ -54,6 +54,7 @@ public class AccountNumberGenerator {
     private static final String ENTITY_TYPE = "entityType";
     private static final String CLIENT_TYPE = "clientType";
     private static final String OFFICE_NAME = "officeName";
+    private static final String OFFICE_SHORT_NAME = "officeShortName";
     private static final String LOAN_PRODUCT_SHORT_NAME = "loanProductShortName";
     private static final String SAVINGS_PRODUCT_SHORT_NAME = "savingsProductShortName";
     private static final String SHARE_PRODUCT_SHORT_NAME = "sharesProductShortName";
@@ -146,6 +147,10 @@ public class AccountNumberGenerator {
                 case PREFIX_SHORT_NAME:
                     generatePrefix(propertyMap, propertyMap.get(ID), accountMaxLength, accountNumberFormat);
                     prefix = propertyMap.get(PREFIX_SHORT_NAME);
+                break;
+
+                case OFFICE_SHORT_NAME:
+                    prefix = propertyMap.get(OFFICE_SHORT_NAME);
                 break;
             }
 
@@ -240,6 +245,7 @@ public class AccountNumberGenerator {
         Map<String, String> propertyMap = new HashMap<>();
         propertyMap.put(ID, group.getId().toString());
         propertyMap.put(OFFICE_NAME, group.getOffice().getName());
+        propertyMap.put(OFFICE_SHORT_NAME, group.getOffice().getShortName());
         return generateAccountNumber(propertyMap, accountNumberFormat);
     }
 
@@ -247,6 +253,7 @@ public class AccountNumberGenerator {
         Map<String, String> propertyMap = new HashMap<>();
         propertyMap.put(ID, group.getId().toString());
         propertyMap.put(OFFICE_NAME, group.getOffice().getName());
+        propertyMap.put(OFFICE_SHORT_NAME, group.getOffice().getShortName());
         return generateAccountNumber(propertyMap, accountNumberFormat);
     }
 

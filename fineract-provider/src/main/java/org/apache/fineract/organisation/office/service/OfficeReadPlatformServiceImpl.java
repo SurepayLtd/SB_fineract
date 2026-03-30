@@ -62,7 +62,7 @@ public class OfficeReadPlatformServiceImpl implements OfficeReadPlatformService 
     private static final class OfficeMapper implements RowMapper<OfficeData> {
 
         public String officeSchema() {
-            return " o.id as id, o.name as name, " + nameDecoratedBaseOnHierarchy
+            return " o.id as id, o.name as name, o.short_name as shortName, " + nameDecoratedBaseOnHierarchy
                     + " as nameDecorated, o.external_id as externalId, o.opening_date as openingDate, o.hierarchy as hierarchy, parent.id as parentId, parent.name as parentName "
                     + "from m_office o LEFT JOIN m_office AS parent ON parent.id = o.parent_id ";
         }
@@ -72,6 +72,7 @@ public class OfficeReadPlatformServiceImpl implements OfficeReadPlatformService 
 
             final Long id = rs.getLong("id");
             final String name = rs.getString("name");
+            final String shortName = rs.getString("shortName");
             final String nameDecorated = rs.getString("nameDecorated");
             final String externalId = rs.getString("externalId");
             final LocalDate openingDate = JdbcSupport.getLocalDate(rs, "openingDate");
@@ -79,7 +80,7 @@ public class OfficeReadPlatformServiceImpl implements OfficeReadPlatformService 
             final Long parentId = JdbcSupport.getLong(rs, "parentId");
             final String parentName = rs.getString("parentName");
 
-            return new OfficeData(id, name, nameDecorated, ExternalIdFactory.produce(externalId), openingDate, hierarchy, parentId,
+            return new OfficeData(id, name, shortName, nameDecorated, ExternalIdFactory.produce(externalId), openingDate, hierarchy, parentId,
                     parentName, null);
         }
     }

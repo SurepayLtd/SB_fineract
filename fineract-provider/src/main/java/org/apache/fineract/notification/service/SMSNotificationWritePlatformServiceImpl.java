@@ -23,6 +23,8 @@ import com.google.gson.GsonBuilder;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.HttpUrl;
@@ -40,6 +42,7 @@ import org.apache.fineract.infrastructure.security.data.OTPRequest;
 import org.apache.fineract.infrastructure.security.service.TwoFactorConfigurationService;
 import org.apache.fineract.notification.data.SmsNotificationData;
 import org.apache.fineract.notification.data.SmsTypeEnum;
+import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
@@ -130,8 +133,26 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
             return;
         }
 
-        String clientName = loan.client().getDisplayName();
-        String mobileNo = loan.client().getMobileNo();
+        String clientName = null;
+        if (loan.client() != null){
+            clientName = loan.client().getDisplayName();
+        }else{
+            clientName = loan.group().getName();
+        }
+
+        String mobileNo = null;
+        if (loan.client() != null) {
+            mobileNo = loan.client().getMobileNo();
+        }else{
+            mobileNo = loan.group().getActiveClientMembers()
+                    .stream()
+                    .map(Client::getMobileNo)
+                    .filter(Objects::nonNull)
+                    .filter(phone -> !phone.trim().isEmpty())
+                    .findFirst()
+                    .orElse(null);
+        }
+
         String message = null;
         String messageId = null;
         switch (smsType) {
@@ -221,16 +242,34 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
             return;
         }
 
-        String clientName = savingsAccount.getClient().getDisplayName();
-        String mobileNo = savingsAccount.getClient().getMobileNo();
+        String clientName = null;
+        if (savingsAccount.getClient() != null){
+            clientName = savingsAccount.getClient().getDisplayName();
+        }else {
+            clientName = savingsAccount.getGroup().getName();
+        }
+
+        String mobileNo =  null;
+        if (savingsAccount.getClient() != null){
+            mobileNo =  savingsAccount.getClient().getMobileNo();
+        }else {
+            mobileNo = savingsAccount.getGroup().getActiveClientMembers()
+                    .stream()
+                    .map(Client::getMobileNo)
+                    .filter(Objects::nonNull)
+                    .filter(phone -> !phone.trim().isEmpty())
+                    .findFirst()
+                    .orElse(null);
+        }
+
         String message = null;
         String messageId = null;
 
         switch (smsType) {
             case SAVINGS_DEPOSIT:
-                final GlobalConfigurationProperty depoosit = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                final GlobalConfigurationProperty deposit = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
                         GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_DEPOSIT);
-                if (depoosit.isEnabled()) {
+                if (deposit.isEnabled()) {
                     message = String.format("Dear %s, we have received your deposit of %s %s. Thank you for choosing %s ", clientName,
                             savingsAccount.getCurrency().getCode(), transaction.getAmount().setScale(2, RoundingMode.HALF_UP),
                             ThreadLocalContextUtil.getTenant().getName());

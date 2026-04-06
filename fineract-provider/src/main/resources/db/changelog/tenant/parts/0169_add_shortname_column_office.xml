@@ -23,6 +23,12 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
     <changeSet id="short_name_column" author="Victor">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="m_office"/>
+            <not>
+                <columnExists tableName="m_office" columnName="short_name"/>
+            </not>
+        </preConditions>
         <addColumn tableName="m_office">
             <column name="short_name" type="VARCHAR(10)" >
                 <constraints unique="true"/>

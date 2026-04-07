@@ -56,7 +56,7 @@ public class GSIMReadPlatformServiceImpl implements GSIMReadPlatformService {
 
         public String schema() {
             return "gsim.id as gsimId,sv.group_id as groupId,sv.client_id as clientId,gsim.account_number as accountNumber, sv.id as childAccountId,sv.account_no as childAccountNumber,sv.account_balance_derived as childBalance,gsim.parent_deposit as parentBalance,gsim.child_accounts_count as childAccountsCount,"
-                    + "gsim.savings_status_id as savingsStatus from gsim_accounts gsim,m_savings_account sv where gsim.id=sv.gsim_id";
+                    + "sv.status_enum as savingsStatus from gsim_accounts gsim,m_savings_account sv where gsim.id=sv.gsim_id";
         }
 
         @Override
@@ -84,8 +84,8 @@ public class GSIMReadPlatformServiceImpl implements GSIMReadPlatformService {
     private static final class GSIMMapper implements RowMapper<GroupSavingsIndividualMonitoringAccountData> {
 
         public String schema() {
-            return "gsim.id as gsimId,gsim.group_id as groupId,gsim.account_number as accountNumber,gsim.parent_deposit as parentDeposit,gsim.child_accounts_count as childAccountsCount,"
-                    + "gsim.savings_status_id as savingsStatus from gsim_accounts gsim";
+            return "gsim.id as gsimId, gsim.group_id as groupId,gsim.account_number as accountNumber,gsim.parent_deposit as parentDeposit,gsim.child_accounts_count as childAccountsCount,"
+                    + "s.status_enum as savingsStatus from gsim_accounts gsim join m_savings_account s on s.gsim_id = gsim.id";
         }
 
         @Override
@@ -100,10 +100,10 @@ public class GSIMReadPlatformServiceImpl implements GSIMReadPlatformService {
 
             final BigDecimal parentDeposit = rs.getBigDecimal("parentDeposit");
 
-            final String loanStatus = LoanStatus.fromInt((int) rs.getLong("savingsStatus")).toString();
+            final String savingsStatus = SavingsAccountStatusType.fromInt((int) rs.getLong("savingsStatus")).toString();
 
             return GroupSavingsIndividualMonitoringAccountData.builder().gsimId(glimId).groupId(groupId).accountNumber(accountNumber)
-                    .parentDeposit(parentDeposit).savingsStatus(loanStatus).build();
+                    .parentDeposit(parentDeposit).savingsStatus(savingsStatus).build();
         }
     }
 

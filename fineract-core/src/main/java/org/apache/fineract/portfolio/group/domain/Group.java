@@ -749,4 +749,7 @@ public final class Group extends AbstractPersistableCustom<Long> {
         this.groupMembers = groupMembers;
     }
 
+    public String getName() {
+            return name;
+    }
 }

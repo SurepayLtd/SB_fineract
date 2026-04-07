@@ -3842,4 +3842,8 @@ public class SavingsAccount extends AbstractAuditableWithUTCDateTimeCustom<Long>
                 .map(transaction -> transaction.toSavingsAccountTransactionDetailsForPostingPeriod(this.currency, this.allowOverdraft))
                 .toList();
     }
+
+    public Group getGroup() {
+        return group;
+    }
 }

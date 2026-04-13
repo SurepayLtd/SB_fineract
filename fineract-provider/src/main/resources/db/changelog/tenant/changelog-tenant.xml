@@ -191,4 +191,5 @@
     <include file="parts/0167_add_bypass_two_factor_to_appuser.xml" relativeToChangelogFile="true" />
     <include file="parts/0168_add_dashboard_permission.xml" relativeToChangelogFile="true" />
     <include file="parts/0169_add_shortname_column_office.xml" relativeToChangelogFile="true"/>
+    <include file="parts/SurePay-002-SMS-Implementation.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

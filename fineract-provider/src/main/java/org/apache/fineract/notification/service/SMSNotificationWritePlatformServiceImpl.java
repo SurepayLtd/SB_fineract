@@ -24,6 +24,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,12 +37,15 @@ import okhttp3.Response;
 import org.apache.fineract.infrastructure.configuration.api.GlobalConfigurationConstants;
 import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationProperty;
 import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationRepositoryWrapper;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.infrastructure.security.data.OTPRequest;
 import org.apache.fineract.infrastructure.security.service.TwoFactorConfigurationService;
 import org.apache.fineract.notification.data.SmsNotificationData;
 import org.apache.fineract.notification.data.SmsTypeEnum;
+import org.apache.fineract.notification.domain.SMSNotification;
+import org.apache.fineract.notification.domain.SMSNotificationRepository;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
@@ -63,18 +67,30 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
     private TwoFactorConfigurationService twoFactorConfigurationService;
     public static final String FORM_URL_CONTENT_TYPE = "application/json";
 
+    private final SMSNotificationRepository smsNotificationRepository;
+
     @Override
     public void sendSms(SmsNotificationData smsNotificationData) {
 
         final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
                 .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
 
-        if (property.isEnabled() && property.getStringValue() != null) {
+        if (property.isEnabled()) {
             Gson gson = new GsonBuilder().create();
 
-            smsNotificationData.setSender(property.getStringValue());
+            Optional<SMSNotification> smsNotification = this.smsNotificationRepository.findById(1L);
+
+            if (smsNotification.isEmpty()){
+                throw new GeneralPlatformDomainRuleException("error.msg.sms.failed.due.missing.activation.details",
+                            "SMS sending has failed due to missing activation credentials.");
+            };
+
+            smsNotificationData.setSender(smsNotification.get().getVendorCode());
             smsNotificationData.setService(getConfigProperty("sms.service"));
-            smsNotificationData.setPassword(getConfigProperty("sms.password"));
+            smsNotificationData.setPassword(smsNotification.get().getVendorPassword());
+
+//            log.info("Vendor: {}, password: {}", smsNotificationData.getSender(), smsNotificationData.getPassword());
+
 
             String notificationObj = gson.toJson(smsNotificationData);
             log.info("SMS Message is constructed :=> " + notificationObj);

@@ -30,6 +30,7 @@ import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.client.domain.ClientStatus;
 import org.apache.fineract.portfolio.dashboard.data.DashboardData;
+import org.apache.fineract.portfolio.group.domain.GroupingTypeStatus;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanStatus;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionType;
 import org.apache.fineract.portfolio.savings.SavingsAccountTransactionType;
@@ -66,6 +67,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
                 .liquidityFunding(retrieveLiquidityFunding(startDate, endDate, officeId))
                 .businessPerformance(retrieveBusinessPerformance(startDate, endDate, officeId))
                 .memberSavingsInsights(retrieveMemberSavingsInsights(officeId))
+                .groupSavingsInsightsData(retrieveGroupSavingsInsights(officeId))
                 .profitabilitySustainability(retrieveProfitabilitySustainability(startDate, endDate, officeId))
                 .build();
     }
@@ -83,10 +85,13 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         BigDecimal totalLoanPortfolio = getTotalLoanPortfolio(officeId);
 
         // Total Deposits / Savings - Sum of all savings account balances
-        BigDecimal totalDeposits = getTotalDeposits(officeId);
+        BigDecimal totalDeposits = getMemberDeposits(officeId).add(getGroupDeposits(officeId));
 
         // Active Members - Count of active clients
         Long activeMembers = getActiveMembers(officeId);
+
+        //Active Groups - Count of active Groups
+        Long activeGroups = getActiveGroups(officeId);
 
         // Net Position calculations
         BigDecimal totalCollections = getTotalCollections(startDate, endDate, officeId);
@@ -102,6 +107,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
                 .totalLoanPortfolio(totalLoanPortfolio)
                 .totalDeposits(totalDeposits)
                 .activeMembers(activeMembers)
+                .activeGroups(activeGroups)
                 .netPosition(netPosition)
                 .totalCollections(totalCollections)
                 .totalNewDeposits(totalNewDeposits)
@@ -152,17 +158,19 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         BigDecimal bankBalance = getBankBalance(officeId);
         BigDecimal mobileWalletBalance = getMobileWalletBalance(officeId);
         BigDecimal availableCash = cashOnHand.add(bankBalance).add(mobileWalletBalance);
+        BigDecimal totalOverallDeposits = getMemberDeposits(officeId).add(getGroupDeposits(officeId));
+
 
         // Liquidity Ratio
         BigDecimal liquidAssets = availableCash;
-        BigDecimal shortTermLiabilities = getTotalDeposits(officeId); // Deposits are short-term liabilities
+        BigDecimal shortTermLiabilities = totalOverallDeposits; // Deposits are short-term liabilities
         BigDecimal liquidityRatio = shortTermLiabilities.compareTo(BigDecimal.ZERO) > 0
                 ? liquidAssets.divide(shortTermLiabilities, SCALE, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
 
         // Loan-to-Deposit Ratio
         BigDecimal totalLoans = getTotalLoanPortfolio(officeId);
-        BigDecimal totalDeposits = getTotalDeposits(officeId);
+        BigDecimal totalDeposits = totalOverallDeposits;
         BigDecimal loanToDepositRatio = totalDeposits.compareTo(BigDecimal.ZERO) > 0
                 ? totalLoans.divide(totalDeposits, SCALE, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
@@ -223,7 +231,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         Long totalMembers = getTotalMembers(officeId);
         Long dormantMembers = getDormantMembers(officeId);
         Long membersWithActiveLoans = getMembersWithActiveLoans(officeId);
-        BigDecimal totalSavings = getTotalDeposits(officeId);
+        BigDecimal clientSavings = getMemberDeposits(officeId);
 
         // Active Borrower Ratio
         BigDecimal activeBorrowerRatio = totalMembers > 0
@@ -234,7 +242,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
 
         // Average Savings per Member
         BigDecimal averageSavingsPerMember = totalMembers > 0
-                ? totalSavings.divide(BigDecimal.valueOf(totalMembers), SCALE, RoundingMode.HALF_UP)
+                ? clientSavings.divide(BigDecimal.valueOf(totalMembers), SCALE, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
         return DashboardData.MemberSavingsInsightsData.builder()
@@ -244,7 +252,39 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
                 .membersWithActiveLoans(membersWithActiveLoans)
                 .totalMembers(totalMembers)
                 .averageSavingsPerMember(averageSavingsPerMember)
-                .totalSavings(totalSavings)
+                .totalSavings(clientSavings)
+                .build();
+    }
+
+    @Override
+    public DashboardData.GroupSavingsInsightsData retrieveGroupSavingsInsights(Long officeId) {
+        Long totalGroups = getTotalGroups(officeId);
+        Long dormantGroups = getDormantGroups(officeId);
+        Long groupsWithActiveLoans = getGroupsWithActiveLoans(officeId);
+        BigDecimal groupDeposits = getGroupDeposits(officeId);
+
+
+        // Active Group Borrower Ratio
+        BigDecimal groupBorrowerRatio = totalGroups > 0
+                ? BigDecimal.valueOf(groupsWithActiveLoans)
+                .divide(BigDecimal.valueOf(totalGroups), SCALE, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                : BigDecimal.ZERO;
+
+
+        // Average Savings per Group
+        BigDecimal averageSavingsPerGroup = totalGroups > 0
+                ? groupDeposits.divide(BigDecimal.valueOf(totalGroups), SCALE, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+
+        return DashboardData.GroupSavingsInsightsData.builder()
+                .dormantGroups(dormantGroups)
+                .dormancyPeriodDays(DORMANCY_PERIOD_DAYS)
+                .totalGroups(totalGroups)
+                .totalSavings(groupDeposits)
+                .averageSavingsPerGroup(averageSavingsPerGroup)
+                .activeBorrowerRatio(groupBorrowerRatio)
                 .build();
     }
 
@@ -292,18 +332,19 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sql.append("+ l.fee_charges_outstanding_derived + l.penalty_charges_outstanding_derived), 0) ");
         sql.append("FROM m_loan l ");
         if (officeId != null) {
-            sql.append("JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON l.group_id = g.id ");
         }
         sql.append("WHERE l.loan_status_id = ? ");
         if (officeId != null) {
-            sql.append("AND c.office_id = ? ");
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
             return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class,
                     LoanStatus.ACTIVE.getValue(), officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, LoanStatus.ACTIVE.getValue());
     }
 
-    private BigDecimal getTotalDeposits(Long officeId) {
+    private BigDecimal getMemberDeposits(Long officeId) {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COALESCE(SUM(sa.account_balance_derived), 0) ");
         sql.append("FROM m_savings_account sa ");
@@ -313,6 +354,23 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sql.append("WHERE sa.status_enum = ? ");
         if (officeId != null) {
             sql.append("AND c.office_id = ? ");
+            return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class,
+                    SavingsAccountStatusType.ACTIVE.getValue(), officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class,
+                SavingsAccountStatusType.ACTIVE.getValue());
+    }
+
+    private BigDecimal getGroupDeposits(Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COALESCE(SUM(sa.account_balance_derived), 0) ");
+        sql.append("FROM m_savings_account sa ");
+        if (officeId != null) {
+            sql.append("JOIN m_group g ON sa.group_id = g.id ");
+        }
+        sql.append("WHERE sa.status_enum = ? ");
+        if (officeId != null) {
+            sql.append("AND g.office_id = ? ");
             return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class,
                     SavingsAccountStatusType.ACTIVE.getValue(), officeId);
         }
@@ -332,12 +390,25 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, ClientStatus.ACTIVE.getValue());
     }
 
+    private Long getActiveGroups(Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(DISTINCT g.id) FROM m_group g ");
+        sql.append("WHERE g.status_enum = ? ");
+        if (officeId != null) {
+            sql.append("AND g.office_id = ? ");
+            return this.jdbcTemplate.queryForObject(sql.toString(), Long.class,
+                    GroupingTypeStatus.ACTIVE.getValue(), officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, GroupingTypeStatus.ACTIVE.getValue());
+    }
+
     private BigDecimal getTotalCollections(LocalDate startDate, LocalDate endDate, Long officeId) {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COALESCE(SUM(lt.amount), 0) FROM m_loan_transaction lt ");
         sql.append("JOIN m_loan l ON lt.loan_id = l.id ");
         if (officeId != null) {
-            sql.append("JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON l.group_id = g.id ");
         }
         sql.append("WHERE lt.transaction_type_enum IN (?, ?, ?) ");
         sql.append("AND lt.is_reversed = false ");
@@ -351,7 +422,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND c.office_id = ? ");
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
@@ -362,7 +433,8 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sql.append("SELECT COALESCE(SUM(st.amount), 0) FROM m_savings_account_transaction st ");
         sql.append("JOIN m_savings_account sa ON st.savings_account_id = sa.id ");
         if (officeId != null) {
-            sql.append("JOIN m_client c ON sa.client_id = c.id ");
+            sql.append("LEFT JOIN m_client c ON sa.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON sa.group_id = g.id ");
         }
         sql.append("WHERE st.transaction_type_enum = ? ");
         sql.append("AND st.is_reversed = false ");
@@ -374,7 +446,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND c.office_id = ? ");
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
@@ -385,7 +457,8 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sql.append("SELECT COALESCE(SUM(lt.amount), 0) FROM m_loan_transaction lt ");
         sql.append("JOIN m_loan l ON lt.loan_id = l.id ");
         if (officeId != null) {
-            sql.append("JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON g.id = l.group_id ");
         }
         sql.append("WHERE lt.transaction_type_enum = ? ");
         sql.append("AND lt.is_reversed = false ");
@@ -397,7 +470,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND c.office_id = ? ");
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
@@ -408,7 +481,8 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sql.append("SELECT COALESCE(SUM(st.amount), 0) FROM m_savings_account_transaction st ");
         sql.append("JOIN m_savings_account sa ON st.savings_account_id = sa.id ");
         if (officeId != null) {
-            sql.append("JOIN m_client c ON sa.client_id = c.id ");
+            sql.append("LEFT JOIN m_client c ON sa.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON sa.group_id = g.id ");
         }
         sql.append("WHERE st.transaction_type_enum = ? ");
         sql.append("AND st.is_reversed = false ");
@@ -420,7 +494,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND c.office_id = ? ");
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
@@ -433,13 +507,14 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sql.append("FROM m_loan l ");
         sql.append("JOIN m_loan_arrears_aging laa ON l.id = laa.loan_id ");
         if (officeId != null) {
-            sql.append("JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g on g.id = l.group_id ");
         }
         sql.append("WHERE l.loan_status_id = ? ");
         sql.append("AND laa.overdue_since_date_derived <= DATE_SUB(CURDATE(), INTERVAL ? DAY) ");
 
         if (officeId != null) {
-            sql.append("AND c.office_id = ? ");
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
             return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class,
                     LoanStatus.ACTIVE.getValue(), daysOverdue, officeId);
         }
@@ -458,11 +533,12 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         baseSql.append("FROM m_loan l ");
         baseSql.append("JOIN m_loan_arrears_aging laa ON l.id = laa.loan_id ");
         if (officeId != null) {
-            baseSql.append("JOIN m_client c ON l.client_id = c.id ");
+            baseSql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            baseSql.append("LEFT JOIN m_group g ON l.group_id = g.id ");
         }
         baseSql.append("WHERE l.loan_status_id = ? AND laa.overdue_since_date_derived ");
 
-        String officeFilter = officeId != null ? " AND c.office_id = " + officeId : "";
+        String officeFilter = officeId != null ? " AND COALESCE(c.office_id, g.office_id) = " + officeId : "";
 
         // 1-30 days
         String sql1to30 = baseSql.toString() + "> ? AND laa.overdue_since_date_derived <= ?" + officeFilter;
@@ -514,7 +590,8 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sql.append("FROM m_loan_repayment_schedule lrs ");
         sql.append("JOIN m_loan l ON lrs.loan_id = l.id ");
         if (officeId != null) {
-            sql.append("JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON l.group_id = g.id ");
         }
         sql.append("WHERE l.loan_status_id = ? ");
         sql.append("AND lrs.duedate BETWEEN ? AND ? ");
@@ -525,7 +602,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND c.office_id = ? ");
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
@@ -561,12 +638,14 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COALESCE(SUM(l.approved_principal), 0) FROM m_loan l ");
         if (officeId != null) {
-            sql.append("JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON l.group_id = g.id ");
+
         }
         sql.append("WHERE l.loan_status_id = ? ");
 
         if (officeId != null) {
-            sql.append("AND c.office_id = ? ");
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
             return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class,
                     LoanStatus.APPROVED.getValue(), officeId);
         }
@@ -579,7 +658,8 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sql.append("SELECT COUNT(DISTINCT lt.loan_id) FROM m_loan_transaction lt ");
         sql.append("JOIN m_loan l ON lt.loan_id = l.id ");
         if (officeId != null) {
-            sql.append("JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON l.group_id = g.id ");
         }
         sql.append("WHERE lt.transaction_type_enum = ? ");
         sql.append("AND lt.is_reversed = false ");
@@ -591,7 +671,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         params.add(endDate);
 
         if (officeId != null) {
-            sql.append("AND c.office_id = ? ");
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
             params.add(officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
@@ -614,6 +694,19 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), Long.class,
                 ClientStatus.ACTIVE.getValue(), ClientStatus.PENDING.getValue());
+    }
+    private Long getTotalGroups(Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(*) FROM m_group g ");
+        sql.append("WHERE g.status_enum IN (?, ?) ");
+
+        if (officeId != null) {
+            sql.append("AND g.office_id = ? ");
+            return this.jdbcTemplate.queryForObject(sql.toString(), Long.class,
+                    GroupingTypeStatus.ACTIVE.getValue(), GroupingTypeStatus.PENDING.getValue(), officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), Long.class,
+                GroupingTypeStatus.ACTIVE.getValue(), GroupingTypeStatus.PENDING.getValue());
     }
 
     private Long getDormantMembers(Long officeId) {
@@ -640,6 +733,30 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         return this.jdbcTemplate.queryForObject(sql.toString(), Long.class,
                 ClientStatus.ACTIVE.getValue(), dormantDate, dormantDate);
     }
+    private Long getDormantGroups(Long officeId) {
+        LocalDate dormantDate = DateUtils.getBusinessLocalDate().minusDays(DORMANCY_PERIOD_DAYS);
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(DISTINCT g.id) FROM m_group g ");
+        sql.append("WHERE g.status_enum = ? ");
+        sql.append("AND g.id NOT IN ( ");
+        sql.append("  SELECT DISTINCT l.group_id FROM m_loan l ");
+        sql.append("  JOIN m_loan_transaction lt ON l.id = lt.loan_id ");
+        sql.append("  WHERE lt.transaction_date > ? AND lt.is_reversed = false ");
+        sql.append("  UNION ");
+        sql.append("  SELECT DISTINCT sa.group_id FROM m_savings_account sa ");
+        sql.append("  JOIN m_savings_account_transaction st ON sa.id = st.savings_account_id ");
+        sql.append("  WHERE st.transaction_date > ? AND st.is_reversed = false ");
+        sql.append(") ");
+
+        if (officeId != null) {
+            sql.append("AND g.office_id = ? ");
+            return this.jdbcTemplate.queryForObject(sql.toString(), Long.class,
+                    GroupingTypeStatus.ACTIVE.getValue(), dormantDate, dormantDate, officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), Long.class,
+                GroupingTypeStatus.ACTIVE.getValue(), dormantDate, dormantDate);
+    }
 
     private Long getMembersWithActiveLoans(Long officeId) {
         StringBuilder sql = new StringBuilder();
@@ -651,6 +768,22 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
 
         if (officeId != null) {
             sql.append("AND c.office_id = ? ");
+            return this.jdbcTemplate.queryForObject(sql.toString(), Long.class,
+                    LoanStatus.ACTIVE.getValue(), officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, LoanStatus.ACTIVE.getValue());
+    }
+
+    private Long getGroupsWithActiveLoans(Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(DISTINCT l.group_id) FROM m_loan l ");
+        if (officeId != null) {
+            sql.append("JOIN m_group g ON l.group_id = g.id ");
+        }
+        sql.append("WHERE l.loan_status_id = ? ");
+
+        if (officeId != null) {
+            sql.append("AND g.office_id = ? ");
             return this.jdbcTemplate.queryForObject(sql.toString(), Long.class,
                     LoanStatus.ACTIVE.getValue(), officeId);
         }

@@ -18,16 +18,8 @@
  */
 package org.apache.fineract.portfolio.loanaccount.domain;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -40,6 +32,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import lombok.Getter;
+import org.apache.fineract.infrastructure.core.api.AmountToWordsUtil;
 import org.apache.fineract.infrastructure.core.domain.AbstractAuditableWithUTCDateTimeCustom;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
@@ -89,6 +82,9 @@ public class LoanTransaction extends AbstractAuditableWithUTCDateTimeCustom<Long
 
     @Column(name = "amount", scale = 6, precision = 19, nullable = false)
     private BigDecimal amount;
+
+    @Column(name = "amount_in_words", nullable = false)
+    private String amountInWords;
 
     @Column(name = "principal_portion_derived", scale = 6, precision = 19, nullable = true)
     private BigDecimal principalPortion;
@@ -143,6 +139,12 @@ public class LoanTransaction extends AbstractAuditableWithUTCDateTimeCustom<Long
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, mappedBy = "loanTransaction")
     private LoanReAgeParameter loanReAgeParameter;
+
+    @PrePersist
+    @PreUpdate
+    public void generateAmountInWords(){
+        this.amountInWords = AmountToWordsUtil.convert(this.amount);
+    }
 
     protected LoanTransaction() {}
 

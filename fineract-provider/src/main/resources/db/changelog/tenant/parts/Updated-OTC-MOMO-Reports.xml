@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+    <changeSet id="update-otc-momo-queries" author="victor">
+
+        <update tableName="stretchy_report">
+            <column name="report_sql" value="SELECT
+            '${startDate}' AS StartDate,
+            '${endDate}' AS EndDate,
+            Y.*
+        FROM (
+	    SELECT
+            coalesce(c.display_name, g.display_name) as CustomerName,
+            o.name as TransactionOffice,
+            case s.status_enum
+                when 300 then 'Active'
+                when 200 then 'Approved'
+                when 100 then 'Pending_Approval'
+                when 600 then 'Closed'
+                else 'Unknown'
+            end
+            as AccountStatus,
+            case s.account_type_enum
+                when 0 then 'Unknown'
+                when 1 then 'Individual'
+                when 2 then 'Group'
+                when 3 then 'JLG'
+                when 4 then 'GLIM'
+                when 5 then 'GSIM'
+            end
+            as AccountType,
+            case s.deposit_type_enum
+                when 100 then 'Savings_Deposit'
+                when 200 then 'Fixed_Deposit'
+                when 300 then 'Recurring_Deposit'
+                when 400 then 'Current_Deposit'
+                else 'Unknown'
+            end
+            as DepositType,
+
+            s.account_no as SavingsAccount, p.name as ProductName,
+            case st.transaction_type_enum
+                when 0 then 'Unknown'
+                when 1 then 'Deposit'
+                when 2 then 'Withdrawal'
+                when 3 then 'Interest_Posting'
+                when 4 then 'Withdraw_Fee'
+                when 5 then 'Annual_Fee'
+                when 6 then 'Waive_Charge'
+                when 7 then 'Pay_Charge'
+                when 8 then 'Dividend_PayOut'
+                when 10 then 'Accrual'
+                when 12 then 'Initiate_Transfer'
+                when 13 then 'Approve_Transfer'
+                when 14 then 'Withdraw_Transfer'
+                when 15 then 'Reject_Transfer'
+                when 16 then 'Written_Off'
+                when 17 then 'Overdraft_Interest'
+                when 18 then 'Withhold_Tax'
+                when 19 then 'Escheat'
+                when 20 then 'Amount_hold'
+                when 21 then 'Amount_Release'
+            end as TransactionType,
+            case st.is_reversed
+                when 0 then 'Normal_Transaction'
+                when 1 then 'Reversed_Transaction'
+            end as ReversalStatus,
+            st.transaction_date as TransactionDate,
+            st.amount as Amount,
+            case st.is_manual
+                when 0 then 'False'
+                when 1 then 'True'
+                else 'Unknown'
+            end
+            as ManualPayment,
+            case st.is_loan_disbursement
+                when 0 then 'False'
+                when 1 then 'True'
+            end as LoanDisbursement,
+            st.ref_no as ReferenceNumber,
+            pt.value as PaymentType,
+            mn.note as Remarks,
+            mp.account_number as 'Phone/Student',
+            mp.routing_code as 'RoutingCode',
+            mp.bank_number as 'Tenant/OVA',
+            mp.receipt_number as ReceiptNumber,
+            mp.check_number as CheckNumber
+            from m_savings_account s
+            left join m_client c on s.client_id = c.id
+            left join m_group g on g.id = s.group_id
+            left join m_savings_product p on p.id = s.product_id
+            left join m_savings_account_transaction st on st.savings_account_id = s.id
+            left join m_office o on o.id = st.office_id
+            left join m_payment_detail mp on mp.id = st.payment_detail_id
+            left join m_payment_type pt on pt.id = mp.payment_type_id
+            left join m_note mn on mn.savings_account_transaction_id = st.id
+            where pt.id != 100
+            and s.status_enum in (300,200,100,600)
+            and s.account_type_enum in (0,1,2,3,4,5)
+            and s.deposit_type_enum in (100,200,300,400)
+            and st.is_reversed in (0,1)
+            and st.is_manual in (0,1)
+            and st.is_loan_disbursement in (0,1)
+            and st.transaction_type_enum in (1,2,3,4,5,6,7,8,10,12,13,14,15,16,17,18,19,20,21)
+            and st.transaction_date between '${startDate}' and '${endDate}'
+
+        ) Y
+        ORDER BY Y.TransactionDate, Y.CustomerName"/>
+            <where>report_name='OTC Savings Transactions Report'</where>
+        </update>
+
+
+        <update tableName="stretchy_report">
+            <column name="report_sql" value="SELECT
+        '${startDate}' AS StartDate,
+        '${endDate}' AS EndDate,
+        Y.*
+    FROM (
+	    select
+            coalesce(c.display_name, g.display_name) as CustomerName,
+            o.name as TransactionOffice,
+            case s.status_enum
+                when 300 then 'Active'
+                when 200 then 'Approved'
+                when 100 then 'Pending_Approval'
+                when 600 then 'Closed'
+                else 'Unknown'
+            end
+            as AccountStatus,
+            case s.account_type_enum
+                when 0 then 'Unknown'
+                when 1 then 'Individual'
+                when 2 then 'Group'
+                when 3 then 'JLG'
+                when 4 then 'GLIM'
+                when 5 then 'GSIM'
+            end
+            as AccountType,
+            case s.deposit_type_enum
+                when 100 then 'Savings_Deposit'
+                when 200 then 'Fixed_Deposit'
+                when 300 then 'Recurring_Deposit'
+                when 400 then 'Current_Deposit'
+                else 'Unknown'
+            end
+            as DepositType,
+
+            s.account_no as SavingsAccount, p.name as ProductName,
+            case st.transaction_type_enum
+                when 0 then 'Unknown'
+                when 1 then 'Deposit'
+                when 2 then 'Withdrawal'
+                when 3 then 'Interest_Posting'
+                when 4 then 'Withdraw_Fee'
+                when 5 then 'Annual_Fee'
+                when 6 then 'Waive_Charge'
+                when 7 then 'Pay_Charge'
+                when 8 then 'Dividend_PayOut'
+                when 10 then 'Accrual'
+                when 12 then 'Initiate_Transfer'
+                when 13 then 'Approve_Transfer'
+                when 14 then 'Withdraw_Transfer'
+                when 15 then 'Reject_Transfer'
+                when 16 then 'Written_Off'
+                when 17 then 'Overdraft_Interest'
+                when 18 then 'Withhold_Tax'
+                when 19 then 'Escheat'
+                when 20 then 'Amount_hold'
+                when 21 then 'Amount_Release'
+            end as TransactionType,
+            case st.is_reversed
+                when 0 then 'Normal_Transaction'
+                when 1 then 'Reversed_Transaction'
+            end as ReversalStatus,
+            st.transaction_date as TransactionDate,
+            st.amount as Amount,
+            case st.is_manual
+                when 0 then 'False'
+                when 1 then 'True'
+                else 'Unknown'
+            end
+            as ManualPayment,
+            case st.is_loan_disbursement
+                when 0 then 'False'
+                when 1 then 'True'
+            end as LoanDisbursement,
+            st.ref_no as ReferenceNumber,
+            pt.value as PaymentType,
+            mn.note as Remarks,
+            mp.account_number as 'Phone/Student',
+            mp.routing_code as 'RoutingCode',
+            mp.bank_number as 'Tenant/OVA',
+            mp.receipt_number as ReceiptNumber,
+            mp.check_number as CheckNumber
+            from m_savings_account s
+            left join m_client c on s.client_id = c.id
+            left join m_group g on g.id = s.group_id
+            left join m_savings_product p on p.id = s.product_id
+            left join m_savings_account_transaction st on st.savings_account_id = s.id
+            left join m_office o on o.id = st.office_id
+            left join m_payment_detail mp on mp.id = st.payment_detail_id
+            left join m_payment_type pt on pt.id = mp.payment_type_id
+            left join m_note mn on mn.savings_account_transaction_id = st.id
+            where pt.id = 100
+            and s.status_enum in (300,200,100,600)
+            and s.account_type_enum in (0,1,2,3,4,5)
+            and s.deposit_type_enum in (100,200,300,400)
+            and st.is_reversed in (0,1)
+            and st.is_manual in (0,1)
+            and st.is_loan_disbursement in (0,1)
+            and st.transaction_type_enum in (1,2,3,4,5,6,7,8,10,12,13,14,15,16,17,18,19,20,21)
+            and st.transaction_date between '${startDate}' and '${endDate}'
+        ) Y
+    ORDER BY Y.TransactionDate, Y.CustomerName"/>
+            <where>report_name='SurePay Momo Saving Transactions Report'</where>
+        </update>
+
+
+        <update tableName="stretchy_report">
+            <column name="report_sql" value="SELECT
+        '${startDate}' AS StartDate,
+        '${endDate}' AS EndDate,
+        Y.*
+    FROM (
+
+    SELECT
+        coalesce(c.display_name, g.display_name) AS CustomerName,
+        o.name AS Office,
+
+      	CASE COALESCE(c.status_enum, g.status_enum)
+	    	WHEN 300 THEN 'Active'
+	    	WHEN 100 THEN 'Pending'
+	    	WHEN 600 THEN 'Closed'
+	    	ELSE 'Unknown'
+		END AS AccountStatus,
+
+		case l.loan_type_enum
+            when 0 then 'Unknown'
+            when 1 then 'Individual'
+            when 2 then 'Group'
+            when 3 then 'JLG'
+            when 4 then 'GLIM'
+            when 5 then 'GSIM'
+         end as AccountType,
+
+        l.account_no AS LoanAccount,
+        lt.amount AS Amount,
+        lt.transaction_date AS TransactionDate,
+
+        CASE lt.transaction_type_enum
+            WHEN 1 THEN 'Disbursement'
+            WHEN 2 THEN 'Repayment'
+            WHEN 3 THEN 'Contra'
+            WHEN 4 THEN 'Waive_Interest'
+            WHEN 5 THEN 'Repayment_at_Disbursement'
+            WHEN 6 THEN 'WriteOff'
+            WHEN 9 THEN 'Waive_Charges'
+            WHEN 10 THEN 'Accrual'
+            WHEN 14 THEN 'Withdraw_Transfer'
+            WHEN 16 THEN 'Refund'
+            WHEN 17 THEN 'Charge Payment'
+            WHEN 19 THEN 'Income Posting'
+            WHEN 22 THEN 'Payout Refund'
+            WHEN 23 THEN 'GoodWill Credit'
+            WHEN 24 THEN 'Charge Refund'
+            WHEN 25 THEN 'Charge Back'
+            WHEN 26 THEN 'Charge Adjustment'
+            WHEN 27 THEN 'Charge Off'
+            WHEN 28 THEN 'Down Payment'
+            WHEN 31 THEN 'Interest Payment Waiver'
+            WHEN 32 THEN 'Accrual_Activity'
+            WHEN 33 THEN 'Interest_Refund'
+            WHEN 34 THEN 'Accrual Adjustment'
+            ELSE 'Unknown'
+        END AS LoanTransactionType,
+
+        pt.value AS PaymentType,
+
+        CASE pt.is_cash_payment
+            WHEN 0 THEN 'False'
+            WHEN 1 THEN 'True'
+            ELSE 'Unknown'
+        END AS CashPayment,
+
+        mn.note AS Remarks
+
+        FROM m_loan l
+        left JOIN m_client c ON l.client_id = c.id
+        left join m_group g on g.id = l.group_id
+        left JOIN m_loan_transaction lt ON lt.loan_id = l.id
+        left JOIN m_office o ON o.id = lt.office_id
+        LEFT JOIN m_payment_detail mp ON mp.id = lt.payment_detail_id
+        LEFT JOIN m_payment_type pt ON pt.id = mp.payment_type_id
+        LEFT JOIN m_note mn ON mn.loan_transaction_id = lt.id
+
+        where
+            pt.id != 100
+            and l.loan_type_enum in (0,1,2,3,4,5)
+            AND coalesce(c.status_enum, g.status_enum) IN (300,100,600)
+            AND lt.transaction_type_enum IN (1,2,3,4,6,9,10,14,16,17,19,22,23,24,25,26,27,28,31,32,33,34)
+            AND lt.transaction_date BETWEEN '${startDate}' AND '${endDate}'
+
+        ) Y
+    ORDER BY Y.TransactionDate, Y.CustomerName"/>
+            <where>report_name='OTC Loan Transactions Report'</where>
+        </update>
+
+
+        <update tableName="stretchy_report">
+            <column name="report_sql" value="SELECT
+        '${startDate}' AS StartDate,
+        '${endDate}' AS EndDate,
+        Y.*
+    FROM (
+
+    SELECT
+        coalesce(c.display_name, g.display_name) AS CustomerName,
+        o.name AS Office,
+
+      	CASE COALESCE(c.status_enum, g.status_enum)
+	    	WHEN 300 THEN 'Active'
+	    	WHEN 100 THEN 'Pending'
+	    	WHEN 600 THEN 'Closed'
+	    	ELSE 'Unknown'
+		END AS AccountStatus,
+
+		case l.loan_type_enum
+            when 0 then 'Unknown'
+            when 1 then 'Individual'
+            when 2 then 'Group'
+            when 3 then 'JLG'
+            when 4 then 'GLIM'
+            when 5 then 'GSIM'
+         end as AccountType,
+
+        l.account_no AS LoanAccount,
+        lt.amount AS Amount,
+        lt.transaction_date AS TransactionDate,
+
+        CASE lt.transaction_type_enum
+            WHEN 1 THEN 'Disbursement'
+            WHEN 2 THEN 'Repayment'
+            WHEN 3 THEN 'Contra'
+            WHEN 4 THEN 'Waive_Interest'
+            WHEN 5 THEN 'Repayment_at_Disbursement'
+            WHEN 6 THEN 'WriteOff'
+            WHEN 9 THEN 'Waive_Charges'
+            WHEN 10 THEN 'Accrual'
+            WHEN 14 THEN 'Withdraw_Transfer'
+            WHEN 16 THEN 'Refund'
+            WHEN 17 THEN 'Charge Payment'
+            WHEN 19 THEN 'Income Posting'
+            WHEN 22 THEN 'Payout Refund'
+            WHEN 23 THEN 'GoodWill Credit'
+            WHEN 24 THEN 'Charge Refund'
+            WHEN 25 THEN 'Charge Back'
+            WHEN 26 THEN 'Charge Adjustment'
+            WHEN 27 THEN 'Charge Off'
+            WHEN 28 THEN 'Down Payment'
+            WHEN 31 THEN 'Interest Payment Waiver'
+            WHEN 32 THEN 'Accrual_Activity'
+            WHEN 33 THEN 'Interest_Refund'
+            WHEN 34 THEN 'Accrual Adjustment'
+            ELSE 'Unknown'
+        END AS LoanTransactionType,
+
+        pt.value AS PaymentType,
+
+        CASE pt.is_cash_payment
+            WHEN 0 THEN 'False'
+            WHEN 1 THEN 'True'
+            ELSE 'Unknown'
+        END AS CashPayment,
+
+        mn.note AS Remarks
+
+        FROM m_loan l
+        left JOIN m_client c ON l.client_id = c.id
+        left join m_group g on g.id = l.group_id
+        left JOIN m_loan_transaction lt ON lt.loan_id = l.id
+        left JOIN m_office o ON o.id = lt.office_id
+        LEFT JOIN m_payment_detail mp ON mp.id = lt.payment_detail_id
+        LEFT JOIN m_payment_type pt ON pt.id = mp.payment_type_id
+        LEFT JOIN m_note mn ON mn.loan_transaction_id = lt.id
+
+        where
+            pt.id = 100
+            and l.loan_type_enum in (0,1,2,3,4,5)
+            AND coalesce(c.status_enum, g.status_enum) IN (300,100,600)
+            AND lt.transaction_type_enum IN (1,2,3,4,6,9,10,14,16,17,19,22,23,24,25,26,27,28,31,32,33,34)
+            AND lt.transaction_date BETWEEN '${startDate}' AND '${endDate}'
+
+        ) Y
+    ORDER BY Y.TransactionDate, Y.CustomerName"/>
+            <where>report_name='SurePay Momo Loan Transactions Report'</where>
+        </update>
+    </changeSet>
+</databaseChangeLog>

@@ -18,18 +18,14 @@
  */
 package org.apache.fineract.portfolio.shareaccounts.domain;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.apache.fineract.infrastructure.core.api.AmountToWordsUtil;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 
 @Entity
@@ -52,6 +48,9 @@ public class ShareAccountTransaction extends AbstractPersistableCustom<Long> {
     @Column(name = "amount")
     private BigDecimal amount;
 
+    @Column(name = "amount_in_words")
+    private String amountInWords;
+
     @Column(name = "amount_paid")
     private BigDecimal amountPaid;
 
@@ -69,6 +68,12 @@ public class ShareAccountTransaction extends AbstractPersistableCustom<Long> {
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "shareAccountTransaction", orphanRemoval = true, fetch = FetchType.EAGER)
     private Set<ShareAccountChargePaidBy> shareAccountChargesPaid = new HashSet<>();
+
+    @PrePersist
+    @PreUpdate
+    public void generateAmountInWords(){
+        this.amountInWords = AmountToWordsUtil.convert(this.amount);
+    }
 
     protected ShareAccountTransaction() {
 

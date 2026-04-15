@@ -207,9 +207,7 @@ public class DashboardData implements Serializable {
         // Active Borrower Ratio - Members with Active Loans ÷ Total Members
         private final BigDecimal activeBorrowerRatio;
         private final Long membersWithActiveLoans;
-        private final Long groupsWithActiveLoans;
         private final Long totalMembers;
-        private final Long totalGroups;
 
         // Average Savings per Member - Total Savings ÷ Total Members
         private final BigDecimal averageSavingsPerMember;

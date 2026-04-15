@@ -18,13 +18,22 @@
  */
 package org.apache.fineract.portfolio.shareaccounts.domain;
 
-import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.CascadeType;
 import org.apache.fineract.infrastructure.core.api.AmountToWordsUtil;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 

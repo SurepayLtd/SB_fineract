@@ -121,6 +121,7 @@ public class DocumentManagementApiResource {
 
         // TODO: stop reading from stream after max size is reached to protect against malicious clients
         // TODO: need to extract the actual file type and determine if they are permissible
+        this.context.authenticatedUser().validateHasCreatePermission(SYSTEM_ENTITY_TYPE);
 
         fileUploadValidator.validate(fileSize, inputStream, fileDetails, bodyPart);
         final DocumentCommand documentCommand = new DocumentCommand(null, null, entityType, entityId, name, fileDetails.getFileName(),
@@ -147,6 +148,9 @@ public class DocumentManagementApiResource {
             @FormDataParam("file") final InputStream inputStream, @FormDataParam("file") final FormDataContentDisposition fileDetails,
             @FormDataParam("file") final FormDataBodyPart bodyPart, @FormDataParam("name") final String name,
             @FormDataParam("description") final String description) {
+
+        this.context.authenticatedUser().validateHasUpdatePermission(SYSTEM_ENTITY_TYPE);
+
 
         final Set<String> modifiedParams = new HashSet<>();
         modifiedParams.add("name");
@@ -222,6 +226,9 @@ public class DocumentManagementApiResource {
     public String deleteDocument(@PathParam("entityType") @Parameter(description = "entityType") final String entityType,
             @PathParam("entityId") @Parameter(description = "entityId") final Long entityId,
             @PathParam("documentId") @Parameter(description = "documentId") final Long documentId) {
+
+        this.context.authenticatedUser().validateHasDeletePermission(SYSTEM_ENTITY_TYPE);
+
 
         final DocumentCommand documentCommand = new DocumentCommand(null, documentId, entityType, entityId, null, null, null, null, null,
                 null);

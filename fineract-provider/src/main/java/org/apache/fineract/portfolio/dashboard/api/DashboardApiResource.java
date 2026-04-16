@@ -60,7 +60,9 @@ import org.springframework.stereotype.Component;
         + "   - Loans Disbursed MTD, Collections vs Target, Average Loan Size\n\n"
         + "**5. Member & Savings Insights** - Member engagement\n"
         + "   - Dormant Members, Active Borrower Ratio, Average Savings per Member\n\n"
-        + "**6. Profitability & Sustainability** - Long-term financial health\n"
+        + "**6. Group & Savings Insights** - Group engagement\n"
+        + "   - Dormant Groups, Group Borrower Ratio, Average Savings per Group\n\n"
+        + "**7. Profitability & Sustainability** - Long-term financial health\n"
         + "   - ROA, Capital Adequacy Ratio, Portfolio per Loan Officer")
 @RequiredArgsConstructor
 public class DashboardApiResource {
@@ -100,8 +102,12 @@ public class DashboardApiResource {
             + "### 5. Member & Savings Insights\n"
             + "- **dormantMembers**: Members inactive for 60+ days\n"
             + "- **activeBorrowerRatio**: Members with Active Loans / Total Members\n"
-            + "- **averageSavingsPerMember**: Total Savings / Total Members\n\n"
-            + "### 6. Profitability & Sustainability\n"
+            + "- **averageSavingsPerMember**: Total Member Savings / Total Members\n\n"
+            + "### 6. Group & Savings Insights\n"
+            + "- **dormantGroups**: Groups inactive for 60+ days\n"
+            + "- **activeBorrowerRatio**: Groups with Active Loans / Total Groups\n"
+            + "- **averageSavingsPerGroups**: Total Groups Savings / Total Groups\n\n"
+            + "### 7. Profitability & Sustainability\n"
             + "- **returnOnAssets**: Net Income / Total Assets\n"
             + "- **capitalAdequacyRatio**: Equity / Total Assets\n"
             + "- **portfolioPerLoanOfficer**: Total Portfolio / Number of Loan Officers\n\n"

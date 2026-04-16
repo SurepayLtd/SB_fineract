@@ -53,7 +53,10 @@ public class DashboardData implements Serializable {
     // 5. Member & Savings Insights
     private final MemberSavingsInsightsData memberSavingsInsights;
 
-    // 6. Profitability & Sustainability
+    // 6. Group & Savings Insights
+    private final GroupSavingsInsightsData groupSavingsInsightsData;
+
+    // 7. Profitability & Sustainability
     private final ProfitabilitySustainabilityData profitabilitySustainability;
 
     /**
@@ -72,6 +75,9 @@ public class DashboardData implements Serializable {
 
         // Active Members - Count of active clients
         private final Long activeMembers;
+
+        // Active Groups - Count of active groups
+        private final Long activeGroups;
 
         // Net Position (Inflow – Outflow) - Total Collections + Deposits – (Loan Disbursements + Withdrawals)
         private final BigDecimal netPosition;
@@ -228,6 +234,28 @@ public class DashboardData implements Serializable {
         // Portfolio per Loan Officer - Total Loan Portfolio ÷ Number of Loan Officers
         private final BigDecimal portfolioPerLoanOfficer;
         private final Long numberOfLoanOfficers;
+    }
+
+    /**
+     * 8. Group & Savings Insights - Group engagement and savings behaviour
+     */
+    @Getter
+    @Builder
+    public static class GroupSavingsInsightsData implements Serializable{
+        private static final long serialVersionUID = 1L;
+
+        // Dormant Groups - Groups with no transactions over 60 days
+        private final Long dormantGroups;
+        private final Integer dormancyPeriodDays;
+
+        // Active Borrower Ratio - Groups with Active Loans ÷ Total Groups
+        private final BigDecimal activeBorrowerRatio;
+        private final Long groupsWithActiveLoans;
+        private final Long totalGroups;
+
+        // Average Savings per Group - Total Savings ÷ Total Groups
+        private final BigDecimal averageSavingsPerGroup;
+        private final BigDecimal totalSavings;
     }
 }
 

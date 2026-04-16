@@ -43,6 +43,7 @@ final class DashboardApiResourceSwagger {
         public GetLiquidityFundingResponse liquidityFunding;
         public GetBusinessPerformanceResponse businessPerformance;
         public GetMemberSavingsInsightsResponse memberSavingsInsights;
+        public GetGroupSavingsInsightsResponse groupSavingsInsights;
         public GetProfitabilitySustainabilityResponse profitabilitySustainability;
     }
 
@@ -169,8 +170,27 @@ final class DashboardApiResourceSwagger {
         public Long membersWithActiveLoans;
         @Schema(example = "1500", description = "Total number of members")
         public Long totalMembers;
-        @Schema(example = "20000.00", description = "Total Savings / Total Members")
+        @Schema(example = "20000.00", description = "Total Individual Savings / Total Members")
         public BigDecimal averageSavingsPerMember;
+        @Schema(example = "30000000.00", description = "Total savings balance")
+        public BigDecimal totalSavings;
+    }
+
+    @Schema(description = "GetGroupSavingsInsightsResponse")
+    public static final class GetGroupSavingsInsightsResponse {
+
+        @Schema(example = "150", description = "Groups with no transactions over 60 days")
+        public Long dormantGroups;
+        @Schema(example = "60", description = "Dormancy period in days")
+        public Integer dormancyPeriodDays;
+        @Schema(example = "45.50", description = "Members with Active Loans / Total Members as percentage")
+        public BigDecimal groupBorrowerRatio;
+        @Schema(example = "682", description = "Number of groups with active loans")
+        public Long groupsWithActiveLoans;
+        @Schema(example = "1500", description = "Total number of groups")
+        public Long totalGroups;
+        @Schema(example = "20000.00", description = "Total Group Savings / Total Groups")
+        public BigDecimal averageSavingsPerGroup;
         @Schema(example = "30000000.00", description = "Total savings balance")
         public BigDecimal totalSavings;
     }

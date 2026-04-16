@@ -192,4 +192,6 @@
     <include file="parts/0168_add_dashboard_permission.xml" relativeToChangelogFile="true" />
     <include file="parts/0169_add_shortname_column_office.xml" relativeToChangelogFile="true"/>
     <include file="parts/SurePay-002-SMS-Implementation.xml" relativeToChangelogFile="true"/>
+    <include file="parts/add_amount_in_words_column.xml" relativeToChangelogFile="true"/>
+    <include file="parts/Updated-OTC-MOMO-Reports.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

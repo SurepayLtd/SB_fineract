@@ -92,6 +92,14 @@ public interface DashboardReadPlatformService {
     DashboardData.MemberSavingsInsightsData retrieveMemberSavingsInsights(Long officeId);
 
     /**
+     * Retrieves only the Group & Savings Insights section of the dashboard.
+     *
+     * @param officeId optional office ID to filter data
+     * @return GroupSavingsInsightsData
+     */
+    DashboardData.GroupSavingsInsightsData retrieveGroupSavingsInsights(Long officeId);
+
+    /**
      * Retrieves only the Profitability & Sustainability section of the dashboard.
      * 
      * @param startDate the start date of the reporting period

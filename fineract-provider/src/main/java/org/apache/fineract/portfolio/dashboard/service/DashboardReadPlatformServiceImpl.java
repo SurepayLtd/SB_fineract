@@ -283,6 +283,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
                 .dormancyPeriodDays(DORMANCY_PERIOD_DAYS)
                 .totalGroups(totalGroups)
                 .totalSavings(groupDeposits)
+                .groupsWithActiveLoans(groupsWithActiveLoans)
                 .averageSavingsPerGroup(averageSavingsPerGroup)
                 .activeBorrowerRatio(groupBorrowerRatio)
                 .build();

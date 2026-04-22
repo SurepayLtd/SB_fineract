@@ -116,10 +116,11 @@ public final class JournalEntryCommandFromApiJsonDeserializer extends AbstractFr
             final Set<String> parametersPassedInForCreditsCommand = new HashSet<>();
 
             final Long glAccountId = this.fromApiJsonHelper.extractLongNamed("glAccountId", creditElement);
+            final String glAccountName = this.fromApiJsonHelper.extractStringNamed("glAccountName", creditElement);
             final String comments = this.fromApiJsonHelper.extractStringNamed("comments", creditElement);
             final BigDecimal amount = this.fromApiJsonHelper.extractBigDecimalNamed("amount", creditElement, locale);
 
-            debitOrCredits[i] = new SingleDebitOrCreditEntryCommand(glAccountId, amount, comments, parametersPassedInForCreditsCommand);
+            debitOrCredits[i] = new SingleDebitOrCreditEntryCommand(glAccountId, glAccountName, amount, comments, parametersPassedInForCreditsCommand);
         }
         return debitOrCredits;
     }

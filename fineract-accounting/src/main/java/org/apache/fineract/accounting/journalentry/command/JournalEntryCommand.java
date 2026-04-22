@@ -76,7 +76,7 @@ public class JournalEntryCommand {
         // validation for credit array elements
         if (this.credits != null) {
             if (this.credits.length == 0) {
-                validateSingleDebitOrCredit(baseDataValidator, "credits", 0, new SingleDebitOrCreditEntryCommand(null, null, null, null));
+                validateSingleDebitOrCredit(baseDataValidator, "credits", 0, new SingleDebitOrCreditEntryCommand(null, null, null, null, null));
             } else {
                 int i = 0;
                 for (final SingleDebitOrCreditEntryCommand credit : this.credits) {
@@ -89,7 +89,7 @@ public class JournalEntryCommand {
         // validation for debit array elements
         if (this.debits != null) {
             if (this.debits.length == 0) {
-                validateSingleDebitOrCredit(baseDataValidator, "debits", 0, new SingleDebitOrCreditEntryCommand(null, null, null, null));
+                validateSingleDebitOrCredit(baseDataValidator, "debits", 0, new SingleDebitOrCreditEntryCommand(null, null, null, null, null));
             } else {
                 int i = 0;
                 for (final SingleDebitOrCreditEntryCommand debit : this.debits) {
@@ -115,6 +115,8 @@ public class JournalEntryCommand {
             final SingleDebitOrCreditEntryCommand credit) {
         baseDataValidator.reset().parameter(paramSuffix + "[" + arrayPos + "].glAccountId").value(credit.getGlAccountId()).notNull()
                 .integerGreaterThanZero();
+        baseDataValidator.reset().parameter(paramSuffix + "[" + arrayPos + "].glAccountName").value(credit.getGlAccountName()).notNull()
+                .notExceedingLengthOf(100);
         baseDataValidator.reset().parameter(paramSuffix + "[" + arrayPos + "].amount").value(credit.getAmount()).notNull()
                 .zeroOrPositiveAmount();
     }

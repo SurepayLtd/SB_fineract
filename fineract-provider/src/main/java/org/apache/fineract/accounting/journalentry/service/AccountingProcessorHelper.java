@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.accounting.closure.domain.GLClosure;
 import org.apache.fineract.accounting.closure.domain.GLClosureRepository;
@@ -80,6 +81,7 @@ import org.apache.fineract.portfolio.savings.domain.SavingsAccountTransactionRep
 import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountTransactionEnumData;
 import org.springframework.dao.DataAccessException;
 
+@Slf4j
 @RequiredArgsConstructor
 public class AccountingProcessorHelper {
 
@@ -397,10 +399,31 @@ public class AccountingProcessorHelper {
         }
 
         if (totalAmount.compareTo(totalCreditedAmount) != 0) {
-            throw new PlatformDataIntegrityException(
-                    "Meltdown in advanced accounting...sum of all charges is not equal to the fee charge for a transaction",
-                    "Meltdown in advanced accounting...sum of all charges is not equal to the fee charge for a transaction",
-                    totalCreditedAmount, totalAmount);
+            // Residual can happen when the loanChargesPaid mappings on an accrual/accrual-adjustment
+            // transaction are missing or out of sync with its fee/penalty portion (e.g. after switching
+            // a loan product from cash-based to accrual-based accounting, or when a charge was removed
+            // after the accrual was generated). Post the difference against the generic (non
+            // charge-specific) income account so the journal entries still balance instead of failing.
+            final BigDecimal residual = totalAmount.subtract(totalCreditedAmount);
+            log.warn(
+                    "Loan charges breakdown mismatch for loanId={} transactionId={}: expected={} actualFromChargePayments={}; "
+                            + "posting residual {} to generic income account",
+                    loanId, transactionId, totalAmount, totalCreditedAmount, residual);
+            final GLAccount genericIncomeAccount = getLinkedGLAccountForLoanCharges(loanProductId, accountTypeToBeCredited, null);
+            final BigDecimal residualAbs = residual.abs();
+            final boolean residualIsPositive = residual.signum() > 0;
+            final boolean debitReceivable = residualIsPositive != isReversal;
+            if (debitReceivable) {
+                createDebitJournalEntryForLoan(office, currencyCode, receivableAccount, loanId, transactionId, transactionDate,
+                        residualAbs);
+                createCreditJournalEntryForLoan(office, currencyCode, genericIncomeAccount, loanId, transactionId, transactionDate,
+                        residualAbs);
+            } else {
+                createDebitJournalEntryForLoan(office, currencyCode, genericIncomeAccount, loanId, transactionId, transactionDate,
+                        residualAbs);
+                createCreditJournalEntryForLoan(office, currencyCode, receivableAccount, loanId, transactionId, transactionDate,
+                        residualAbs);
+            }
         }
     }
 

@@ -31,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class SingleDebitOrCreditEntryCommand {
 
     private final Long glAccountId;
+    private final String glAccountName;
     private final BigDecimal amount;
     private final String comments;
 
@@ -38,6 +39,10 @@ public class SingleDebitOrCreditEntryCommand {
 
     public boolean isGlAccountIdChanged() {
         return this.parametersPassedInRequest.contains("glAccountId");
+    }
+
+    public boolean isGlAccountNameChanged() {
+        return this.parametersPassedInRequest.contains("glAccountName");
     }
 
     public boolean isGlAmountChanged() {

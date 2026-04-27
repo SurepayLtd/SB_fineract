@@ -19,6 +19,8 @@
 package org.apache.fineract.portfolio.loanaccount.service;
 
 import java.util.Collection;
+import java.util.List;
+
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.data.OverdueLoanScheduleData;
@@ -34,6 +36,8 @@ public interface LoanChargeWritePlatformService {
     CommandProcessingResult updateLoanCharge(Long loanId, Long loanChargeId, JsonCommand command);
 
     CommandProcessingResult waiveLoanCharge(Long loanId, Long loanChargeId, JsonCommand command);
+
+    CommandProcessingResult massWaiveLoanCharge(Long loanId, JsonCommand command);
 
     CommandProcessingResult deleteLoanCharge(Long loanId, Long loanChargeId, JsonCommand command);
 

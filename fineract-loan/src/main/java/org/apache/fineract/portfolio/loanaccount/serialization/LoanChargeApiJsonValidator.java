@@ -256,6 +256,29 @@ public final class LoanChargeApiJsonValidator {
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
     }
 
+    public void validateMassWaiver(final String json){
+        if (StringUtils.isBlank(json)) {
+            return;
+        }
+        Set<String> transactionParameters = new HashSet<>(
+                Arrays.asList("locale", "dateFormat", "amount", "externalId"));
+
+        final Type typeOfMap = new TypeToken<Map<String, Object>>() {
+
+        }.getType();
+        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, transactionParameters);
+
+        final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
+                .resource("loan.charge.waive.transaction");
+
+        final JsonElement element = this.fromApiJsonHelper.parse(json);
+
+        final BigDecimal amount = this.fromApiJsonHelper.extractBigDecimalWithLocaleNamed("amount", element);
+        baseDataValidator.reset().parameter("amount").value(amount).positiveAmount();
+        throwExceptionIfValidationWarningsExist(dataValidationErrors);
+    }
+
     public void validateLoanCharges(final Set<LoanCharge> charges, final List<ApiParameterError> dataValidationErrors) {
         if (charges == null) {
             return;

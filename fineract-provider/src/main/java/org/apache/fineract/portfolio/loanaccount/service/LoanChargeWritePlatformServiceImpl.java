@@ -23,16 +23,9 @@ import com.google.gson.JsonObject;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -92,28 +85,7 @@ import org.apache.fineract.portfolio.group.exception.GroupNotActiveException;
 import org.apache.fineract.portfolio.loanaccount.api.LoanApiConstants;
 import org.apache.fineract.portfolio.loanaccount.data.LoanChargePaidByData;
 import org.apache.fineract.portfolio.loanaccount.data.ScheduleGeneratorDTO;
-import org.apache.fineract.portfolio.loanaccount.domain.ChangedTransactionDetail;
-import org.apache.fineract.portfolio.loanaccount.domain.Loan;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanAccountDomainService;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanCharge;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanChargePaidBy;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanChargeRepository;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanDisbursementDetails;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanEvent;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanInstallmentCharge;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanInterestRecalcualtionAdditionalDetails;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanLifecycleStateMachine;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanOverdueInstallmentCharge;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleInstallment;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleProcessingWrapper;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleTransactionProcessorFactory;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTrancheDisbursementCharge;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionRelation;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionRelationTypeEnum;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionRepository;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionType;
+import org.apache.fineract.portfolio.loanaccount.domain.*;
 import org.apache.fineract.portfolio.loanaccount.domain.transactionprocessor.LoanRepaymentScheduleTransactionProcessor;
 import org.apache.fineract.portfolio.loanaccount.domain.transactionprocessor.MoneyHolder;
 import org.apache.fineract.portfolio.loanaccount.domain.transactionprocessor.TransactionCtx;
@@ -173,6 +145,7 @@ public class LoanChargeWritePlatformServiceImpl implements LoanChargeWritePlatfo
     private final LoanDownPaymentTransactionValidator loanDownPaymentTransactionValidator;
     private final LoanChargeValidator loanChargeValidator;
     private final LoanScheduleService loanScheduleService;
+    private final MassWaiverRepository massWaiverRepository;
 
     private static boolean isPartOfThisInstallment(LoanCharge loanCharge, LoanRepaymentScheduleInstallment e) {
         return DateUtils.isAfter(loanCharge.getDueDate(), e.getFromDate()) && !DateUtils.isAfter(loanCharge.getDueDate(), e.getDueDate());
@@ -587,6 +560,7 @@ public class LoanChargeWritePlatformServiceImpl implements LoanChargeWritePlatfo
                 .build();
     }
 
+
     @Transactional
     @Override
     public CommandProcessingResult deleteLoanCharge(final Long loanId, final Long loanChargeId, final JsonCommand command) {
@@ -619,6 +593,7 @@ public class LoanChargeWritePlatformServiceImpl implements LoanChargeWritePlatfo
                 .withLoanId(loanId) //
                 .build();
     }
+
 
     @Transactional
     @Override
@@ -1492,4 +1467,214 @@ public class LoanChargeWritePlatformServiceImpl implements LoanChargeWritePlatfo
 
         return waiveLoanChargeTransaction;
     }
+
+
+    @Override
+    @Transactional
+    public CommandProcessingResult massWaiveLoanCharge(Long loanId, JsonCommand command) {
+
+        final Loan loan = this.loanAssembler.assembleFrom(loanId);
+        checkClientOrGroupActive(loan);
+
+        BigDecimal amountToWaive = command.bigDecimalValueOfParameterNamed("amount");
+
+        if (amountToWaive == null || amountToWaive.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new GeneralPlatformDomainRuleException("error.msg.loan.mass.waive.amount.invalid",
+                    "The waive amount must be greater than zero.");
+        }
+        final ExternalId externalId =
+                externalIdFactory.createFromCommand(command, LoanApiConstants.externalIdParameterName);
+        this.loanChargeApiJsonValidator.validateMassWaiver(command.json());
+
+
+        // Get charges
+        List<LoanCharge> loanCharges = retrieveAllEligibleLoanCharges(loan);
+
+
+        // Sort (oldest first)
+        loanCharges.sort(Comparator
+                .comparing(LoanCharge::getDueLocalDate)
+                .thenComparing(LoanCharge::getChargeCalculation));
+
+        // Validate all first
+        for (LoanCharge loanCharge : loanCharges) {
+            validateChargeEligibility(loan, loanCharge);
+        }
+
+        BigDecimal remainingToWaive = amountToWaive;
+
+        List<Map<String, Object>> waiverBreakdown = new ArrayList<>();
+
+        List<MassWaiverDetail> items = new ArrayList<>();
+
+        MassWaiver massWaiver = MassWaiver.create(loan.getClient(), loan, amountToWaive, null, null, null);
+        this.massWaiverRepository.save(massWaiver);
+
+
+        for (LoanCharge loanCharge : loanCharges) {
+
+            if (remainingToWaive.compareTo(BigDecimal.ZERO) <= 0) break;
+
+            BigDecimal outstanding = getChargeOutstandingAmount(loan, loanCharge);
+
+            if (outstanding.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            BigDecimal waiveAmount = remainingToWaive.min(outstanding);
+
+            processChargeWaiverInBulk(loan, loanCharge, waiveAmount, externalId, command);
+
+            boolean isFullyWaived = waiveAmount.compareTo(outstanding) == 0;
+
+            LocalDate dueDate = loanCharge.getDueDate();
+
+            // Track for response
+            Map<String, Object> detail = new LinkedHashMap<>();
+            detail.put("chargeId", loanCharge.getId());
+            detail.put("chargeName", loanCharge.getCharge().getName());
+            detail.put("waivedAmount", waiveAmount);
+            detail.put("fullyWaived", isFullyWaived);
+            detail.put("chargeDueDate", loanCharge.getDueDate());
+            waiverBreakdown.add(detail);
+
+            remainingToWaive = remainingToWaive.subtract(waiveAmount);
+
+            MassWaiverDetail massWaiverDetail = MassWaiverDetail.create(massWaiver, loanCharge, waiveAmount, isFullyWaived, dueDate );
+            massWaiver.addDetail(massWaiverDetail);
+            items.add(massWaiverDetail);
+        }
+
+        // Accrual handling (ONLY ONCE)
+        if (loan.isInterestBearingAndInterestRecalculationEnabled()) {
+            loanAccrualsProcessingService.reprocessExistingAccruals(loan);
+            loanAccrualsProcessingService.processIncomePostingAndAccruals(loan);
+        }
+
+        BigDecimal totalWaived = amountToWaive.subtract(remainingToWaive);
+        Integer chargesAffected = waiverBreakdown.size();
+
+        //Update fields
+        massWaiver.setChargesAffected(chargesAffected);
+        massWaiver.setTotalWaived(totalWaived);
+        massWaiver.setRemainingAmount(remainingToWaive);
+
+
+        // Save loan once
+        this.loanRepositoryWrapper.save(loan);
+
+        // Final business events
+        businessEventNotifierService.notifyPostBusinessEvent(new LoanBalanceChangedBusinessEvent(loan));
+        this.loanAccountDomainService.setLoanDelinquencyTag(loan, DateUtils.getBusinessLocalDate());
+
+
+        // Response
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("totalRequestedToWaive", amountToWaive);
+        changes.put("totalWaived", totalWaived);
+        changes.put("remainingAmount", remainingToWaive);
+        changes.put("chargesAffected", chargesAffected);
+        changes.put("breakdown", waiverBreakdown);
+
+        return new CommandProcessingResultBuilder()
+                .withCommandId(command.commandId())
+                .withEntityId(loanId)
+                .withEntityExternalId(loan.getExternalId())
+                .withOfficeId(loan.getOfficeId())
+                .withClientId(loan.getClientId())
+                .withGroupId(loan.getGroupId())
+                .withLoanId(loanId)
+                .with(changes)
+                .build();
+    }
+
+    /**
+     * Process charge waiver as part of a bulk operation
+     */
+    private void processChargeWaiverInBulk(Loan loan, LoanCharge loanCharge, BigDecimal amountToWaive,
+                                           ExternalId externalId, JsonCommand command) {
+
+        Integer loanInstallmentNumber = null;
+        if (loanCharge.isInstalmentFee()) {
+            LoanInstallmentCharge chargePerInstallment = loanCharge.getUnpaidInstallmentLoanCharge();
+            if (chargePerInstallment != null) {
+                loanInstallmentNumber = chargePerInstallment.getRepaymentInstallment().getInstallmentNumber();
+            }
+        }
+
+        final Map<String, Object> changes = new LinkedHashMap<>();
+
+        changes.put(LoanApiConstants.externalIdParameterName, externalId);
+
+        final List<Long> existingTransactionIds = new ArrayList<>();
+        final List<Long> existingReversedTransactionIds = new ArrayList<>();
+        LocalDate recalculateFrom = null;
+         ScheduleGeneratorDTO scheduleGeneratorDTO = this.loanUtilService.buildScheduleGeneratorDTO(loan, recalculateFrom);
+
+        Money accruedCharge = Money.zero(loan.getCurrency());
+        if (loan.isPeriodicAccrualAccountingEnabledOnLoanProduct()) {
+            Collection<LoanChargePaidByData> chargePaidByCollection = this.loanChargeReadPlatformService
+                    .retrieveLoanChargesPaidBy(loanCharge.getId(), LoanTransactionType.ACCRUAL, loanInstallmentNumber);
+            for (LoanChargePaidByData chargePaidByData : chargePaidByCollection) {
+                accruedCharge = accruedCharge.plus(chargePaidByData.getAmount());
+            }
+        }
+
+        loanChargeValidator.validateLoanIsNotClosed(loan, loanCharge);
+        LoanTransaction waiveTransaction = waiveLoanCharge(loan, loanCharge, defaultLoanLifecycleStateMachine, changes,
+                existingTransactionIds, existingReversedTransactionIds, loanInstallmentNumber, scheduleGeneratorDTO, accruedCharge,
+                externalId);
+
+        this.loanTransactionRepository.saveAndFlush(waiveTransaction);
+        postJournalEntries(loan, existingTransactionIds, existingReversedTransactionIds);
+        loanAccrualTransactionBusinessEventService.raiseBusinessEventForAccrualTransactions(loan, existingTransactionIds);
+        businessEventNotifierService.notifyPostBusinessEvent(new LoanWaiveChargeBusinessEvent(loanCharge));
+
+    }
+
+    private void validateChargeEligibility(Loan loan, LoanCharge loanCharge) {
+
+        if (!loan.getStatus().isActive()) {
+            throw new LoanChargeCannotBeWaivedException(
+                    LoanChargeCannotBeWaivedException.LoanChargeCannotBeWaivedReason.LOAN_INACTIVE,
+                    loanCharge.getId());
+        }
+
+        if (loanCharge.isWaived()) {
+            throw new LoanChargeCannotBeWaivedException(
+                    LoanChargeCannotBeWaivedException.LoanChargeCannotBeWaivedReason.ALREADY_WAIVED,
+                    loanCharge.getId());
+        }
+
+        if (loanCharge.isPaid()) {
+            throw new LoanChargeCannotBeWaivedException(
+                    LoanChargeCannotBeWaivedException.LoanChargeCannotBeWaivedReason.ALREADY_PAID,
+                    loanCharge.getId());
+        }
+    }
+
+    private BigDecimal getChargeOutstandingAmount(Loan loan, LoanCharge loanCharge) {
+
+        if (loanCharge.isInstalmentFee()) {
+            LoanInstallmentCharge installmentCharge =
+                    loanCharge.getUnpaidInstallmentLoanCharge();
+
+            return installmentCharge != null
+                    ? installmentCharge.getAmount()
+                    : BigDecimal.ZERO;
+        }
+
+        return loanCharge.getAmountOutstanding();
+    }
+
+    private List<LoanCharge> retrieveAllEligibleLoanCharges(Loan loan) {
+
+        return loan.getLoanCharges().stream()
+                .filter(charge -> !charge.isWaived() && !charge.isPaid())
+                .filter(charge -> {
+                    BigDecimal outstanding = getChargeOutstandingAmount(loan, charge);
+                    return outstanding != null && outstanding.compareTo(BigDecimal.ZERO) > 0;
+                })
+                .collect(Collectors.toList());
+    }
+
+
 }

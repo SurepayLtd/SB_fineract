@@ -294,7 +294,7 @@ public class LoanAccountConfiguration {
             LoanAccrualTransactionBusinessEventService loanAccrualTransactionBusinessEventService,
             LoanAccrualsProcessingService loanAccrualsProcessingService,
             LoanDownPaymentTransactionValidator loanDownPaymentTransactionValidator, LoanChargeValidator loanChargeValidator,
-            LoanScheduleService loanScheduleService) {
+            LoanScheduleService loanScheduleService, MassWaiverRepository massWaiverRepository) {
         return new LoanChargeWritePlatformServiceImpl(loanChargeApiJsonValidator, loanAssembler, chargeRepository,
                 businessEventNotifierService, loanTransactionRepository, accountTransfersWritePlatformService, loanRepositoryWrapper,
                 journalEntryWritePlatformService, loanAccountDomainService, loanChargeRepository, loanWritePlatformService, loanUtilService,
@@ -302,7 +302,7 @@ public class LoanAccountConfiguration {
                 configurationDomainService, loanRepaymentScheduleTransactionProcessorFactory, externalIdFactory,
                 accountTransferDetailRepository, loanChargeAssembler, replayedTransactionBusinessEventService,
                 paymentDetailWritePlatformService, noteRepository, loanAccrualTransactionBusinessEventService,
-                loanAccrualsProcessingService, loanDownPaymentTransactionValidator, loanChargeValidator, loanScheduleService);
+                loanAccrualsProcessingService, loanDownPaymentTransactionValidator, loanChargeValidator, loanScheduleService, massWaiverRepository);
     }
 
     @Bean

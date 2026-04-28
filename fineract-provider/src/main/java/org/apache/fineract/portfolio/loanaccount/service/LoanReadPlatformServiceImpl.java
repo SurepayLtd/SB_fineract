@@ -85,22 +85,7 @@ import org.apache.fineract.portfolio.group.data.GroupGeneralData;
 import org.apache.fineract.portfolio.group.data.GroupRoleData;
 import org.apache.fineract.portfolio.group.service.GroupReadPlatformService;
 import org.apache.fineract.portfolio.loanaccount.api.LoanApiConstants;
-import org.apache.fineract.portfolio.loanaccount.data.DisbursementData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanAccountData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanApplicationTimelineData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanApprovalData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanChargePaidByData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanInterestRecalculationData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanRepaymentScheduleInstallmentData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanStatusEnumData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanSummaryData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanTransactionData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanTransactionEnumData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanTransactionRelationData;
-import org.apache.fineract.portfolio.loanaccount.data.OutstandingAmountsDTO;
-import org.apache.fineract.portfolio.loanaccount.data.PaidInAdvanceData;
-import org.apache.fineract.portfolio.loanaccount.data.RepaymentScheduleRelatedLoanData;
-import org.apache.fineract.portfolio.loanaccount.data.ScheduleGeneratorDTO;
+import org.apache.fineract.portfolio.loanaccount.data.*;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanChargeOffBehaviour;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleInstallment;
@@ -2322,4 +2307,43 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
         return loanRepositoryWrapper.findIdByExternalId(externalId);
     }
 
+    @Override
+    public LoanPenaltiesData retrievePenaltiesByLoan(Long loanId) {
+        this.context.authenticatedUser();
+        PenaltyMapper mp = new PenaltyMapper();
+        String sql = "select " + mp.penaltySchema() + " where l.id = ?";
+        return this.jdbcTemplate.queryForObject(sql, mp, loanId) ;
+    }
+
+    protected static class PenaltyMapper implements RowMapper<LoanPenaltiesData>{
+        @Override
+        public LoanPenaltiesData mapRow(ResultSet rs, int rowNum) throws SQLException {
+
+            final Long loanId = rs.getObject("loanId", Long.class);
+            final BigDecimal totalPenaltiesDerived = rs.getBigDecimal("totalPenaltiesDerived");
+            final BigDecimal totalPenaltiesPaid = rs.getBigDecimal("totalPenaltiesPaid");
+            final BigDecimal totalPenaltiesWaived = rs.getBigDecimal("totalPenaltiesWaived");
+            final BigDecimal totalPenaltiesWrittenOff = rs.getBigDecimal("totalPenaltiesWrittenOff");
+            final BigDecimal totalPenaltiesOutstanding = rs.getBigDecimal("totalPenaltiesOutstanding");
+            final String currencyCode = rs.getString("currencyCode");
+            final String currencyName = rs.getString("currencyName");
+            final String currencyNameCode = rs.getString("currencyNameCode");
+            final String currencyDisplaySymbol = rs.getString("currencyDisplaySymbol");
+            final Integer currencyDigits = JdbcSupport.getInteger(rs, "currencyDigits");
+            final Integer inMultiplesOf = JdbcSupport.getInteger(rs, "inMultiplesOf");
+            final CurrencyData currencyData = new CurrencyData(currencyCode, currencyName, currencyDigits, inMultiplesOf,
+                    currencyDisplaySymbol, currencyNameCode);
+
+            return new LoanPenaltiesData(loanId, totalPenaltiesDerived, totalPenaltiesPaid, totalPenaltiesWaived, totalPenaltiesWrittenOff, totalPenaltiesOutstanding, currencyData);
+        }
+
+        public String penaltySchema(){
+            return "l.id as loanId, l.penalty_charges_charged_derived as totalPenaltiesDerived, "+
+                    "l.penalty_charges_repaid_derived as totalPenaltiesPaid, l.penalty_charges_waived_derived as totalPenaltiesWaived, "+
+                    "l.penalty_charges_writtenoff_derived as totalPenaltiesWrittenOff, l.penalty_charges_outstanding_derived as totalPenaltiesOutstanding, " +
+                    "l.currency_code as currencyCode, l.currency_digits as currencyDigits, l.currency_multiplesof as inMultiplesOf, "+
+                    "rc.name as currencyName, rc.display_symbol as currencyDisplaySymbol, rc.internationalized_name_code as currencyNameCode "+
+                    " from m_loan l INNER JOIN m_currency rc on rc.code = l.currency_code ";
+        }
+    }
 }

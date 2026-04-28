@@ -1496,11 +1496,6 @@ public class LoanChargeWritePlatformServiceImpl implements LoanChargeWritePlatfo
                 .comparing(LoanCharge::getDueLocalDate)
                 .thenComparing(LoanCharge::getChargeCalculation));
 
-        // Validate all first
-        for (LoanCharge loanCharge : loanCharges) {
-            validateChargeEligibility(loan, loanCharge);
-        }
-
         BigDecimal remainingToWaive = amountToWaive;
 
         List<Map<String, Object>> waiverBreakdown = new ArrayList<>();
@@ -1510,8 +1505,10 @@ public class LoanChargeWritePlatformServiceImpl implements LoanChargeWritePlatfo
         MassWaiver massWaiver = MassWaiver.create(loan.getClient(), loan, amountToWaive, null, null, null);
         this.massWaiverRepository.save(massWaiver);
 
-
+        // Validate all first
         for (LoanCharge loanCharge : loanCharges) {
+
+            validateChargeEligibility(loan, loanCharge);
 
             if (remainingToWaive.compareTo(BigDecimal.ZERO) <= 0) break;
 
@@ -1543,7 +1540,7 @@ public class LoanChargeWritePlatformServiceImpl implements LoanChargeWritePlatfo
             items.add(massWaiverDetail);
         }
 
-        // Accrual handling (ONLY ONCE)
+        // Accrual handling
         if (loan.isInterestBearingAndInterestRecalculationEnabled()) {
             loanAccrualsProcessingService.reprocessExistingAccruals(loan);
             loanAccrualsProcessingService.processIncomePostingAndAccruals(loan);
@@ -1557,14 +1554,8 @@ public class LoanChargeWritePlatformServiceImpl implements LoanChargeWritePlatfo
         massWaiver.setTotalWaived(totalWaived);
         massWaiver.setRemainingAmount(remainingToWaive);
 
-
         // Save loan once
         this.loanRepositoryWrapper.save(loan);
-
-        // Final business events
-        businessEventNotifierService.notifyPostBusinessEvent(new LoanBalanceChangedBusinessEvent(loan));
-        this.loanAccountDomainService.setLoanDelinquencyTag(loan, DateUtils.getBusinessLocalDate());
-
 
         // Response
         Map<String, Object> changes = new LinkedHashMap<>();
@@ -1627,7 +1618,8 @@ public class LoanChargeWritePlatformServiceImpl implements LoanChargeWritePlatfo
         postJournalEntries(loan, existingTransactionIds, existingReversedTransactionIds);
         loanAccrualTransactionBusinessEventService.raiseBusinessEventForAccrualTransactions(loan, existingTransactionIds);
         businessEventNotifierService.notifyPostBusinessEvent(new LoanWaiveChargeBusinessEvent(loanCharge));
-
+        this.loanAccountDomainService.setLoanDelinquencyTag(loan, DateUtils.getBusinessLocalDate());
+        businessEventNotifierService.notifyPostBusinessEvent(new LoanBalanceChangedBusinessEvent(loan));
     }
 
     private void validateChargeEligibility(Loan loan, LoanCharge loanCharge) {

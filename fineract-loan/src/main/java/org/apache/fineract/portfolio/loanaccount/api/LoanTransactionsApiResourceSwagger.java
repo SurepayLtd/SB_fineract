@@ -275,6 +275,57 @@ final class LoanTransactionsApiResourceSwagger {
         }
     }
 
+    @Schema(description = "GetLoansLoanIdPenaltyTemplateResponse")
+    public static final class GetLoansLoanIdPenaltyTemplateResponse {
+
+        private GetLoansLoanIdPenaltyTemplateResponse() {}
+
+
+        static final class GetLoansTotal {
+
+            private GetLoansTotal() {}
+
+            @Schema(example = "XOF")
+            public String currencyCode;
+            @Schema(example = "0")
+            public Integer digitsAfterDecimal;
+            @Schema(example = "0")
+            public Integer inMultiplesOf;
+            @Schema(example = "471")
+            public Float amount;
+            @Schema(example = "CFA Franc BCEAO")
+            public String defaultName;
+            @Schema(example = "currency.XOF")
+            public String nameCode;
+            @Schema(example = "CFA")
+            public String displaySymbol;
+            @Schema(example = "false")
+            public Boolean zero;
+            @Schema(example = "true")
+            public Boolean greaterThanZero;
+            @Schema(example = "471 CFA")
+            public String displaySymbolValue;
+        }
+
+        @Schema(example = "[2009, 8, 1]")
+        public LocalDate date;
+
+        public GetLoansTotal total;
+
+        @Schema(example = "200.000000")
+        public Double totalPenaltiesDerived;
+        @Schema(example = "100.000000")
+        public Double totalPenaltiesPaid;
+        @Schema(example = "80.000000")
+        public Double totalPenaltiesWaived;
+        @Schema(example = "20.000000")
+        public Double totalPenaltiesWrittenOff;
+        @Schema(example = "20.000000")
+        public Double totalPenaltiesOutstanding;
+
+        public GetLoanCurrency currency;
+    }
+
     @Schema(description = "PostLoansLoanIdTransactionsRequest")
     public static final class PostLoansLoanIdTransactionsRequest {
 

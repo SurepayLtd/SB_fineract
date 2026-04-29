@@ -1512,9 +1512,11 @@ public class LoanChargeWritePlatformServiceImpl implements LoanChargeWritePlatfo
 
         BigDecimal amountToWaive = command.bigDecimalValueOfParameterNamed("amount");
 
-        if (amountToWaive == null || amountToWaive.compareTo(BigDecimal.ZERO) <= 0) {
+        BigDecimal maxAmount = new BigDecimal("500000");
+
+        if (amountToWaive == null || amountToWaive.compareTo(BigDecimal.ZERO) <= 0 || amountToWaive.compareTo(maxAmount) > 0) {
             throw new GeneralPlatformDomainRuleException("error.msg.loan.mass.waive.amount.invalid",
-                    "The waive amount must be greater than zero.");
+                    "The waive amount must be greater than zero and not above 500000.");
         }
         final ExternalId externalId =
                 externalIdFactory.createFromCommand(command, LoanApiConstants.externalIdParameterName);

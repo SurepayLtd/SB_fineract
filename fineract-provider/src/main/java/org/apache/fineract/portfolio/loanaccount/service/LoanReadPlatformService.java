@@ -34,6 +34,7 @@ import org.apache.fineract.portfolio.loanaccount.data.LoanRepaymentScheduleInsta
 import org.apache.fineract.portfolio.loanaccount.data.LoanTransactionData;
 import org.apache.fineract.portfolio.loanaccount.data.PaidInAdvanceData;
 import org.apache.fineract.portfolio.loanaccount.data.RepaymentScheduleRelatedLoanData;
+import org.apache.fineract.portfolio.loanaccount.data.LoanPenaltiesData;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionType;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.data.LoanScheduleData;
@@ -143,4 +144,6 @@ public interface LoanReadPlatformService {
     Long retrieveLoanTransactionIdByExternalId(ExternalId externalId);
 
     Long retrieveLoanIdByExternalId(ExternalId externalId);
+
+    LoanPenaltiesData retrievePenaltiesByLoan(Long loanId);
 }

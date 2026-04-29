@@ -822,6 +822,15 @@ public class CommandWrapperBuilder {
         return this;
     }
 
+    public CommandWrapperBuilder massWaiveLoanCharge(final Long loanId) {
+        this.actionName = "BULKWAIVER";
+        this.entityName = "LOANCHARGE";
+        this.entityId = null;
+        this.loanId = loanId;
+        this.href = "/loans/" + loanId + "/charges/mass-waiver" ;
+        return this;
+    }
+
     public CommandWrapperBuilder payLoanCharge(final Long loanId, final Long loanChargeId) {
         this.actionName = "PAY";
         this.entityName = "LOANCHARGE";

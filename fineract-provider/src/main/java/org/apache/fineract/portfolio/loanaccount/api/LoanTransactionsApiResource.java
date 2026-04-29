@@ -61,6 +61,7 @@ import org.apache.fineract.infrastructure.core.service.CommandParameterUtil;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.core.service.ExternalIdFactory;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.portfolio.loanaccount.data.LoanPenaltiesData;
 import org.apache.fineract.portfolio.loanaccount.data.LoanRepaymentScheduleInstallmentData;
 import org.apache.fineract.portfolio.loanaccount.data.LoanTransactionData;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionType;
@@ -85,6 +86,7 @@ public class LoanTransactionsApiResource {
     public static final String REAGE = "reAge";
     public static final String REAMORTIZE = "reAmortize";
     public static final String UNDO_REAMORTIZE = "undoReAmortize";
+    public static final String MASS_WAIVER = "mass-waiver";
     private final Set<String> responseDataParameters = new HashSet<>(Arrays.asList("id", "type", "date", "currency", "amount", "externalId",
             LoanApiConstants.REVERSAL_EXTERNAL_ID_PARAMNAME, LoanApiConstants.REVERSED_ON_DATE_PARAMNAME));
 
@@ -94,6 +96,7 @@ public class LoanTransactionsApiResource {
     private final LoanReadPlatformService loanReadPlatformService;
     private final ApiRequestParameterHelper apiRequestParameterHelper;
     private final DefaultToApiJsonSerializer<LoanTransactionData> toApiJsonSerializer;
+    private final DefaultToApiJsonSerializer<LoanPenaltiesData> loanPenaltiesDataDefaultToApiJsonSerializer;
     private final PortfolioCommandSourceWritePlatformService commandsSourceWritePlatformService;
     private final PaymentTypeReadPlatformService paymentTypeReadPlatformService;
     private final LoanChargePaidByReadService loanChargePaidByReadService;
@@ -113,7 +116,8 @@ public class LoanTransactionsApiResource {
             + "loans/1/transactions/template?command=refundbycash" + "\n" + "loans/1/transactions/template?command=refundbytransfer" + "\n"
             + "loans/1/transactions/template?command=foreclosure" + "\n" + "loans/1/transactions/template?command=interestPaymentWaiver"
             + "\n" + "loans/1/transactions/template?command=creditBalanceRefund (returned 'amount' field will have the overpaid value)"
-            + "\n" + "loans/1/transactions/template?command=charge-off" + "\n" + "loans/1/transactions/template?command=downPayment" + "\n")
+            + "\n" + "loans/1/transactions/template?command=charge-off" + "\n" + "loans/1/transactions/template?command=downPayment" + "\n" +
+            "loans/1/transactions/template?command=merchantIssuedRefund" + "/n")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = LoanTransactionsApiResourceSwagger.GetLoansLoanIdTransactionsTemplateResponse.class))) })
     public String retrieveTransactionTemplate(@PathParam("loanId") @Parameter(description = "loanId", required = true) final Long loanId,
@@ -125,6 +129,26 @@ public class LoanTransactionsApiResource {
         final DateFormat dateFormat = StringUtils.isBlank(rawDateFormat) ? null : new DateFormat(rawDateFormat);
 
         return retrieveTransactionTemplate(loanId, null, commandParam, uriInfo, dateFormat, transactionDateParam, locale);
+    }
+
+    @GET
+    @Path("{loanId}/penalties/template")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Retrieve Loan Penalty Template", description = "This is a convenience resource. It can be useful when building maintenance user interface screens for client applications. The template data returned consists of any or all of:\n"
+            + "\n" + "Field Defaults\n" + "Allowed Value Lists\n\n" + "Example Requests:\n" + "\n"
+            + "loans/1/penalties/template?command=mass-waiver")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = LoanTransactionsApiResourceSwagger.GetLoansLoanIdPenaltyTemplateResponse.class))) })
+    public String retrievePenaltyTemplate(@PathParam("loanId") @Parameter(description = "loanId", required = true) final Long loanId,
+                                              @QueryParam("command") @Parameter(description = "command") final String commandParam, @Context final UriInfo uriInfo,
+                                              @QueryParam("dateFormat") @Parameter(description = "dateFormat") final String rawDateFormat,
+                                              @QueryParam("transactionDate") @Parameter(description = "transactionDate") final DateParam transactionDateParam,
+                                              @QueryParam("locale") @Parameter(description = "locale") final String locale) {
+
+        final DateFormat dateFormat = StringUtils.isBlank(rawDateFormat) ? null : new DateFormat(rawDateFormat);
+
+        return retrievePenaltyTemplate(loanId, null, commandParam, uriInfo, dateFormat, transactionDateParam, locale);
     }
 
     @GET
@@ -525,6 +549,28 @@ public class LoanTransactionsApiResource {
         final CommandProcessingResult result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
         return this.toApiJsonSerializer.serialize(result);
     }
+
+    private String retrievePenaltyTemplate(Long loanId, String loanExternalIdStr, String commandParam, UriInfo uriInfo,
+                                               DateFormat dateFormat, DateParam transactionDateParam, String locale) {
+        this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSIONS);
+
+        ExternalId loanExternalId = ExternalIdFactory.produce(loanExternalIdStr);
+
+        Long resolvedLoanId = getResolvedLoanId(loanId, loanExternalId);
+        LoanPenaltiesData transactionData;
+
+       if (CommandParameterUtil.is(commandParam, MASS_WAIVER)) {
+            transactionData = this.loanReadPlatformService.retrievePenaltiesByLoan(resolvedLoanId);
+        }
+       else {
+           throw new UnrecognizedQueryParamException("command", commandParam);
+       }
+
+        final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
+        return this.loanPenaltiesDataDefaultToApiJsonSerializer.serialize(settings, transactionData, this.responseDataParameters);
+    }
+
+
 
     private String retrieveTransactionTemplate(Long loanId, String loanExternalIdStr, String commandParam, UriInfo uriInfo,
             DateFormat dateFormat, DateParam transactionDateParam, String locale) {

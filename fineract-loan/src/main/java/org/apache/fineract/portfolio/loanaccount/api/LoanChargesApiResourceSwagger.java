@@ -190,6 +190,21 @@ final class LoanChargesApiResourceSwagger {
         public String externalId;
     }
 
+    @Schema(description = " PostLoansLoanIdMassChargesRequest")
+    public static final class PostLoansLoanIdMassChargesRequest {
+
+        private PostLoansLoanIdMassChargesRequest() {}
+
+        @Schema(example = "en")
+        public String locale;
+        @Schema(example = "100.00")
+        public Double amount;
+        @Schema(example = "dd MMMM yyyy")
+        public String dateFormat;
+        @Schema(example = "786444UUUYYH7")
+        public String externalId;
+    }
+
     @Schema(description = " PostLoansLoanIdChargesResponse")
     public static final class PostLoansLoanIdChargesResponse {
 

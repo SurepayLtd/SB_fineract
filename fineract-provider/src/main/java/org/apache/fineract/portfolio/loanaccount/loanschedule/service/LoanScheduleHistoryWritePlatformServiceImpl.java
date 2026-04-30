@@ -19,6 +19,7 @@
 package org.apache.fineract.portfolio.loanaccount.loanschedule.service;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -80,8 +81,11 @@ public class LoanScheduleHistoryWritePlatformServiceImpl implements LoanSchedule
                 createdOnDate = repaymentScheduleInstallment.getCreatedDate().get();
             } else if (repaymentScheduleInstallment.getId() != null) {
                 oldDates = loanScheduleHistoryReadPlatformService.fetchOldAuditDates(repaymentScheduleInstallment.getId());
-                oldCreatedOnDate = (LocalDateTime) oldDates.get("created_date");
-                oldLastModifiedOnDate = (LocalDateTime) oldDates.get("lastmodified_date");
+
+                Timestamp createdTs = (Timestamp) oldDates.get("created_date");
+                Timestamp modifiedTs = (Timestamp) oldDates.get("lastmodified_date");
+                oldCreatedOnDate = createdTs != null ? createdTs.toLocalDateTime() : null;
+                oldLastModifiedOnDate = modifiedTs != null ? modifiedTs.toLocalDateTime() : null;
             }
 
             final Long createdByUser = repaymentScheduleInstallment.getCreatedBy()
@@ -94,8 +98,10 @@ public class LoanScheduleHistoryWritePlatformServiceImpl implements LoanSchedule
                 lastModifiedOnDate = repaymentScheduleInstallment.getLastModifiedDate().get();
             } else if (repaymentScheduleInstallment.getId() != null && oldDates == null) {
                 oldDates = loanScheduleHistoryReadPlatformService.fetchOldAuditDates(repaymentScheduleInstallment.getId());
-                oldCreatedOnDate = (LocalDateTime) oldDates.get("created_date");
-                oldLastModifiedOnDate = (LocalDateTime) oldDates.get("lastmodified_date");
+                Timestamp createdTs = (Timestamp) oldDates.get("created_date");
+                Timestamp modifiedTs = (Timestamp) oldDates.get("lastmodified_date");
+                oldCreatedOnDate = createdTs != null ? createdTs.toLocalDateTime() : null;
+                oldLastModifiedOnDate = modifiedTs != null ? modifiedTs.toLocalDateTime() : null;
             }
 
             LoanRepaymentScheduleHistory loanRepaymentScheduleHistory = LoanRepaymentScheduleHistory.instance(loan, loanRescheduleRequest,

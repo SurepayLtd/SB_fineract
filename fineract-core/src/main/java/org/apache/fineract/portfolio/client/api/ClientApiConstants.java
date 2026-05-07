@@ -103,6 +103,7 @@ public class ClientApiConstants {
     public static final String reactivationDateParamName = "reactivationDate";
     public static final String staffIdParamName = "staffId";
     public static final String isStaffParamName = "isStaff";
+    public static final String momoParamName = "momoPaymentActive";
     public static final String closureDateParamName = "closureDate";
     public static final String closureReasonIdParamName = "closureReasonId";
     public static final String reopenedDateParamName = "reopenedDate";

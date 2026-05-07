@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.commands.domain.CommandWrapper;
 import org.apache.fineract.commands.service.CommandWrapperBuilder;
 import org.apache.fineract.commands.service.PortfolioCommandSourceWritePlatformService;
@@ -51,6 +52,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class ClientPersonImportHandler implements ImportHandler {
 
     public static final String SEPARATOR = "-";
@@ -132,6 +134,8 @@ public class ClientPersonImportHandler implements ImportHandler {
             }
         }
         Boolean isStaff = ImportHandlerUtils.readAsBoolean(ClientPersonConstants.IS_STAFF_COL, row);
+        Boolean isMomoPaymentActive = ImportHandlerUtils.readAsBoolean(ClientPersonConstants.MOMO_PAYMENT_ACTIVE_COL, row);
+//        log.info("Momo Payment: {}", isMomoPaymentActive);
 
         AddressData addressDataObj = null;
         Collection<AddressData> addressList = null;
@@ -179,7 +183,7 @@ public class ClientPersonImportHandler implements ImportHandler {
         }
         return ClientData.importClientPersonInstance(legalFormId, row.getRowNum(), firstName, lastName, middleName, submittedOn,
                 activationDate, active, externalId, officeId, staffId, mobileNo, dob, clientTypeId, genderId, clientClassificationId,
-                isStaff, addressList, locale, dateFormat);
+                isStaff, addressList, locale, dateFormat, isMomoPaymentActive);
 
     }
 

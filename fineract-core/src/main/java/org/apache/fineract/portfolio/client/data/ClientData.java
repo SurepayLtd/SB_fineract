@@ -137,7 +137,7 @@ public final class ClientData implements Comparable<ClientData>, Serializable {
             ClientNonPersonData clientNonPersonDetails, Collection<AddressData> address, String locale, String dateFormat) {
         return new ClientData(legalFormId, rowIndex, fullname, null, null, null, submittedOnDate, activationDate, active, externalId,
                 officeId, staffId, mobileNo, dateOfBirth, clientTypeId, null, clientClassificationId, null, address, clientNonPersonDetails,
-                locale, dateFormat);
+                locale, dateFormat, false);
     }
 
     public static ClientData createClientForInterestPosting(final Long id, final Long officeId) {
@@ -208,11 +208,11 @@ public final class ClientData implements Comparable<ClientData>, Serializable {
     public static ClientData importClientPersonInstance(Long legalFormId, Integer rowIndex, String firstname, String lastname,
             String middlename, LocalDate submittedOn, LocalDate activationDate, Boolean active, ExternalId externalId, Long officeId,
             Long staffId, String mobileNo, LocalDate dob, Long clientTypeId, Long genderId, Long clientClassificationId, Boolean isStaff,
-            Collection<AddressData> address, String locale, String dateFormat) {
+            Collection<AddressData> address, String locale, String dateFormat, boolean momoPaymentActive) {
 
         return new ClientData(legalFormId, rowIndex, null, firstname, lastname, middlename, submittedOn, activationDate, active, externalId,
                 officeId, staffId, mobileNo, dob, clientTypeId, genderId, clientClassificationId, isStaff, address, null, locale,
-                dateFormat);
+                dateFormat, momoPaymentActive);
     }
 
     public static ClientData emptyInstance(Long clientId) {
@@ -222,7 +222,7 @@ public final class ClientData implements Comparable<ClientData>, Serializable {
     private ClientData(Long legalFormId, Integer rowIndex, String fullname, String firstname, String lastname, String middlename,
             LocalDate submittedOn, LocalDate activationDate, Boolean active, ExternalId externalId, Long officeId, Long staffId,
             String mobileNo, LocalDate dob, Long clientTypeId, Long genderId, Long clientClassificationId, Boolean isStaff,
-            Collection<AddressData> address, ClientNonPersonData clientNonPersonDetails, String locale, String dateFormat) {
+            Collection<AddressData> address, ClientNonPersonData clientNonPersonDetails, String locale, String dateFormat, boolean momoPaymentActive) {
         this.rowIndex = rowIndex;
         this.dateFormat = dateFormat;
         this.locale = locale;
@@ -244,6 +244,7 @@ public final class ClientData implements Comparable<ClientData>, Serializable {
         this.clientClassificationId = clientClassificationId;
         this.isStaff = isStaff;
         this.address = address;
+        this.momoPaymentActive = momoPaymentActive;
         this.id = null;
         this.accountNo = null;
         this.status = null;

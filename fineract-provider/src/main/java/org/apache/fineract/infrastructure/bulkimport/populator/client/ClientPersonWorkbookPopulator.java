@@ -158,6 +158,7 @@ public class ClientPersonWorkbookPopulator extends AbstractWorkbookPopulator {
         worksheet.setColumnWidth(ClientPersonConstants.ADDRESS_LINE_2_COL, TemplatePopulateImportConstants.MEDIUM_COL_SIZE);
         worksheet.setColumnWidth(ClientPersonConstants.ADDRESS_LINE_3_COL, TemplatePopulateImportConstants.MEDIUM_COL_SIZE);
         worksheet.setColumnWidth(ClientPersonConstants.CITY_COL, TemplatePopulateImportConstants.SMALL_COL_SIZE);
+        worksheet.setColumnWidth(ClientPersonConstants.MOMO_PAYMENT_ACTIVE_COL, TemplatePopulateImportConstants.MEDIUM_COL_SIZE);
         worksheet.setColumnWidth(ClientPersonConstants.STATE_PROVINCE_COL, TemplatePopulateImportConstants.SMALL_COL_SIZE);
         worksheet.setColumnWidth(ClientPersonConstants.COUNTRY_COL, TemplatePopulateImportConstants.SMALL_COL_SIZE);
         worksheet.setColumnWidth(ClientPersonConstants.POSTAL_CODE_COL, TemplatePopulateImportConstants.SMALL_COL_SIZE);
@@ -191,6 +192,7 @@ public class ClientPersonWorkbookPopulator extends AbstractWorkbookPopulator {
         writeString(ClientPersonConstants.ADDRESS_LINE_2_COL, rowHeader, "Address Line 2");
         writeString(ClientPersonConstants.ADDRESS_LINE_3_COL, rowHeader, "Address Line 3 ");
         writeString(ClientPersonConstants.CITY_COL, rowHeader, "City ");
+        writeString(ClientPersonConstants.MOMO_PAYMENT_ACTIVE_COL, rowHeader, "MomoPaymentActive ");
         writeString(ClientPersonConstants.STATE_PROVINCE_COL, rowHeader, "State/ Province ");
         writeString(ClientPersonConstants.COUNTRY_COL, rowHeader, "Country ");
         writeString(ClientPersonConstants.POSTAL_CODE_COL, rowHeader, "Postal Code ");
@@ -225,6 +227,8 @@ public class ClientPersonWorkbookPopulator extends AbstractWorkbookPopulator {
                 ClientPersonConstants.DOB_COL, ClientPersonConstants.DOB_COL);
         CellRangeAddressList isStaffRange = new CellRangeAddressList(1, SpreadsheetVersion.EXCEL97.getLastRowIndex(),
                 ClientPersonConstants.IS_STAFF_COL, ClientPersonConstants.IS_STAFF_COL);
+        CellRangeAddressList isMomoRange = new CellRangeAddressList(1, SpreadsheetVersion.EXCEL97.getLastRowIndex(),
+                ClientPersonConstants.MOMO_PAYMENT_ACTIVE_COL, ClientPersonConstants.MOMO_PAYMENT_ACTIVE_COL);
         CellRangeAddressList genderRange = new CellRangeAddressList(1, SpreadsheetVersion.EXCEL97.getLastRowIndex(),
                 ClientPersonConstants.GENDER_COL, ClientPersonConstants.GENDER_COL);
         CellRangeAddressList clientClassificationRange = new CellRangeAddressList(1, SpreadsheetVersion.EXCEL97.getLastRowIndex(),
@@ -258,6 +262,7 @@ public class ClientPersonWorkbookPopulator extends AbstractWorkbookPopulator {
         DataValidationConstraint activeConstraint = validationHelper.createExplicitListConstraint(new String[] { "True", "False" });
         DataValidationConstraint clientTypesConstraint = validationHelper.createFormulaListConstraint("ClientTypes");
         DataValidationConstraint isStaffConstraint = validationHelper.createExplicitListConstraint(new String[] { "True", "False" });
+        DataValidationConstraint isMomoPaymentActive = validationHelper.createExplicitListConstraint(new String[] { "True", "False" });
         DataValidationConstraint genderConstraint = validationHelper.createFormulaListConstraint("Gender");
         DataValidationConstraint clientClassificationConstraint = validationHelper.createFormulaListConstraint("ClientClassification");
         DataValidationConstraint enabledAddressConstraint = validationHelper.createExplicitListConstraint(new String[] { "True", "False" });
@@ -268,6 +273,7 @@ public class ClientPersonWorkbookPopulator extends AbstractWorkbookPopulator {
 
         DataValidation officeValidation = validationHelper.createValidation(officeNameConstraint, officeNameRange);
         DataValidation staffValidation = validationHelper.createValidation(staffNameConstraint, staffNameRange);
+        DataValidation momoValidation = validationHelper.createValidation(isMomoPaymentActive, isMomoRange);
         DataValidation submittedOnDateValidation = validationHelper.createValidation(submittedOnDateConstraint, submittedOnDateRange);
         DataValidation activationDateValidation = validationHelper.createValidation(activationDateConstraint, activationDateRange);
         DataValidation dobDateValidation = validationHelper.createValidation(dobDateConstraint, dobRange);
@@ -298,6 +304,7 @@ public class ClientPersonWorkbookPopulator extends AbstractWorkbookPopulator {
         worksheet.addValidationData(stateProvinceValidation);
         worksheet.addValidationData(countryValidation);
         worksheet.addValidationData(activeAddressValidation);
+        worksheet.addValidationData(momoValidation);
     }
 
     private void setNames(Sheet worksheet, List<OfficeData> offices) {

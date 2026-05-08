@@ -225,6 +225,11 @@ public final class ClientDataValidator {
             baseDataValidator.reset().parameter("isStaff").value(isStaffFlag).notNull();
         }
 
+        if (this.fromApiJsonHelper.parameterExists(ClientApiConstants.momoParamName, element)) {
+            final Boolean momoParam = this.fromApiJsonHelper.extractBooleanNamed(ClientApiConstants.momoParamName, element);
+            baseDataValidator.reset().parameter(ClientApiConstants.momoParamName).value(momoParam).trueOrFalseRequired(false);
+        }
+
         if (this.configurationReadPlatformService.retrieveGlobalConfiguration(GlobalConfigurationConstants.ENABLE_ADDRESS).isEnabled()) {
             final JsonArray address = this.fromApiJsonHelper.extractJsonArrayNamed(ClientApiConstants.address, element);
             baseDataValidator.reset().parameter(ClientApiConstants.address).value(address).notNull().jsonArrayNotEmpty();
@@ -248,6 +253,11 @@ public final class ClientDataValidator {
             final String incorpNumber = this.fromApiJsonHelper.extractStringNamed(ClientApiConstants.incorpNumberParamName, element);
             baseDataValidator.reset().parameter(ClientApiConstants.incorpNumberParamName).value(incorpNumber).ignoreIfNull()
                     .notExceedingLengthOf(50);
+        }
+
+        if (this.fromApiJsonHelper.parameterExists(ClientApiConstants.momoParamName, element)) {
+            final Boolean momoParam = this.fromApiJsonHelper.extractBooleanNamed(ClientApiConstants.momoParamName, element);
+            baseDataValidator.reset().parameter(ClientApiConstants.momoParamName).value(momoParam).trueOrFalseRequired(false);
         }
 
         if (this.fromApiJsonHelper.parameterExists(ClientApiConstants.remarksParamName, element)) {

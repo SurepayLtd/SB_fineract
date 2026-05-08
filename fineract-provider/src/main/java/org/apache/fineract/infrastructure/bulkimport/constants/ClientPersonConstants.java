@@ -60,4 +60,6 @@ public final class ClientPersonConstants {
     public static final int LOOKUP_ADDRESS_TYPE_COL = 40;// AO
     public static final int LOOKUP_STATE_PROVINCE_COL = 41;// AP
     public static final int LOOKUP_COUNTRY_COL = 42;// AQ
+    public static final int MOMO_PAYMENT_ACTIVE_COL = 43;// AQ
+
 }

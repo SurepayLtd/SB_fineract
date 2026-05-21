@@ -78,6 +78,7 @@ public class LoanProductData implements Serializable {
     private final Long fundId;
     private final String fundName;
     private final boolean includeInBorrowerCycle;
+    private final boolean isUssd;
     private final boolean useBorrowerCycle;
     private final LocalDate startDate;
     private final LocalDate closeDate;
@@ -257,6 +258,7 @@ public class LoanProductData implements Serializable {
         final BigDecimal maxInterestRatePerPeriod = null;
         final BigDecimal annualInterestRate = null;
         final boolean isLinkedToFloatingInterestRates = false;
+        final boolean isUssd = false;
         final Integer floatingRateId = null;
         final String floatingRateName = null;
         final BigDecimal interestRateDifferential = null;
@@ -361,7 +363,7 @@ public class LoanProductData implements Serializable {
                 overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment,
                 paymentAllocation, creditAllocation, repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType,
                 loanScheduleProcessingType, fixedLength, enableAccrualActivityPosting, supportedInterestRefundTypes, chargeOffBehaviour,
-                interestRecognitionOnDisbursementDate);
+                interestRecognitionOnDisbursementDate, isUssd);
 
     }
 
@@ -382,6 +384,7 @@ public class LoanProductData implements Serializable {
         final BigDecimal maxInterestRatePerPeriod = null;
         final BigDecimal annualInterestRate = null;
         final boolean isLinkedToFloatingInterestRates = false;
+        final boolean isUssd = false;
         final Integer floatingRateId = null;
         final String floatingRateName = null;
         final BigDecimal interestRateDifferential = null;
@@ -486,7 +489,7 @@ public class LoanProductData implements Serializable {
                 overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment,
                 paymentAllocation, creditAllocation, repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType,
                 loanScheduleProcessingType, fixedLength, enableAccrualActivityPosting, supportedInterestRefundTypes, chargeOffBehaviour,
-                interestRecognitionOnDisbursementDate);
+                interestRecognitionOnDisbursementDate, isUssd);
 
     }
 
@@ -511,6 +514,7 @@ public class LoanProductData implements Serializable {
         final BigDecimal maxInterestRatePerPeriod = null;
         final BigDecimal annualInterestRate = null;
         final boolean isLinkedToFloatingInterestRates = false;
+        final boolean isUssd = false;
         final Integer floatingRateId = null;
         final String floatingRateName = null;
         final BigDecimal interestRateDifferential = null;
@@ -618,7 +622,7 @@ public class LoanProductData implements Serializable {
                 overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment,
                 paymentAllocation, creditAllocation, repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType,
                 loanScheduleProcessingType, fixedLength, enableAccrualActivityPosting, supportedInterestRefundTypes, chargeOffBehaviour,
-                interestRecognitionOnDisbursementDate);
+                interestRecognitionOnDisbursementDate, isUssd);
 
     }
 
@@ -673,6 +677,7 @@ public class LoanProductData implements Serializable {
 
         final EnumOptionData accountingType = AccountingEnumerations.accountingRuleType(AccountingRuleType.NONE);
         final boolean includeInBorrowerCycle = false;
+        final boolean isUssd = false;
         final boolean useBorrowerCycle = false;
         final LocalDate startDate = null;
         final LocalDate closeDate = null;
@@ -744,7 +749,7 @@ public class LoanProductData implements Serializable {
                 overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment,
                 paymentAllocation, creditAllocationData, repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType,
                 loanScheduleProcessingType, fixedLength, enableAccrualActivityPosting, supportedInterestRefundTypes, chargeOffBehaviour,
-                interestRecognitionOnDisbursementDate);
+                interestRecognitionOnDisbursementDate, isUssd);
     }
 
     public static LoanProductData withAccountingDetails(final LoanProductData productData, final Map<String, Object> accountingMappings,
@@ -798,7 +803,7 @@ public class LoanProductData implements Serializable {
             final EnumOptionData repaymentStartDateType, final boolean enableInstallmentLevelDelinquency,
             final EnumOptionData loanScheduleType, final EnumOptionData loanScheduleProcessingType, final Integer fixedLength,
             final boolean enableAccrualActivityPosting, final List<StringEnumOptionData> supportedInterestRefundTypes,
-            StringEnumOptionData chargeOffBehaviour, final boolean interestRecognitionOnDisbursementDate) {
+            StringEnumOptionData chargeOffBehaviour, final boolean interestRecognitionOnDisbursementDate, boolean isUssd) {
         this.id = id;
         this.name = name;
         this.shortName = shortName;
@@ -942,6 +947,7 @@ public class LoanProductData implements Serializable {
         this.chargeOffBehaviourOptions = null;
         this.chargeOffReasonOptions = null;
         this.interestRecognitionOnDisbursementDate = interestRecognitionOnDisbursementDate;
+        this.isUssd = isUssd;
     }
 
     public LoanProductData(final LoanProductData productData, final Collection<ChargeData> chargeOptions,
@@ -1127,6 +1133,7 @@ public class LoanProductData implements Serializable {
         this.chargeOffBehaviourOptions = chargeOffBehaviourOptions;
         this.chargeOffReasonOptions = chargeOffReasonOptions;
         this.interestRecognitionOnDisbursementDate = productData.interestRecognitionOnDisbursementDate;
+        this.isUssd = productData.isUssd;
     }
 
     private Collection<ChargeData> nullIfEmpty(final Collection<ChargeData> charges) {

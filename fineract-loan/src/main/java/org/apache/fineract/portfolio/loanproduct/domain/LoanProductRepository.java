@@ -41,4 +41,7 @@ public interface LoanProductRepository extends JpaRepository<LoanProduct, Long>,
     @Override
     @Query("SELECT CASE WHEN COUNT(loanProduct)>0 THEN TRUE ELSE FALSE END FROM LoanProduct loanProduct WHERE loanProduct.id = :loanProductId")
     boolean existsById(@NotNull @Param("loanProductId") Long loanProductId);
+
+    @Query("SELECT COUNT(lp) FROM LoanProduct lp WHERE lp.isUssd = true")
+    Long countUssdLoanProducts();
 }

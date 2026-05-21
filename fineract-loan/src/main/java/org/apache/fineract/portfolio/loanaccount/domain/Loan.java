@@ -82,6 +82,7 @@ import org.apache.fineract.organisation.office.domain.Office;
 import org.apache.fineract.organisation.staff.domain.Staff;
 import org.apache.fineract.organisation.workingdays.domain.WorkingDays;
 import org.apache.fineract.portfolio.accountdetails.domain.AccountType;
+import org.apache.fineract.portfolio.accountdetails.domain.LoanChannel;
 import org.apache.fineract.portfolio.calendar.data.CalendarHistoryDataWrapper;
 import org.apache.fineract.portfolio.calendar.domain.Calendar;
 import org.apache.fineract.portfolio.calendar.domain.CalendarHistory;
@@ -231,6 +232,10 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     @Setter(AccessLevel.PACKAGE)
     @Column(name = "loan_status_id", nullable = false)
     private Integer loanStatus;
+
+    @Setter()
+    @Column(name = "loan_channel")
+    private Integer loanChannel;
 
     @Setter()
     @Column(name = "sync_disbursement_with_meeting")
@@ -640,6 +645,8 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom<Long> {
         this.enableInstallmentLevelDelinquency = enableInstallmentLevelDelinquency;
         this.getLoanProductRelatedDetail()
                 .setEnableAccrualActivityPosting(loanProduct.getLoanProductRelatedDetail().isEnableAccrualActivityPosting());
+
+        this.loanChannel = LoanChannel.WEB.getValue();
     }
 
     public Integer getNumberOfRepayments() {
@@ -3498,6 +3505,10 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
     public boolean isIndividualLoan() {
         return AccountType.fromInt(this.loanType).isIndividualAccount();
+    }
+
+    public void ussdChannel() {
+        this.loanChannel = LoanChannel.USSD.getValue();
     }
 
     public AccountType getLoanType() {

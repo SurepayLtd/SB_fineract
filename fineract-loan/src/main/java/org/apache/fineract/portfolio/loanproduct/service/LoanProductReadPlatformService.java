@@ -20,15 +20,16 @@ package org.apache.fineract.portfolio.loanproduct.service;
 
 import java.util.Collection;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
-import org.apache.fineract.portfolio.loanproduct.data.AdvancedPaymentData;
-import org.apache.fineract.portfolio.loanproduct.data.CreditAllocationData;
-import org.apache.fineract.portfolio.loanproduct.data.LoanProductBorrowerCycleVariationData;
-import org.apache.fineract.portfolio.loanproduct.data.LoanProductData;
+import org.apache.fineract.portfolio.loanproduct.data.*;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
 
 public interface LoanProductReadPlatformService {
 
     Collection<LoanProductData> retrieveAllLoanProducts();
+
+    Collection<UssdLoanProductData> retrieveAllUssdLoanProducts();
+
+    UssdLoanProductData retrieveUssdLoanProduct(Long ussdProductId);
 
     Collection<LoanProductData> retrieveAllLoanProductsForLookup(String inClass);
 

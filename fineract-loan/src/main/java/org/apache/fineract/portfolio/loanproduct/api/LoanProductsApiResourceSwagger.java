@@ -101,6 +101,8 @@ final class LoanProductsApiResourceSwagger {
 
         // Settings
         @Schema(example = "false")
+        public Boolean isUssd;
+        @Schema(example = "false")
         public Boolean includeInBorrowerCycle;
         @Schema(example = "false")
         public Boolean useBorrowerCycle;
@@ -348,6 +350,132 @@ final class LoanProductsApiResourceSwagger {
         public Long resourceId;
     }
 
+    @Schema(description = "GetUssdLoanProductsResponse")
+    public static final class GetUssdLoanProductsResponse {
+
+        private GetUssdLoanProductsResponse() {
+        }
+
+        static final class GetLoanProductsCurrency {
+
+            private GetLoanProductsCurrency() {}
+
+            @Schema(example = "USD")
+            public String code;
+            @Schema(example = "US Dollar")
+            public String name;
+            @Schema(example = "2")
+            public Integer decimalPlaces;
+            @Schema(example = "0")
+            public Integer inMultiplesOf;
+            @Schema(example = "$")
+            public String displaySymbol;
+            @Schema(example = "currency.USD")
+            public String nameCode;
+            @Schema(example = "US Dollar ($)")
+            public String displayLabel;
+        }
+
+        static final class GetLoanProductsRepaymentFrequencyType {
+
+            private GetLoanProductsRepaymentFrequencyType() {}
+
+            @Schema(example = "0")
+            public Long id;
+            @Schema(example = "repaymentFrequency.periodFrequencyType.days")
+            public String code;
+            @Schema(example = "Days")
+            public String description;
+        }
+
+        static final class GetLoanProductsInterestRateFrequencyType {
+
+            private GetLoanProductsInterestRateFrequencyType() {}
+
+            @Schema(example = "3")
+            public Long id;
+            @Schema(example = "interestRateFrequency.periodFrequencyType.years")
+            public String code;
+            @Schema(example = "Per year")
+            public String description;
+        }
+
+        static final class GetLoanProductsAmortizationType {
+
+            private GetLoanProductsAmortizationType() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "amortizationType.equal.installments")
+            public String code;
+            @Schema(example = "Equal installments")
+            public String description;
+        }
+
+        static final class GetLoanProductsInterestType {
+
+            private GetLoanProductsInterestType() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "interestType.flat")
+            public String code;
+            @Schema(example = "Flat")
+            public String description;
+        }
+
+        static final class GetLoansProductsInterestCalculationPeriodType {
+
+            private GetLoansProductsInterestCalculationPeriodType() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "interestCalculationPeriodType.same.as.repayment.period")
+            public String code;
+            @Schema(example = "Same as repayment period")
+            public String description;
+        }
+
+        @Schema(example = "1")
+        public Long id;
+        @Schema(example = "personal loan product")
+        public String name;
+        @Schema(example = "pe1")
+        public String shortName;
+        @Schema(example = "[2013, 9, 2]")
+        public LocalDate startDate;
+        @Schema(example = "[2014, 2, 7]")
+        public LocalDate endDate;
+        @Schema(example = "loanProduct.active")
+        public String status;
+        public GetUssdLoanProductsResponse.GetLoanProductsCurrency currency;
+        @Schema(example = "10000.000000")
+        public Double principal;
+        @Schema(example = "5000.000000")
+        public Double minPrincipal;
+        @Schema(example = "15000.000000")
+        public Double maxPrincipal;
+        @Schema(example = "10")
+        public Integer numberOfRepayments;
+        @Schema(example = "5")
+        public Integer minNumberOfRepayments;
+        @Schema(example = "15")
+        public Integer maxNumberOfRepayments;
+        @Schema(example = "7")
+        public Integer repaymentEvery;
+        public GetUssdLoanProductsResponse.GetLoanProductsRepaymentFrequencyType repaymentFrequencyType;
+        @Schema(example = "15.000000")
+        public Double interestRatePerPeriod;
+        public GetUssdLoanProductsResponse.GetLoanProductsInterestRateFrequencyType interestRateFrequencyType;
+        @Schema(example = "15.000000")
+        public Double annualInterestRate;
+        public GetUssdLoanProductsResponse.GetLoanProductsAmortizationType amortizationType;
+        public GetUssdLoanProductsResponse.GetLoanProductsInterestType interestType;
+        public GetUssdLoanProductsResponse.GetLoansProductsInterestCalculationPeriodType interestCalculationPeriodType;
+        @Schema(example = "mifos-standard-strategy")
+        public String transactionProcessingStrategy;
+    }
+
     @Schema(description = "GetLoanProductsResponse")
     public static final class GetLoanProductsResponse {
 
@@ -566,6 +694,8 @@ final class LoanProductsApiResourceSwagger {
         public String shortName;
         @Schema(example = "false")
         public Boolean includeInBorrowerCycle;
+        @Schema(example = "false")
+        public Boolean isUssd;
         @Schema(example = "false")
         public Boolean useBorrowerCycle;
         @Schema(example = "[2013, 9, 2]")
@@ -1491,6 +1621,8 @@ final class LoanProductsApiResourceSwagger {
 
         // Settings
         @Schema(example = "false")
+        public Boolean isUssd;
+        @Schema(example = "false")
         public Boolean includeInBorrowerCycle;
         @Schema(example = "false")
         public Boolean useBorrowerCycle;
@@ -1779,5 +1911,66 @@ final class LoanProductsApiResourceSwagger {
         @Schema(example = "1")
         public Long resourceId;
         public PutLoanChanges changes;
+    }
+
+    @Schema(description = "GetUssdLoanProductsProductIdResponse")
+    public static final class GetUssdLoanProductsProductIdResponse {
+
+        private GetUssdLoanProductsProductIdResponse() {}
+
+        static final class GetLoanProductsInterestRateFrequencyType {
+
+            private GetLoanProductsInterestRateFrequencyType() {}
+
+            @Schema(example = "2")
+            public Long id;
+            @Schema(example = "interestRateFrequency.periodFrequencyType.months")
+            public String code;
+            @Schema(example = "Per month")
+            public String description;
+        }
+
+        @Schema(example = "11")
+        public Long id;
+        @Schema(example = "advanced accounting")
+        public String name;
+        @Schema(example = "ad11")
+        public String shortName;
+        @Schema(example = "sample description")
+        public String description;
+        @Schema(example = "loanProduct.active")
+        public String status;
+        public GetUssdLoanProductsResponse.GetLoanProductsCurrency currency;
+        @Schema(example = "10000.000000")
+        public Double principal;
+        @Schema(example = "2000.000000")
+        public Double minPrincipal;
+        @Schema(example = "15000.000000")
+        public Double maxPrincipal;
+        @Schema(example = "7")
+        public Integer numberOfRepayments;
+        @Schema(example = "5")
+        public Integer minNumberOfRepayments;
+        @Schema(example = "10")
+        public Integer maxNumberOfRepayments;
+        @Schema(example = "7")
+        public Integer repaymentEvery;
+        public GetUssdLoanProductsResponse.GetLoanProductsRepaymentFrequencyType repaymentFrequencyType;
+        @Schema(example = "5.000000")
+        public Double interestRatePerPeriod;
+        @Schema(example = "0.000000")
+        public Double minInterestRatePerPeriod;
+        @Schema(example = "10.000000")
+        public Double maxInterestRatePerPeriod;
+        public GetUssdLoanProductsProductIdResponse.GetLoanProductsInterestRateFrequencyType interestRateFrequencyType;
+        @Schema(example = "60.000000")
+        public Double annualInterestRate;
+        public GetUssdLoanProductsResponse.GetLoanProductsAmortizationType amortizationType;
+        public GetUssdLoanProductsResponse.GetLoanProductsInterestType interestType;
+        public GetUssdLoanProductsResponse.GetLoansProductsInterestCalculationPeriodType interestCalculationPeriodType;
+        @Schema(example = "mifos-standard-strategy")
+        public String transactionProcessingStrategyCode;
+        @Schema(example = "false")
+        public Boolean interestRecognitionOnDisbursementDate;
     }
 }

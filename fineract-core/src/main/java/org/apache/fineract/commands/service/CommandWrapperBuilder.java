@@ -1033,6 +1033,15 @@ public class CommandWrapperBuilder {
         return this;
     }
 
+    public CommandWrapperBuilder createUssdLoanApplication() {
+        this.actionName = "CREATEUSSD";
+        this.entityName = "LOAN";
+        this.entityId = null;
+        this.loanId = null;
+        this.href = "/loans/ussd-create";
+        return this;
+    }
+
     public CommandWrapperBuilder updatePostDatedCheck(final Long id, final Long loanId) {
         this.actionName = "UPDATE";
         this.entityName = "REPAYMENT_WITH_POSTDATEDCHECKS";

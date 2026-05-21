@@ -42,6 +42,7 @@ import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.dataqueries.data.EntityTables;
 import org.apache.fineract.infrastructure.dataqueries.data.StatusEnum;
@@ -57,6 +58,7 @@ import org.apache.fineract.notification.service.SMSNotificationWritePlatformServ
 import org.apache.fineract.portfolio.account.domain.AccountAssociationType;
 import org.apache.fineract.portfolio.account.domain.AccountAssociations;
 import org.apache.fineract.portfolio.account.domain.AccountAssociationsRepository;
+import org.apache.fineract.portfolio.accountdetails.domain.LoanChannel;
 import org.apache.fineract.portfolio.calendar.domain.Calendar;
 import org.apache.fineract.portfolio.calendar.domain.CalendarEntityType;
 import org.apache.fineract.portfolio.calendar.domain.CalendarFrequencyType;
@@ -66,6 +68,7 @@ import org.apache.fineract.portfolio.calendar.domain.CalendarRepository;
 import org.apache.fineract.portfolio.calendar.domain.CalendarType;
 import org.apache.fineract.portfolio.calendar.exception.CalendarNotFoundException;
 import org.apache.fineract.portfolio.calendar.service.CalendarReadPlatformService;
+import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.collateralmanagement.domain.ClientCollateralManagement;
 import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
 import org.apache.fineract.portfolio.group.exception.GroupMemberNotFoundInGSIMException;
@@ -88,6 +91,8 @@ import org.apache.fineract.portfolio.loanaccount.serialization.LoanApplicationTr
 import org.apache.fineract.portfolio.loanaccount.serialization.LoanApplicationValidator;
 import org.apache.fineract.portfolio.loanaccount.serialization.LoanDownPaymentTransactionValidator;
 import org.apache.fineract.portfolio.loanproduct.LoanProductConstants;
+import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
+import org.apache.fineract.portfolio.loanproduct.domain.LoanProductRepository;
 import org.apache.fineract.portfolio.loanproduct.domain.RecalculationFrequencyType;
 import org.apache.fineract.portfolio.note.domain.Note;
 import org.apache.fineract.portfolio.note.domain.NoteRepository;
@@ -138,6 +143,8 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             this.loanApplicationValidator.validateForCreate(command);
             // Assembling loan
             final Loan loan = this.loanAssembler.assembleFrom(command);
+            //Validate Normal Loans
+            validateNormalLoans(loan);
             // Validations (further validations which requires the assembling first)
             this.loanApplicationValidator.validateForCreate(loan);
             // Need to flush to gather loan id
@@ -189,7 +196,129 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
         }
     }
 
-    private void createAndPersistCalendarInstanceForInterestRecalculation(final Loan loan) {
+    private void validateNormalLoans(Loan loan){
+
+
+        if (!loan.getLoanChannel().equals(LoanChannel.WEB.getValue())){
+            throw new GeneralPlatformDomainRuleException(
+                    "error.msg.channel.loan.application.not.allowed",
+                    "The loan channel can only be UI."
+            );
+        }
+    }
+
+    @Override
+    public CommandProcessingResult submitUssdApplication(JsonCommand command) {
+        try {
+            // Validations (prior assembling)
+            this.loanApplicationValidator.validateForCreate(command);
+            // Assembling loan
+            final Loan loan = this.loanAssembler.assembleFrom(command);
+
+            //Set Channel
+            loan.ussdChannel();
+
+            //Validate Ussd Loan
+            validateUssdLoans(loan);
+
+            // Validations (further validations which requires the assembling first)
+            this.loanApplicationValidator.validateForCreate(loan);
+            // Need to flush to gather loan id
+            this.loanRepositoryWrapper.saveAndFlush(loan);
+            // Account number regeneration (need loan id...)
+            this.loanAssembler.accountNumberGeneration(command, loan);
+            // Save interest recalculation calendar
+            if (loan.getLoanProduct().isInterestRecalculationEnabled()) {
+                createAndPersistCalendarInstanceForInterestRecalculation(loan);
+            }
+            // Save note
+            final String submittedOnNote = command.stringValueOfParameterNamed("submittedOnNote");
+            createNote(submittedOnNote, loan);
+            // Save calendar instance
+            createCalendar(command, loan);
+            // Save linked account information
+            final Long savingsAccountId = command.longValueOfParameterNamed("linkAccountId");
+            createSavingsAccountAssociation(savingsAccountId, loan);
+            // Save related datatable entries
+            if (command.parameterExists(LoanApiConstants.datatables)) {
+                this.entityDatatableChecksWritePlatformService.saveDatatables(StatusEnum.CREATE.getValue(), EntityTables.LOAN.getName(),
+                        loan.getId(), loan.productId(), command.arrayOfParameterNamed(LoanApiConstants.datatables));
+            }
+            // TODO: review whether we really need this
+            loanRepositoryWrapper.flush();
+            // Check mandatory datatable entries were created
+            this.entityDatatableChecksWritePlatformService.runTheCheckForProduct(loan.getId(), EntityTables.LOAN.getName(),
+                    StatusEnum.CREATE.getValue(), EntityTables.LOAN.getForeignKeyColumnNameOnDatatable(), loan.productId());
+            // Trigger business event
+            businessEventNotifierService.notifyPostBusinessEvent(new LoanCreatedBusinessEvent(loan));
+            // Send SMS
+            smsNotificationWritePlatformService.processLoanSmsNotification(loan, SmsTypeEnum.USSD_LOAN_APPLICATION, null);
+            // Building response
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityId(loan.getId()) //
+                    .withEntityExternalId(loan.getExternalId()) //
+                    .withOfficeId(loan.getOfficeId()) //
+                    .withClientId(loan.getClientId()) //
+                    .withGroupId(loan.getGroupId()) //
+                    .withLoanId(loan.getId())
+                    .withGlimId(loan.getGlimId())
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    private void validateUssdLoans(Loan loan){
+        //Filter out non USSD Loans
+        LoanProduct product = loan.getLoanProduct();
+
+        Client client = loan.getClient();
+
+        //Check if product is ussd
+        if (!product.isUssd()){
+            throw new GeneralPlatformDomainRuleException(
+                    "error.msg.ussd.loan.application.not.allowed",
+                    "This loan product is not available for USSD."
+            );
+        }
+        //Channel should be strictly USSD For tracking purposes
+        if (!loan.getLoanChannel().equals(LoanChannel.USSD.getValue())){
+            throw new GeneralPlatformDomainRuleException(
+                    "error.msg.channel.loan.application.not.allowed",
+                    "The loan channel can only be USSD."
+            );
+        }
+        //Validate only individual Loans
+        if (!loan.isIndividualLoan()){
+            throw new GeneralPlatformDomainRuleException(
+                    "error.msg.type.loan.application.not.allowed",
+                    "Only individual Loans can be processed via USSD."
+            );
+        }
+
+        //Prevent spam requests
+        Long pendingLoans = loanRepository.countPendingUssdLoans(
+                client.getId(),
+                LoanChannel.USSD.getValue(),
+                List.of(LoanStatus.SUBMITTED_AND_PENDING_APPROVAL.getValue())
+        );
+
+        if (pendingLoans > 0) {
+            throw new GeneralPlatformDomainRuleException(
+                    "error.msg.ussd.loan.pending.exists",
+                    "You already have a pending USSD loan application. Contact Sacco for Support!"
+            );
+        }
+    }
+
+
+        private void createAndPersistCalendarInstanceForInterestRecalculation(final Loan loan) {
 
         LocalDate calendarStartDate = loan.getExpectedDisbursedOnLocalDate();
         Integer repeatsOnDay = null;

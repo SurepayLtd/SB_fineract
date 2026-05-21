@@ -33,7 +33,7 @@ public enum SmsTypeEnum {
     SAVINGS_WITHDRAW(8, "SmsTypeEnum.savingsWithdraw", "Savings Account Withdraw"), //
     SAVINGS_CREATION(9, "SmsTypeEnum.savingsCreation", "Savings Account Creation"), //
     SAVINGS_ACTIVATED(10, "SmsTypeEnum.savingsActivated", "Savings Account Activated"), //
-    ;
+    USSD_LOAN_APPLICATION(11, "SmsTypeEnum.ussdLoanApplication", "USSD Loan Application");
 
     private final Integer value;
     private final String code;

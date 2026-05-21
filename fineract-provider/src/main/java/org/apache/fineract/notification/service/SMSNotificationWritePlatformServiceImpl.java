@@ -182,6 +182,16 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                     messageId = String.format("LOAN-SUBMISSION-%s", loan.getId());
                 }
             break;
+            case USSD_LOAN_APPLICATION:
+                final GlobalConfigurationProperty submitUssdLoan = this.configurationRepositoryWrapper
+                        .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_ON_USSD_LOAN_APPLICATION);
+                if (submitUssdLoan.isEnabled()) {
+                    message = String.format(
+                            "Dear %s, your loan application of  %s, has been submitted to %s Sacco . Your ref %s",
+                            clientName, loan.getPrincipal(), ThreadLocalContextUtil.getTenant().getName(), loan.getAccountNumber());
+                    messageId = String.format("LOAN-SUBMISSION-%s", loan.getId());
+                }
+            break;
             case LOAN_APPROVAL:
                 final GlobalConfigurationProperty approvedLoan = this.configurationRepositoryWrapper
                         .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_APPROVED);
@@ -244,6 +254,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         if (mobileNo != null && messageId != null) {
             sendSms(new SmsNotificationData(mobileNo, message, messageId));
         }
+//        log.info("SMS Sent: {}", message);
     }
 
     @Override

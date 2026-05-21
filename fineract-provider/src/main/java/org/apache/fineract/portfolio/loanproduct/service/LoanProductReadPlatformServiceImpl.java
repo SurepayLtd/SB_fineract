@@ -39,6 +39,7 @@ import org.apache.fineract.infrastructure.entityaccess.domain.FineractEntityType
 import org.apache.fineract.infrastructure.entityaccess.service.FineractEntityAccessUtil;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
+import org.apache.fineract.portfolio.accountdetails.domain.LoanChannel;
 import org.apache.fineract.portfolio.charge.data.ChargeData;
 import org.apache.fineract.portfolio.charge.service.ChargeReadPlatformService;
 import org.apache.fineract.portfolio.common.service.CommonEnumerations;
@@ -47,13 +48,8 @@ import org.apache.fineract.portfolio.delinquency.service.DelinquencyReadPlatform
 import org.apache.fineract.portfolio.loanaccount.domain.LoanChargeOffBehaviour;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleProcessingType;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleType;
-import org.apache.fineract.portfolio.loanproduct.data.AdvancedPaymentData;
+import org.apache.fineract.portfolio.loanproduct.data.*;
 import org.apache.fineract.portfolio.loanproduct.data.AdvancedPaymentData.PaymentAllocationOrder;
-import org.apache.fineract.portfolio.loanproduct.data.CreditAllocationData;
-import org.apache.fineract.portfolio.loanproduct.data.LoanProductBorrowerCycleVariationData;
-import org.apache.fineract.portfolio.loanproduct.data.LoanProductData;
-import org.apache.fineract.portfolio.loanproduct.data.LoanProductGuaranteeData;
-import org.apache.fineract.portfolio.loanproduct.data.LoanProductInterestRecalculationData;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProductConfigurableAttributes;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProductParamType;
@@ -153,6 +149,30 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
         }
 
         return this.jdbcTemplate.query(sql, rm); // NOSONAR
+    }
+
+    @Override
+    public Collection<UssdLoanProductData> retrieveAllUssdLoanProducts() {
+        this.context.authenticatedUser();
+        UssdMapper mp = new UssdMapper(null);
+        final String sql = "select " + mp.ussdSchema() + " where lp.is_ussd = true";
+
+        return this.jdbcTemplate.query(sql, mp);
+    }
+
+    @Override
+    public UssdLoanProductData retrieveUssdLoanProduct(Long ussdProductId) {
+
+        try {
+            final Collection<ChargeData> charges = this.chargeReadPlatformService.retrieveLoanProductCharges(ussdProductId);
+
+            final UssdMapper rm = new UssdMapper(charges);
+            final String sql = "select " + rm.ussdSchema() + " where lp.id = ? and lp.is_ussd = ?";
+            return this.jdbcTemplate.queryForObject(sql, rm, ussdProductId, true); // NOSONAR
+
+        } catch (final EmptyResultDataAccessException e) {
+            throw new LoanProductNotFoundException(ussdProductId, e);
+        }
     }
 
     @Override
@@ -289,7 +309,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     + "lp.allow_variabe_installments as isVariableIntallmentsAllowed, " + "lvi.minimum_gap as minimumGap, "
                     + "lvi.maximum_gap as maximumGap, dbuc.id as delinquencyBucketId, dbuc.name as delinquencyBucketName, "
                     + "lp.can_use_for_topup as canUseForTopup, lp.is_equal_amortization as isEqualAmortization, lp.loan_schedule_type as loanScheduleType, lp.loan_schedule_processing_type as loanScheduleProcessingType, lp.supported_interest_refund_types as supportedInterestRefundTypes, "
-                    + "lp.charge_off_behaviour as chargeOffBehaviour" + " from m_product_loan lp "
+                    + "lp.charge_off_behaviour as chargeOffBehaviour, lp.is_ussd as isUssd" + " from m_product_loan lp "
                     + " left join m_fund f on f.id = lp.fund_id "
                     + " left join m_product_loan_recalculation_details lpr on lpr.product_id=lp.id "
                     + " left join m_product_loan_guarantee_details lpg on lpg.loan_product_id=lp.id "
@@ -361,6 +381,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
             final BigDecimal defaultDifferentialLendingRate = rs.getBigDecimal("defaultDifferentialLendingRate");
             final BigDecimal maxDifferentialLendingRate = rs.getBigDecimal("maxDifferentialLendingRate");
             final boolean isFloatingInterestRateCalculationAllowed = rs.getBoolean("isFloatingInterestRateCalculationAllowed");
+            final boolean isUssd = rs.getBoolean("isUssd");
 
             final boolean isVariableIntallmentsAllowed = rs.getBoolean("isVariableIntallmentsAllowed");
             final Integer minimumGap = rs.getInt("minimumGap");
@@ -574,7 +595,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     enableAutoRepaymentForDownPayment, advancedPaymentData, creditAllocationData, repaymentStartDateType,
                     enableInstallmentLevelDelinquency, loanScheduleType.asEnumOptionData(), loanScheduleProcessingType.asEnumOptionData(),
                     fixedLength, enableAccrualActivityPosting, supportedInterestRefundTypes,
-                    loanChargeOffBehaviour.getValueAsStringEnumOptionData(), interestRecognitionOnDisbursementDate);
+                    loanChargeOffBehaviour.getValueAsStringEnumOptionData(), interestRecognitionOnDisbursementDate, isUssd);
         }
     }
 
@@ -831,6 +852,102 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
             return LoanProductData.loanProductWithFloatingRates(id, name, isLinkedToFloatingInterestRates, floatingRateId, floatingRateName,
                     interestRateDifferential, minDifferentialLendingRate, defaultDifferentialLendingRate, maxDifferentialLendingRate,
                     isFloatingInterestRateCalculationAllowed);
+        }
+    }
+
+    protected static class UssdMapper implements RowMapper<UssdLoanProductData>{
+
+        private final Collection<ChargeData> charges;
+
+        public UssdMapper(Collection<ChargeData> charges) {
+            this.charges = charges;
+        }
+
+        @Override
+        public UssdLoanProductData mapRow(ResultSet rs, int rowNum) throws SQLException {
+            final Long id = JdbcSupport.getLong(rs,"id");
+            final String name = rs.getString("name");
+            final String shortName = rs.getString("shortName");
+            final String description = rs.getString("description");
+            final LocalDate startDate = rs.getDate("startDate") != null
+                    ? rs.getDate("startDate").toLocalDate(): null;
+            final LocalDate closeDate = rs.getDate("closeDate") != null
+                    ? rs.getDate("closeDate").toLocalDate(): null;
+            String status = "";
+            if (closeDate != null && DateUtils.isBeforeBusinessDate(closeDate)) {
+                status = "loanProduct.inActive";
+            } else {
+                status = "loanProduct.active";
+            }
+            final String currencyCode = rs.getString("currencyCode");
+            final String currencyName = rs.getString("currencyName");
+            final String currencyNameCode = rs.getString("currencyNameCode");
+            final String currencyDisplaySymbol = rs.getString("currencyDisplaySymbol");
+            final Integer currencyDigits = JdbcSupport.getInteger(rs, "currencyDigits");
+            final Integer inMultiplesOf = JdbcSupport.getInteger(rs, "inMultiplesOf");
+
+            final CurrencyData currency = new CurrencyData(currencyCode, currencyName, currencyDigits, inMultiplesOf, currencyDisplaySymbol,
+                    currencyNameCode);
+
+            final BigDecimal principal = rs.getBigDecimal("principal");
+            final BigDecimal minPrincipal = rs.getBigDecimal("minPrincipal");
+            final BigDecimal maxPrincipal = rs.getBigDecimal("maxPrincipal");
+
+            final Integer numberOfRepayments = JdbcSupport.getInteger(rs, "numberOfRepayments");
+            final Integer minNumberOfRepayments = JdbcSupport.getInteger(rs, "minNumberOfRepayments");
+            final Integer maxNumberOfRepayments = JdbcSupport.getInteger(rs, "maxNumberOfRepayments");
+            final Integer repaymentEvery = JdbcSupport.getInteger(rs, "repaidEvery");
+            final int repaymentFrequencyTypeId = JdbcSupport.getInteger(rs, "repaymentPeriodFrequency");
+            final EnumOptionData repaymentFrequencyType = LoanEnumerations.repaymentFrequencyType(repaymentFrequencyTypeId);
+
+            final BigDecimal interestRatePerPeriod = rs.getBigDecimal("interestRatePerPeriod");
+            final BigDecimal minInterestRatePerPeriod = rs.getBigDecimal("minInterestRatePerPeriod");
+            final BigDecimal maxInterestRatePerPeriod = rs.getBigDecimal("maxInterestRatePerPeriod");
+            final BigDecimal annualInterestRate = rs.getBigDecimal("annualInterestRate");
+            final Integer interestRateFrequencyTypeId = JdbcSupport.getInteger(rs, "interestRatePerPeriodFreq");
+            final EnumOptionData interestRateFrequencyType = LoanEnumerations.interestRateFrequencyType(interestRateFrequencyTypeId);
+
+            final int amortizationTypeId = JdbcSupport.getInteger(rs, "amortizationMethod");
+            final EnumOptionData amortizationType = LoanEnumerations.amortizationType(amortizationTypeId);
+            final boolean isEqualAmortization = rs.getBoolean("isEqualAmortization");
+
+
+            final int interestTypeId = JdbcSupport.getInteger(rs, "interestMethod");
+            final EnumOptionData interestType = LoanEnumerations.interestType(interestTypeId);
+
+            final int interestCalculationPeriodTypeId = JdbcSupport.getInteger(rs, "interestCalculationInPeriodMethod");
+            final EnumOptionData interestCalculationPeriodType = LoanEnumerations
+                    .interestCalculationPeriodType(interestCalculationPeriodTypeId);
+
+            final boolean enableInstallmentLevelDelinquency = rs.getBoolean("enableInstallmentLevelDelinquency");
+
+            final boolean interestRecognitionOnDisbursementDate = rs.getBoolean("interestRecognitionOnDisbursementDate");
+
+            final String transactionStrategyCode = rs.getString("transactionStrategyCode");
+
+
+
+            return new UssdLoanProductData(id, name, shortName, description, startDate, closeDate, status, currency, principal, minPrincipal, maxPrincipal, numberOfRepayments,
+                    minNumberOfRepayments, maxNumberOfRepayments, repaymentEvery, repaymentFrequencyType, interestRatePerPeriod, minInterestRatePerPeriod, maxInterestRatePerPeriod, interestRateFrequencyType, annualInterestRate,
+                    amortizationType, interestType, interestCalculationPeriodType, isEqualAmortization, interestRecognitionOnDisbursementDate, transactionStrategyCode, enableInstallmentLevelDelinquency, this.charges);
+        }
+
+        public String ussdSchema(){
+            return "lp.id as id, lp.loan_transaction_strategy_code as transactionStrategyCode, "
+                    + "lp.name as name, lp.short_name as shortName, lp.description as description, "
+                    + "lp.principal_amount as principal, lp.min_principal_amount as minPrincipal, lp.max_principal_amount as maxPrincipal, lp.currency_code as currencyCode, lp.currency_digits as currencyDigits, lp.currency_multiplesof as inMultiplesOf, "
+                    + "lp.nominal_interest_rate_per_period as interestRatePerPeriod, lp.min_nominal_interest_rate_per_period as minInterestRatePerPeriod, lp.max_nominal_interest_rate_per_period as maxInterestRatePerPeriod, lp.interest_period_frequency_enum as interestRatePerPeriodFreq, "
+                    + "lp.annual_nominal_interest_rate as annualInterestRate, lp.interest_method_enum as interestMethod, lp.interest_calculated_in_period_enum as interestCalculationInPeriodMethod, "
+                    + "lp.repay_every as repaidEvery, lp.repayment_period_frequency_enum as repaymentPeriodFrequency, lp.number_of_repayments as numberOfRepayments, lp.min_number_of_repayments as minNumberOfRepayments, lp.max_number_of_repayments as maxNumberOfRepayments, "
+                    + "lp.amortization_method_enum as amortizationMethod, "
+                    + "lp.start_date as startDate, lp.close_date as closeDate, "
+                    + "lp.instalment_amount_in_multiples_of as installmentAmountInMultiplesOf, "
+                    + "lp.enable_installment_level_delinquency as enableInstallmentLevelDelinquency, "
+                    + "curr.name as currencyName, curr.internationalized_name_code as currencyNameCode, curr.display_symbol as currencyDisplaySymbol,"
+                    + "lp.interest_recognition_on_disbursement_date as interestRecognitionOnDisbursementDate, "
+                    + "lp.is_equal_amortization as isEqualAmortization "
+                    + "from m_product_loan lp "
+                    + " join m_currency curr on curr.code = lp.currency_code";
         }
     }
 

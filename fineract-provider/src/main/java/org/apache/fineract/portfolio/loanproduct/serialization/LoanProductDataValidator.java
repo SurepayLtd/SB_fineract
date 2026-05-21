@@ -79,6 +79,7 @@ public final class LoanProductDataValidator {
     public static final String DESCRIPTION = "description";
     public static final String FUND_ID = "fundId";
     public static final String INCLUDE_IN_BORROWER_CYCLE = "includeInBorrowerCycle";
+    public static final String IS_USSD_PRODUCT = "isUssd";
     public static final String CURRENCY_CODE = "currencyCode";
     public static final String DIGITS_AFTER_DECIMAL = "digitsAfterDecimal";
     public static final String IN_MULTIPLES_OF = "inMultiplesOf";
@@ -124,7 +125,7 @@ public final class LoanProductDataValidator {
             INTEREST_CALCULATION_PERIOD_TYPE, LoanProductConstants.ALLOW_PARTIAL_PERIOD_INTEREST_CALCUALTION_PARAM_NAME,
             IN_ARREARS_TOLERANCE, TRANSACTION_PROCESSING_STRATEGY_CODE, ADVANCED_PAYMENT_ALLOCATIONS, CREDIT_ALLOCATIONS,
             GRACE_ON_PRINCIPAL_PAYMENT, "recurringMoratoriumOnPrincipalPeriods", GRACE_ON_INTEREST_PAYMENT, GRACE_ON_INTEREST_CHARGED,
-            "charges", ACCOUNTING_RULE, INCLUDE_IN_BORROWER_CYCLE, "startDate", "closeDate", "externalId",
+            "charges", ACCOUNTING_RULE, INCLUDE_IN_BORROWER_CYCLE, "startDate", "closeDate", "externalId", IS_USSD_PRODUCT,
             IS_LINKED_TO_FLOATING_INTEREST_RATES, FLOATING_RATES_ID, INTEREST_RATE_DIFFERENTIAL, MIN_DIFFERENTIAL_LENDING_RATE,
             DEFAULT_DIFFERENTIAL_LENDING_RATE, MAX_DIFFERENTIAL_LENDING_RATE, IS_FLOATING_INTEREST_RATE_CALCULATION_ALLOWED,
             "syncExpectedWithDisbursementDate", LoanProductAccountingParams.FEES_RECEIVABLE.getValue(),
@@ -248,6 +249,10 @@ public final class LoanProductDataValidator {
 
         final Boolean includeInBorrowerCycle = this.fromApiJsonHelper.extractBooleanNamed(INCLUDE_IN_BORROWER_CYCLE, element);
         baseDataValidator.reset().parameter(INCLUDE_IN_BORROWER_CYCLE).value(includeInBorrowerCycle).ignoreIfNull()
+                .validateForBooleanValue();
+
+        final Boolean isUssd = this.fromApiJsonHelper.extractBooleanNamed(IS_USSD_PRODUCT, element);
+        baseDataValidator.reset().parameter(IS_USSD_PRODUCT).value(isUssd).ignoreIfNull()
                 .validateForBooleanValue();
 
         // terms
@@ -1263,6 +1268,12 @@ public final class LoanProductDataValidator {
         if (this.fromApiJsonHelper.parameterExists(INCLUDE_IN_BORROWER_CYCLE, element)) {
             final Boolean includeInBorrowerCycle = this.fromApiJsonHelper.extractBooleanNamed(INCLUDE_IN_BORROWER_CYCLE, element);
             baseDataValidator.reset().parameter(INCLUDE_IN_BORROWER_CYCLE).value(includeInBorrowerCycle).ignoreIfNull()
+                    .validateForBooleanValue();
+        }
+
+        if (this.fromApiJsonHelper.parameterExists(IS_USSD_PRODUCT, element)) {
+            final Boolean isUssd = this.fromApiJsonHelper.extractBooleanNamed(IS_USSD_PRODUCT, element);
+            baseDataValidator.reset().parameter(IS_USSD_PRODUCT).value(isUssd).ignoreIfNull()
                     .validateForBooleanValue();
         }
 

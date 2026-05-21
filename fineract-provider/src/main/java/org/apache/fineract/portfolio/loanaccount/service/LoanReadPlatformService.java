@@ -78,6 +78,8 @@ public interface LoanReadPlatformService {
 
     Page<LoanAccountData> retrieveAll(SearchParameters searchParameters);
 
+    Page<LoanAccountData> retrieveAllUssdApplications(final SearchParameters searchParameters);
+
     Collection<StaffData> retrieveAllowedLoanOfficers(Long selectedOfficeId, boolean staffInSelectedOfficeOnly);
 
     /*

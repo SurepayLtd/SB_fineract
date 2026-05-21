@@ -33,6 +33,7 @@ import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.entityaccess.domain.FineractEntityAccessType;
@@ -96,6 +97,8 @@ public class LoanProductWritePlatformServiceJpaRepositoryImpl implements LoanPro
     private final LoanProductPaymentAllocationRuleMerger loanProductPaymentAllocationRuleMerger = new LoanProductPaymentAllocationRuleMerger();
     private final LoanProductCreditAllocationRuleMerger loanProductCreditAllocationRuleMerger = new LoanProductCreditAllocationRuleMerger();
 
+    private static final int MAX_USSD_PRODUCTS =4;
+
     @Transactional
     @Override
     public CommandProcessingResult createLoanProduct(final JsonCommand command) {
@@ -106,6 +109,7 @@ public class LoanProductWritePlatformServiceJpaRepositoryImpl implements LoanPro
 
             this.fromApiJsonDeserializer.validateForCreate(command);
             validateInputDates(command);
+            validateMaxUssdProducts();
 
             final Fund fund = findFundByIdIfProvided(command.longValueOfParameterNamed("fundId"));
 
@@ -192,6 +196,7 @@ public class LoanProductWritePlatformServiceJpaRepositoryImpl implements LoanPro
 
             this.fromApiJsonDeserializer.validateForUpdate(command, product);
             validateInputDates(command);
+            validateMaxUssdProducts();
 
             if (anyChangeInCriticalFloatingRateLinkedParams(command, product)
                     && this.loanRepositoryWrapper.doNonClosedLoanAccountsExistForProduct(product.getId())) {
@@ -419,5 +424,16 @@ public class LoanProductWritePlatformServiceJpaRepositoryImpl implements LoanPro
 
     private void logAsErrorUnexpectedDataIntegrityException(final Exception dve) {
         log.error("Error occurred.", dve);
+    }
+
+    private void validateMaxUssdProducts(){
+        Long count = loanProductRepository.countUssdLoanProducts();
+
+        if (count >= MAX_USSD_PRODUCTS) {
+            throw new GeneralPlatformDomainRuleException(
+                    "error.msg.ussd.product.limit.exceeded",
+                    "You can only create up to 4 USSD loan products"
+            );
+        }
     }
 }

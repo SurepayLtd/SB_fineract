@@ -86,6 +86,7 @@ import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanSchedul
 import org.apache.fineract.portfolio.loanproduct.LoanProductConstants;
 import org.apache.fineract.portfolio.loanproduct.data.LoanProductData;
 import org.apache.fineract.portfolio.loanproduct.data.TransactionProcessingStrategyData;
+import org.apache.fineract.portfolio.loanproduct.data.UssdLoanProductData;
 import org.apache.fineract.portfolio.loanproduct.domain.AllocationType;
 import org.apache.fineract.portfolio.loanproduct.domain.CreditAllocationTransactionType;
 import org.apache.fineract.portfolio.loanproduct.domain.FutureInstallmentAllocationRule;
@@ -121,7 +122,7 @@ public class LoanProductsApiResource {
             "interestTypeOptions", "interestCalculationPeriodTypeOptions", "transactionProcessingStrategyOptions", "chargeOptions",
             "accountingOptions", "accountingRuleOptions", "accountingMappingOptions", "floatingRateOptions",
             "isLinkedToFloatingInterestRates", "floatingRatesId", "interestRateDifferential", "minDifferentialLendingRate",
-            "defaultDifferentialLendingRate", "maxDifferentialLendingRate", "isFloatingInterestRateCalculationAllowed",
+            "defaultDifferentialLendingRate", "maxDifferentialLendingRate", "isFloatingInterestRateCalculationAllowed", "isUssd",
             LoanProductConstants.CAN_USE_FOR_TOPUP, LoanProductConstants.IS_EQUAL_AMORTIZATION_PARAM, LoanProductConstants.RATES_PARAM_NAME,
             LoanApiConstants.fixedPrincipalPercentagePerInstallmentParamName, LoanProductConstants.DUE_DAYS_FOR_REPAYMENT_EVENT,
             LoanProductConstants.OVER_DUE_DAYS_FOR_REPAYMENT_EVENT, LoanProductConstants.ENABLE_DOWN_PAYMENT,
@@ -130,6 +131,11 @@ public class LoanProductsApiResource {
 
     private static final Set<String> PRODUCT_MIX_DATA_PARAMETERS = new HashSet<>(
             Arrays.asList("productId", "productName", "restrictedProducts", "allowedProducts", "productOptions"));
+
+    private static final Set<String> USSD_LOAN_PRODUCT_DATA_PARAMETERS = new HashSet<>(Arrays.asList("id", "name", "shortName", "description",
+            "includeInBorrowerCycle", "currency", "principal", "minPrincipal", "maxPrincipal", "numberOfRepayments",
+            "minNumberOfRepayments", "maxNumberOfRepayments", "repaymentEvery", "repaymentFrequencyType", "currencyOptions", "repaymentFrequencyTypeOptions"
+    ));
 
     private static final String RESOURCE_NAME_FOR_PERMISSIONS = "LOANPRODUCT";
     public static final String PRODUCTMIX = "PRODUCTMIX";
@@ -141,6 +147,7 @@ public class LoanProductsApiResource {
     private final CurrencyReadPlatformService currencyReadPlatformService;
     private final FundReadPlatformService fundReadPlatformService;
     private final DefaultToApiJsonSerializer<LoanProductData> toApiJsonSerializer;
+    private final DefaultToApiJsonSerializer<UssdLoanProductData> toUssdApiJsonSerializer;
     private final ApiRequestParameterHelper apiRequestParameterHelper;
     private final LoanDropdownReadPlatformService dropdownReadPlatformService;
     private final PortfolioCommandSourceWritePlatformService commandsSourceWritePlatformService;
@@ -209,6 +216,31 @@ public class LoanProductsApiResource {
     }
 
     @GET
+    @Path("/ussd-products")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "List USSD Loan Products", description = "Lists Ussd Loan Products\n\n" + "Example Requests:\n" + "\n" + "loanproducts\n"
+            + "\n" + "\n" + "loanproducts?fields=name,description")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(array = @ArraySchema(schema = @Schema(implementation = LoanProductsApiResourceSwagger.GetUssdLoanProductsResponse.class)))) })
+    public String retrieveAllLoanUssdProducts(@Context final UriInfo uriInfo) {
+
+        this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSIONS);
+        final Set<String> associationParameters = ApiParameterHelper.extractAssociationsForResponseIfProvided(uriInfo.getQueryParameters());
+        final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
+
+        if (!associationParameters.isEmpty() && associationParameters.contains(PRODUCT_MIXES)) {
+            this.context.authenticatedUser().validateHasReadPermission(PRODUCTMIX);
+            final Collection<ProductMixData> productMixes = this.productMixReadPlatformService.retrieveAllProductMixes();
+            return this.productMixDataApiJsonSerializer.serialize(settings, productMixes, PRODUCT_MIX_DATA_PARAMETERS);
+        }
+
+        final Collection<UssdLoanProductData> product = this.loanProductReadPlatformService.retrieveAllUssdLoanProducts();
+
+        return this.toUssdApiJsonSerializer.serialize(settings, product, USSD_LOAN_PRODUCT_DATA_PARAMETERS);
+    }
+
+    @GET
     @Path("template")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
@@ -251,6 +283,27 @@ public class LoanProductsApiResource {
         this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSIONS);
 
         return getLoanProductDetails(productId, uriInfo);
+    }
+
+
+    @GET
+    @Path("ussd-product/{productId}")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Retrieve a USSD Loan Product", description = "Retrieves a USSD Loan Product\n\n" + "Example Requests:\n" + "\n"
+            + "loanproducts/ussd-product/1\n")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = LoanProductsApiResourceSwagger.GetUssdLoanProductsProductIdResponse.class))) })
+    public String retrieveLoanUssdProductDetails(@PathParam("productId") @Parameter(description = "productId") final Long productId,
+                                             @Context final UriInfo uriInfo) {
+
+        this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSIONS);
+
+        final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
+
+        UssdLoanProductData loanProduct = this.loanProductReadPlatformService.retrieveUssdLoanProduct(productId);
+
+        return this.toUssdApiJsonSerializer.serialize(settings, loanProduct, LOAN_PRODUCT_DATA_PARAMETERS);
     }
 
     @PUT

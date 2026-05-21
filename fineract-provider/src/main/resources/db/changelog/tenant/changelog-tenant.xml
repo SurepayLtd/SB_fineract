@@ -195,4 +195,5 @@
     <include file="parts/add_amount_in_words_column.xml" relativeToChangelogFile="true"/>
     <include file="parts/Updated-OTC-MOMO-Reports.xml" relativeToChangelogFile="true"/>
     <include file="parts/mass-waiver.xml" relativeToChangelogFile="true"/>
+    <include file="parts/Ussd-Loan-application.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

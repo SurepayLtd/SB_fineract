@@ -101,6 +101,8 @@ public interface LoanRepository extends JpaRepository<Loan, Long>, JpaSpecificat
 
     String FIND_ALL_LOAN_IDS_BY_STATUS_ID = "SELECT loan.id FROM Loan loan WHERE loan.loanStatus = :statusId";
 
+    String FIND_USSD_LOANS_PENDING = " select COUNT(l) FROM Loan l where l.client.id = :clientId and l.loanChannel = :channel and l.loanStatus IN :statuses";
+
     String LOANS_FOR_ACCRUAL = "select l from Loan l left join l.loanInterestRecalculationDetails recalcDetails "
             + "where l.loanStatus = 300 and l.isNpa = false and l.chargedOff = false "
             + "and l.loanProduct.accountingRule = :accountingType "
@@ -252,4 +254,7 @@ public interface LoanRepository extends JpaRepository<Loan, Long>, JpaSpecificat
 
     @Query(FIND_LOAN_BY_EXTERNAL_ID)
     Optional<Loan> findByExternalId(@Param("externalId") ExternalId externalId);
+
+    @Query(FIND_USSD_LOANS_PENDING)
+    Long countPendingUssdLoans(@Param("clientId") Long clientId, @Param("channel") Integer channel, @Param("statuses") Collection<Integer> statuses);
 }

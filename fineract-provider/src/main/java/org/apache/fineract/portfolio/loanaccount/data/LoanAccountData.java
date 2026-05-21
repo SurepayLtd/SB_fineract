@@ -75,6 +75,9 @@ public class LoanAccountData {
     private LoanStatusEnumData status;
     private EnumOptionData subStatus;
 
+    //Channel
+    private EnumOptionData loanChannel;
+
     // related to
     private Long clientId;
     private String clientAccountNo;
@@ -464,7 +467,7 @@ public class LoanAccountData {
             final BigDecimal disbursedAmountPercentageForDownPayment, final boolean enableAutoRepaymentForDownPayment,
             final boolean enableInstallmentLevelDelinquency, final EnumOptionData loanScheduleType,
             final EnumOptionData loanScheduleProcessingType, final Integer fixedLength, final StringEnumOptionData chargeOffBehaviour,
-            final boolean isInterestRecognitionOnDisbursementDate) {
+            final boolean isInterestRecognitionOnDisbursementDate, final EnumOptionData loanChannel) {
 
         final CollectionData delinquent = CollectionData.template();
 
@@ -510,7 +513,8 @@ public class LoanAccountData {
                 .setEnableInstallmentLevelDelinquency(enableInstallmentLevelDelinquency).setLoanScheduleType(loanScheduleType)
                 .setLoanScheduleProcessingType(loanScheduleProcessingType).setFixedLength(fixedLength)
                 .setChargeOffBehaviour(chargeOffBehaviour)
-                .setInterestRecognitionOnDisbursementDate(isInterestRecognitionOnDisbursementDate);
+                .setInterestRecognitionOnDisbursementDate(isInterestRecognitionOnDisbursementDate)
+                .setLoanChannel(loanChannel);
     }
 
     /*

@@ -25,6 +25,8 @@ public interface LoanApplicationWritePlatformService {
 
     CommandProcessingResult submitApplication(JsonCommand command);
 
+    CommandProcessingResult submitUssdApplication(JsonCommand command);
+
     CommandProcessingResult modifyApplication(Long loanId, JsonCommand command);
 
     CommandProcessingResult deleteApplication(Long loanId);

@@ -62,6 +62,7 @@ import org.apache.fineract.organisation.staff.service.StaffReadPlatformService;
 import org.apache.fineract.portfolio.account.data.AccountTransferData;
 import org.apache.fineract.portfolio.accountdetails.data.LoanAccountSummaryData;
 import org.apache.fineract.portfolio.accountdetails.domain.AccountType;
+import org.apache.fineract.portfolio.accountdetails.domain.LoanChannel;
 import org.apache.fineract.portfolio.accountdetails.service.AccountDetailsReadPlatformService;
 import org.apache.fineract.portfolio.accountdetails.service.AccountEnumerations;
 import org.apache.fineract.portfolio.calendar.data.CalendarData;
@@ -231,6 +232,56 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
     }
 
     @Override
+    public Page<LoanAccountData> retrieveAllUssdApplications(final SearchParameters searchParameters) {
+
+        this.context.authenticatedUser();
+
+        final LoanMapper loanMapper = new LoanMapper(sqlGenerator, delinquencyReadPlatformService);
+
+        final StringBuilder sqlBuilder = new StringBuilder(200);
+
+        sqlBuilder.append("select ");
+        sqlBuilder.append(sqlGenerator.calcFoundRows()).append(" ");
+        sqlBuilder.append(loanMapper.loanSchema());
+        sqlBuilder.append(" where l.loan_channel = ? and l.loan_status_id = ?");
+
+        List<Object> params = new ArrayList<>();
+
+        params.add(LoanChannel.USSD.getValue());
+        params.add(LoanStatus.SUBMITTED_AND_PENDING_APPROVAL.getValue());
+
+        if (searchParameters != null) {
+
+            if (searchParameters.hasOrderBy()) {
+                sqlBuilder.append(" order by ").append(searchParameters.getOrderBy());
+                this.columnValidator.validateSqlInjection(sqlBuilder.toString(), searchParameters.getOrderBy());
+
+                if (searchParameters.hasSortOrder()) {
+                    sqlBuilder.append(" ").append(searchParameters.getSortOrder());
+                    this.columnValidator.validateSqlInjection(sqlBuilder.toString(), searchParameters.getSortOrder());
+                }
+            }
+
+            if (searchParameters.hasLimit()) {
+                sqlBuilder.append(" ");
+
+                if (searchParameters.hasOffset()) {
+                    sqlBuilder.append(sqlGenerator.limit(searchParameters.getLimit(), searchParameters.getOffset()));
+                } else {
+                    sqlBuilder.append(sqlGenerator.limit(searchParameters.getLimit()));
+                }
+            }
+        }
+
+        return this.paginationHelper.fetchPage(
+                this.jdbcTemplate,
+                sqlBuilder.toString(),
+                params.toArray(),
+                loanMapper
+        );
+    }
+
+    @Override
     public LoanAccountData fetchRepaymentScheduleData(LoanAccountData accountData) {
         final RepaymentScheduleRelatedLoanData repaymentScheduleRelatedData = new RepaymentScheduleRelatedLoanData(
                 accountData.getTimeline().getExpectedDisbursementDate(), accountData.getTimeline().getActualDisbursementDate(),
@@ -331,6 +382,12 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
             if (StringUtils.isNotBlank(searchParameters.getStatus())) {
                 sqlBuilder.append(" and l.loan_status_id = ?");
                 extraCriterias.add(Integer.parseInt(searchParameters.getStatus()));
+                arrayPos = arrayPos + 1;
+            }
+
+            if (searchParameters.getLoanChannel() != null) {
+                sqlBuilder.append(" and l.loan_channel = ?");
+                extraCriterias.add(searchParameters.getLoanChannel());
                 arrayPos = arrayPos + 1;
             }
 
@@ -719,7 +776,7 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
                     + " cobu.username as chargedOffByUsername, cobu.firstname as chargedOffByFirstname, cobu.lastname as chargedOffByLastname, l.loan_schedule_type as loanScheduleType, l.loan_schedule_processing_type as loanScheduleProcessingType, "
                     + " l.charge_off_behaviour as chargeOffBehaviour, l.interest_recognition_on_disbursement_date as interestRecognitionOnDisbursementDate ,"
                     + " l.is_disbursed_via_momo_pay AS disbursedViaMomoPay,l.disbursement_payout_completed AS disbursementPayoutCompleted ,"
-                    + " l.disbursement_payout_completed_date AS disbursementPayoutCompletedDate,l.middleware_reference_no AS middlewareReferenceNo " //
+                    + " l.disbursement_payout_completed_date AS disbursementPayoutCompletedDate,l.middleware_reference_no AS middlewareReferenceNo, l.loan_channel as channelType " //
                     + " from m_loan l" //
                     + " join m_product_loan lp on lp.id = l.product_id" //
                     + " left join m_loan_recalculation_details lir on lir.loan_id = l.id join m_currency rc on rc."
@@ -1091,6 +1148,8 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
             final boolean dibursementPayoutCompleted = rs.getBoolean("disbursementPayoutCompleted");
             final LocalDate dibursementPayoutCompletedDate = JdbcSupport.getLocalDate(rs, "disbursementPayoutCompletedDate");
             final String middlewareReferenceNo = rs.getString("middlewareReferenceNo");
+            final Integer channelType = JdbcSupport.getInteger(rs, "channelType");
+            final EnumOptionData channel  = getChannel(channelType);
 
             LoanAccountData loanAccountData = LoanAccountData.basicLoanDetails(id, accountNo, status, externalId, clientId, clientAccountNo,
                     clientName, clientOfficeId, clientExternalId, groupData, loanType, loanProductId, loanProductName,
@@ -1110,7 +1169,7 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
                     disallowExpectedDisbursements, isFraud, lastClosedBusinessDate, overpaidOnDate, isChargedOff, enableDownPayment,
                     disbursedAmountPercentageForDownPayment, enableAutoRepaymentForDownPayment, enableInstallmentLevelDelinquency,
                     loanScheduleType.asEnumOptionData(), loanScheduleProcessingType.asEnumOptionData(), fixedLength,
-                    chargeOffBehaviour.getValueAsStringEnumOptionData(), interestRecognitionOnDisbursementDate);
+                    chargeOffBehaviour.getValueAsStringEnumOptionData(), interestRecognitionOnDisbursementDate, channel);
 
             loanAccountData.setDisbursedViaMomoPay(disbursedViaMomoPay);
             loanAccountData.setDisbursementPayoutCompleted(dibursementPayoutCompleted);
@@ -1118,6 +1177,11 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
             loanAccountData.setMiddlewareReferenceNo(middlewareReferenceNo);
 
             return loanAccountData;
+        }
+
+        private EnumOptionData getChannel(Integer channel){
+            LoanChannel type = LoanChannel.fromInt(channel);
+            return new EnumOptionData(type.getValue().longValue(), type.getCode(), type.getDescription());
         }
     }
 

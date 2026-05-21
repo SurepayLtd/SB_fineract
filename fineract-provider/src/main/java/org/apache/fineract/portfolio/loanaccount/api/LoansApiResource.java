@@ -473,7 +473,8 @@ public class LoansApiResource {
             @QueryParam("orderBy") @Parameter(description = "orderBy") final String orderBy,
             @QueryParam("sortOrder") @Parameter(description = "sortOrder") final String sortOrder,
             @QueryParam("accountNo") @Parameter(description = "accountNo") final String accountNo,
-            @QueryParam("status") @Parameter(description = "status") final String status) {
+            @QueryParam("status") @Parameter(description = "status") final String status,
+            @QueryParam("channel") @Parameter(description = "channel") final Integer channel) {
 
         this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSIONS);
 
@@ -482,12 +483,40 @@ public class LoansApiResource {
         sqlValidator.validate(accountNo);
         sqlValidator.validate(externalId);
         final SearchParameters searchParameters = SearchParameters.builder().accountNo(accountNo).sortOrder(sortOrder)
-                .externalId(externalId).offset(offset).limit(limit).orderBy(orderBy).status(status).build();
+                .externalId(externalId).offset(offset).limit(limit).orderBy(orderBy).status(status).loanChannel(channel).build();
 
         final Page<LoanAccountData> loanBasicDetails = this.loanReadPlatformService.retrieveAll(searchParameters);
 
         final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
         return this.toApiJsonSerializer.serialize(settings, loanBasicDetails, LOAN_DATA_PARAMETERS);
+    }
+
+    @GET
+    @Path("/ussd-loans")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "List USSD Loans", description = "The API returns only loans applied via USSD channel that are pending approval.\n"
+                    + "Example Requests:\n\n" + "/loans/ussd-loans\n" + "/loans/ussd-loans?offset=10&limit=50\n" + "/loans/ussd-loans?sortOrder=DESC")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = LoansApiResourceSwagger.GetLoansResponse.class))) })
+    public String retrieveAllUssdLoans(@Context final UriInfo uriInfo,
+                                       @QueryParam("offset") @Parameter(description = "offset") final Integer offset,
+                                       @QueryParam("limit") @Parameter(description = "limit") final Integer limit,
+                                       @QueryParam("orderBy") @Parameter(description = "orderBy") final String orderBy,
+                                       @QueryParam("sortOrder") @Parameter(description = "sortOrder") final String sortOrder
+                                       ) {
+
+        sqlValidator.validate(orderBy);
+        sqlValidator.validate(sortOrder);
+        this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSIONS);
+
+        final SearchParameters searchParameters = SearchParameters.builder().sortOrder(sortOrder)
+                .offset(offset).limit(limit).orderBy(orderBy).build();
+
+        final Page<LoanAccountData> ussdLoanBasicDetails = this.loanReadPlatformService.retrieveAllUssdApplications(searchParameters);
+
+        final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
+        return this.toApiJsonSerializer.serialize(settings, ussdLoanBasicDetails, LOAN_DATA_PARAMETERS);
     }
 
     @POST
@@ -519,6 +548,42 @@ public class LoansApiResource {
         }
 
         final CommandWrapper commandRequest = new CommandWrapperBuilder().createLoanApplication().withJson(apiRequestBodyAsJson).build();
+
+        final CommandProcessingResult result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
+
+        return this.toApiJsonSerializer.serialize(result);
+    }
+
+    @POST
+    @Path("/ussd-create")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Calculate loan repayment schedule | Submit a new ussd Loan Application", description = "It calculates the loan repayment Schedule\n"
+            + "Submits a new ussd loan application\n"
+            + "Mandatory Fields: clientId, productId, principal, loanTermFrequency, loanTermFrequencyType, loanType, numberOfRepayments, repaymentEvery, repaymentFrequencyType, interestRatePerPeriod, amortizationType, interestType, interestCalculationPeriodType, transactionProcessingStrategyCode, expectedDisbursementDate, submittedOnDate, loanType\n"
+            + "Optional Fields: graceOnPrincipalPayment, graceOnInterestPayment, graceOnInterestCharged, linkAccountId, allowPartialPeriodInterestCalcualtion, fixedEmiAmount, maxOutstandingLoanBalance, disbursementData, graceOnArrearsAgeing, createStandingInstructionAtDisbursement (requires linkedAccountId if set to true)\n"
+            + "Additional Mandatory Fields if interest recalculation is enabled for product and Rest frequency not same as repayment period: recalculationRestFrequencyDate\n"
+            + "Additional Mandatory Fields if interest recalculation with interest/fee compounding is enabled for product and compounding frequency not same as repayment period: recalculationCompoundingFrequencyDate\n"
+            + "Additional Mandatory Field if Entity-Datatable Check is enabled for the entity of type loan: datatables")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = LoansApiResourceSwagger.PostLoansRequest.class)))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = LoansApiResourceSwagger.PostLoansResponse.class))) })
+    public String calculateLoanScheduleAndSubmitLoanUssdApplication(
+            @QueryParam("command") @Parameter(description = "command") final String commandParam, @Context final UriInfo uriInfo,
+            @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+
+        if (CommandParameterUtil.is(commandParam, "calculateLoanSchedule")) {
+
+            final JsonElement parsedQuery = this.fromJsonHelper.parse(apiRequestBodyAsJson);
+            final JsonQuery query = JsonQuery.from(apiRequestBodyAsJson, parsedQuery, this.fromJsonHelper);
+
+            final LoanScheduleModel loanSchedule = this.calculationPlatformService.calculateLoanSchedule(query, true);
+
+            final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
+            return this.loanScheduleToApiJsonSerializer.serialize(settings, loanSchedule.toData(), new HashSet<>());
+        }
+
+        final CommandWrapper commandRequest = new CommandWrapperBuilder().createUssdLoanApplication().withJson(apiRequestBodyAsJson).build();
 
         final CommandProcessingResult result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
 

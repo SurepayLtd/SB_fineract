@@ -233,6 +233,9 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
     @Column(name = "repayment_start_date_type_enum", nullable = false)
     private RepaymentStartDateType repaymentStartDateType;
 
+    @Column(name = "is_ussd", nullable = false)
+    private boolean isUssd;
+
     public static LoanProduct assembleFromJson(final Fund fund, final String loanTransactionProcessingStrategy,
             final List<Charge> productCharges, final JsonCommand command, final AprCalculator aprCalculator, FloatingRate floatingRate,
             final List<Rate> productRates, List<LoanProductPaymentAllocationRule> loanProductPaymentAllocationRules,
@@ -244,6 +247,8 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
         final String currencyCode = command.stringValueOfParameterNamed("currencyCode");
         final Integer digitsAfterDecimal = command.integerValueOfParameterNamed("digitsAfterDecimal");
         final Integer inMultiplesOf = command.integerValueOfParameterNamed("inMultiplesOf");
+        final boolean ussd = command.booleanPrimitiveValueOfParameterNamed("isUssd");
+
 
         final MonetaryCurrency currency = new MonetaryCurrency(currencyCode, digitsAfterDecimal, inMultiplesOf);
         final BigDecimal principal = command.bigDecimalValueOfParameterNamed("principal");
@@ -486,7 +491,7 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
                 allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType, overAppliedNumber, dueDaysForRepaymentEvent,
                 overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment,
                 repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType, loanScheduleProcessingType, fixedLength,
-                enableAccrualActivityPosting, supportedInterestRefundTypes, chargeOffBehaviour, interestRecognitionOnDisbursementDate);
+                enableAccrualActivityPosting, supportedInterestRefundTypes, chargeOffBehaviour, interestRecognitionOnDisbursementDate, ussd);
 
     }
 
@@ -514,6 +519,7 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
                 LoanProductConstants.INTEREST_RATE_VARIATIONS_FOR_BORROWER_CYCLE_PARAMETER_NAME);
 
     }
+
 
     private static void assembleRepaymentVariations(final JsonCommand command,
             final Set<LoanProductBorrowerCycleVariations> loanProductBorrowerCycleVariations) {
@@ -705,7 +711,7 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
             final boolean enableInstallmentLevelDelinquency, final LoanScheduleType loanScheduleType,
             final LoanScheduleProcessingType loanScheduleProcessingType, final Integer fixedLength,
             final boolean enableAccrualActivityPosting, final List<LoanSupportedInterestRefundTypes> supportedInterestRefundTypes,
-            final LoanChargeOffBehaviour chargeOffBehaviour, final boolean isInterestRecognitionOnDisbursementDate) {
+            final LoanChargeOffBehaviour chargeOffBehaviour, final boolean isInterestRecognitionOnDisbursementDate, final boolean isUssd) {
         this.fund = fund;
         this.transactionProcessingStrategyCode = transactionProcessingStrategyCode;
 
@@ -808,6 +814,7 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
         this.repaymentStartDateType = repaymentStartDateType;
 
         this.enableInstallmentLevelDelinquency = enableInstallmentLevelDelinquency;
+        this.isUssd = isUssd;
         validateLoanProductPreSave();
     }
 
@@ -1001,6 +1008,13 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
             final String newValue = command.stringValueOfParameterNamed(descriptionParamName);
             actualChanges.put(descriptionParamName, newValue);
             this.description = newValue;
+        }
+
+        final String ussdParamName = "isUssd";
+        if (command.isChangeInBooleanParameterNamed(ussdParamName, this.isUssd)) {
+            final boolean newValue = command.booleanPrimitiveValueOfParameterNamed(ussdParamName);
+            actualChanges.put(ussdParamName, newValue);
+            this.isUssd = newValue;
         }
 
         Long existingFundId = null;
@@ -1633,6 +1647,10 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
 
     public void updateEnableInstallmentLevelDelinquency(boolean enableInstallmentLevelDelinquency) {
         this.enableInstallmentLevelDelinquency = enableInstallmentLevelDelinquency;
+    }
+
+    public boolean isUssd(){
+        return this.isUssd;
     }
 
 }

@@ -22,10 +22,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.accounting.common.AccountingEnumerations;
@@ -63,6 +60,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 
 @RequiredArgsConstructor
@@ -154,8 +152,8 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
     @Override
     public Collection<UssdLoanProductData> retrieveAllUssdLoanProducts() {
         this.context.authenticatedUser();
-        UssdMapper mp = new UssdMapper(null);
-        final String sql = "select " + mp.ussdSchema() + " where lp.is_ussd = true";
+        UssdResultSetExtractor mp = new UssdResultSetExtractor();
+        final String sql = "select " + mp.ussdSchema() + " where lp.is_ussd = true and ch.is_deleted=false and ch.is_active=true ";
 
         return this.jdbcTemplate.query(sql, mp);
     }
@@ -163,16 +161,16 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
     @Override
     public UssdLoanProductData retrieveUssdLoanProduct(Long ussdProductId) {
 
-        try {
-            final Collection<ChargeData> charges = this.chargeReadPlatformService.retrieveLoanProductCharges(ussdProductId);
 
-            final UssdMapper rm = new UssdMapper(charges);
-            final String sql = "select " + rm.ussdSchema() + " where lp.id = ? and lp.is_ussd = ?";
-            return this.jdbcTemplate.queryForObject(sql, rm, ussdProductId, true); // NOSONAR
+        final UssdResultSetExtractor rm = new UssdResultSetExtractor();
+        final String sql = "select " + rm.ussdSchema() + " where lp.id = ? and lp.is_ussd = ? and ch.is_deleted=false and ch.is_active=true ";
 
-        } catch (final EmptyResultDataAccessException e) {
-            throw new LoanProductNotFoundException(ussdProductId, e);
-        }
+        Collection<UssdLoanProductData> results = this.jdbcTemplate.query(sql, rm, ussdProductId, true);
+
+        return results.stream()
+                .findFirst()
+                .orElseThrow(() -> new LoanProductNotFoundException(ussdProductId));
+
     }
 
     @Override
@@ -855,16 +853,51 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
         }
     }
 
-    protected static class UssdMapper implements RowMapper<UssdLoanProductData>{
-
-        private final Collection<ChargeData> charges;
-
-        public UssdMapper(Collection<ChargeData> charges) {
-            this.charges = charges;
-        }
+    private static final class UssdResultSetExtractor implements ResultSetExtractor<Collection<UssdLoanProductData>> {
 
         @Override
-        public UssdLoanProductData mapRow(ResultSet rs, int rowNum) throws SQLException {
+        public Collection<UssdLoanProductData> extractData(ResultSet rs) throws SQLException {
+
+            Map<Long, UssdLoanProductData> products = new LinkedHashMap<>();
+
+            while (rs.next()) {
+
+                Long productId = JdbcSupport.getLong(rs, "id");
+
+                UssdLoanProductData product = products.get(productId);
+
+                if (product == null) {
+
+                    product = buildLoanProduct(rs);
+
+                    products.put(productId, product);
+                }
+
+                Long chargeId = rs.getLong("chargeId");
+
+                if (!rs.wasNull()) {
+
+                    final String chargeName = rs.getString("chargeName");
+                    final BigDecimal chargeAmount = rs.getBigDecimal("chargeAmount");
+                    final boolean penalty = rs.getBoolean("penalty");
+                    final boolean active = rs.getBoolean("active");
+
+                    ChargeData charge = ChargeData.builder()
+                            .id(chargeId)
+                            .name(chargeName)
+                            .amount(chargeAmount)
+                            .active(active)
+                            .penalty(penalty)
+                            .build();
+
+                    product.getCharges().add(charge);
+                }
+            }
+
+            return products.values();
+        }
+
+        private UssdLoanProductData buildLoanProduct(ResultSet rs) throws SQLException {
             final Long id = JdbcSupport.getLong(rs,"id");
             final String name = rs.getString("name");
             final String shortName = rs.getString("shortName");
@@ -929,7 +962,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
 
             return new UssdLoanProductData(id, name, shortName, description, startDate, closeDate, status, currency, principal, minPrincipal, maxPrincipal, numberOfRepayments,
                     minNumberOfRepayments, maxNumberOfRepayments, repaymentEvery, repaymentFrequencyType, interestRatePerPeriod, minInterestRatePerPeriod, maxInterestRatePerPeriod, interestRateFrequencyType, annualInterestRate,
-                    amortizationType, interestType, interestCalculationPeriodType, isEqualAmortization, interestRecognitionOnDisbursementDate, transactionStrategyCode, enableInstallmentLevelDelinquency, this.charges);
+                    amortizationType, interestType, interestCalculationPeriodType, isEqualAmortization, interestRecognitionOnDisbursementDate, transactionStrategyCode, enableInstallmentLevelDelinquency, new ArrayList<>());
         }
 
         public String ussdSchema(){
@@ -945,9 +978,12 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     + "lp.enable_installment_level_delinquency as enableInstallmentLevelDelinquency, "
                     + "curr.name as currencyName, curr.internationalized_name_code as currencyNameCode, curr.display_symbol as currencyDisplaySymbol,"
                     + "lp.interest_recognition_on_disbursement_date as interestRecognitionOnDisbursementDate, "
-                    + "lp.is_equal_amortization as isEqualAmortization "
+                    + "lp.is_equal_amortization as isEqualAmortization, "
+                    + "ch.id as chargeId, ch.name as chargeName, ch.amount as chargeAmount, ch.is_active as active, ch.is_penalty as penalty "
                     + "from m_product_loan lp "
-                    + " join m_currency curr on curr.code = lp.currency_code";
+                    + " join m_currency curr on curr.code = lp.currency_code "
+                    + " left join m_product_loan_charge plc on plc.product_loan_id = lp.id "
+                    + " left join m_charge ch on ch.id = plc.charge_id ";
         }
     }
 

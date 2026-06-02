@@ -86,7 +86,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class LoanAccrualsProcessingServiceImpl implements LoanAccrualsProcessingService {
 
-    private static final Predicate<LoanTransaction> ACCRUAL_PREDICATE = t -> t.isNotReversed()
+    private static final Predicate<LoanTransaction> ACCRUAL_PREDICATE = t -> t !=null && t.isNotReversed()
             && (t.isAccrual() || t.isAccrualAdjustment());
 
     private static final String ACCRUAL_ON_CHARGE_SUBMITTED_ON_DATE = "submitted-date";
@@ -313,7 +313,7 @@ public class LoanAccrualsProcessingServiceImpl implements LoanAccrualsProcessing
         if (progressiveAccrual && accruedTill != null && !DateUtils.isAfter(tillDate, accruedTill)) {
             if (isFinal) {
                 reverseTransactionsAfter(existingAccruals, accrualDate, addJournal);
-            } else if (existingAccruals.stream().anyMatch(t -> !t.isReversed() && !DateUtils.isBefore(t.getDateOf(), accrualDate))) {
+            } else if (existingAccruals.stream().anyMatch(t -> t !=null && !t.isReversed() && !DateUtils.isBefore(t.getDateOf(), accrualDate))) {
                 return;
             }
         }
@@ -463,7 +463,7 @@ public class LoanAccrualsProcessingServiceImpl implements LoanAccrualsProcessing
     @NotNull
     private BigDecimal calcInterestTransactionWaivedAmount(@NotNull LoanRepaymentScheduleInstallment installment,
             @NotNull LocalDate tillDate) {
-        Predicate<LoanTransaction> transactionPredicate = t -> !t.isReversed() && t.isInterestWaiver()
+        Predicate<LoanTransaction> transactionPredicate = t -> t !=null && !t.isReversed() && t.isInterestWaiver()
                 && !DateUtils.isAfter(t.getTransactionDate(), tillDate);
         return installment.getLoanTransactionToRepaymentScheduleMappings().stream()
                 .filter(tm -> transactionPredicate.test(tm.getLoanTransaction()))
@@ -476,7 +476,7 @@ public class LoanAccrualsProcessingServiceImpl implements LoanAccrualsProcessing
         // unrecognized amount of the transaction is not mapped to installments
         LocalDate dueDate = installment.getDueDate();
         LocalDate toDate = DateUtils.isBefore(dueDate, tillDate) ? dueDate : tillDate;
-        Predicate<LoanTransaction> transactionPredicate = t -> !t.isReversed() && t.isInterestWaiver()
+        Predicate<LoanTransaction> transactionPredicate = t -> t != null && !t.isReversed() && t.isInterestWaiver()
                 && !DateUtils.isAfter(t.getTransactionDate(), toDate);
         Loan loan = installment.getLoan();
         BigDecimal totalUnrecognized = loan.getLoanTransactions().stream().filter(transactionPredicate)
@@ -506,7 +506,7 @@ public class LoanAccrualsProcessingServiceImpl implements LoanAccrualsProcessing
         } else {
             return isFullPeriod(tillDate, installment) ? installment.getInterestAccrued()
                     : loan.getLoanTransactions().stream()
-                            .filter(t -> !t.isReversed() && t.isAccrual() && isInPeriod(t.getTransactionDate(), installment, false))
+                            .filter(t -> t !=null && !t.isReversed() && t.isAccrual() && isInPeriod(t.getTransactionDate(), installment, false))
                             .map(LoanTransaction::getInterestPortion).reduce(BigDecimal.ZERO, MathUtil::add);
         }
     }

@@ -99,6 +99,15 @@ public interface DashboardReadPlatformService {
      */
     DashboardData.GroupSavingsInsightsData retrieveGroupSavingsInsights(Long officeId);
 
+
+    /**
+     * Retrieves only the Share Insights section of the dashboard.
+     *
+     * @param officeId optional office ID to filter data
+     * @return GroupSavingsInsightsData
+     */
+    DashboardData.SharesInsightsData retrieveShareInsights(Long officeId);
+
     /**
      * Retrieves only the Profitability & Sustainability section of the dashboard.
      * 

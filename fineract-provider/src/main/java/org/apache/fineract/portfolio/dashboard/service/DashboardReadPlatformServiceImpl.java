@@ -35,6 +35,9 @@ import org.apache.fineract.portfolio.loanaccount.domain.LoanStatus;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionType;
 import org.apache.fineract.portfolio.savings.SavingsAccountTransactionType;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccountStatusType;
+import org.apache.fineract.portfolio.shareaccounts.domain.PurchasedSharesStatusType;
+import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccount;
+import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountStatusType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,6 +71,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
                 .businessPerformance(retrieveBusinessPerformance(startDate, endDate, officeId))
                 .memberSavingsInsights(retrieveMemberSavingsInsights(officeId))
                 .groupSavingsInsightsData(retrieveGroupSavingsInsights(officeId))
+                .sharesInsightsData(retrieveShareInsights(officeId))
                 .profitabilitySustainability(retrieveProfitabilitySustainability(startDate, endDate, officeId))
                 .build();
     }
@@ -113,6 +117,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
                 .totalNewDeposits(totalNewDeposits)
                 .totalDisbursements(totalDisbursements)
                 .totalWithdrawals(totalWithdrawals)
+                .totalShareAccounts(getTotalShareAccounts())
                 .build();
     }
 
@@ -286,6 +291,58 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
                 .groupsWithActiveLoans(groupsWithActiveLoans)
                 .averageSavingsPerGroup(averageSavingsPerGroup)
                 .activeBorrowerRatio(groupBorrowerRatio)
+                .build();
+    }
+
+    @Override
+    public DashboardData.SharesInsightsData retrieveShareInsights(Long officeId) {
+        Long totalShares = getTotalShareAccounts();
+        Long activeShareAccounts = getTotalActiveShareAccounts();
+        Long membersWithShares = membersWithShares(officeId);
+        Long activeClients = getActiveMembers(officeId);
+        BigDecimal shareParticipationRate = membersWithShares > 0
+                ? BigDecimal.valueOf(membersWithShares)
+                .divide(BigDecimal.valueOf(activeClients), SCALE, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                : BigDecimal.ZERO;
+
+        Long totalApprovedShares = totalApprovedShares();
+        Long totalPendingShares = totalPendingShares();
+        BigDecimal totalShareCapitalValue = totalShareCapitalValue();
+        Long totalShareProducts = totalShareProducts();
+        Long totalIssuedShares = totalIssuedShares();
+        Long totalSubscribedShares = totalSubscribedShares();
+        Long availableShares =  BigDecimal.valueOf(totalIssuedShares).subtract(BigDecimal.valueOf(totalSubscribedShares)).longValue();
+        Long largestShareholderShares = largestShareholderShares(officeId);
+        String largestShareholderName = largestShareholderName(officeId);
+        Double ownershipConcentrationPercentage =  (largestShareholderShares > 0 && totalIssuedShares > 0)
+                ? BigDecimal.valueOf(largestShareholderShares).
+                divide(BigDecimal.valueOf(totalIssuedShares), SCALE, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .doubleValue()
+                : 0.0;
+        Long newShareAccountsThisMonth = newShareAccountsThisMonth();
+        Long sharesPurchasedThisMonth = sharesPurchasedThisMonth();
+        BigDecimal shareCapitalGrowthThisMonth = totalShareCapitalValueCurrentMonth().subtract(totalShareCapitalValuePreviousMonth());
+
+        return DashboardData.SharesInsightsData.builder()
+                .totalShareAccounts(totalShares)
+                .activeShareAccounts(activeShareAccounts)
+                .membersWithShares(membersWithShares)
+                .shareParticipationRate(shareParticipationRate)
+                .totalApprovedShares(totalApprovedShares)
+                .totalPendingShares(totalPendingShares)
+                .totalShareCapitalValue(totalShareCapitalValue)
+                .totalShareProducts(totalShareProducts)
+                .totalIssuedShares(totalIssuedShares)
+                .totalSubscribedShares(totalSubscribedShares)
+                .availableShares(availableShares)
+                .largestShareholderShares(largestShareholderShares)
+                .largestShareholderName(largestShareholderName)
+                .ownershipConcentrationPercentage(ownershipConcentrationPercentage)
+                .newShareAccountsThisMonth(newShareAccountsThisMonth)
+                .sharesPurchasedThisMonth(sharesPurchasedThisMonth)
+                .shareCapitalGrowthThisMonth(shareCapitalGrowthThisMonth)
                 .build();
     }
 
@@ -818,6 +875,173 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
             return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, officeId);
         }
         return this.jdbcTemplate.queryForObject(sql.toString(), Long.class);
+    }
+
+    private Long getTotalShareAccounts(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COUNT(DISTINCT s.id) from m_share_account s ");
+        sb.append(" where s.status_enum IN (?, ?, ? ) ");
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), Long.class, ShareAccountStatusType.SUBMITTED_AND_PENDING_APPROVAL.getValue(),
+                ShareAccountStatusType.APPROVED.getValue(), ShareAccountStatusType.ACTIVE.getValue());
+
+    }
+
+    private Long getTotalActiveShareAccounts(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COUNT(DISTINCT s.id) from m_share_account s ");
+        sb.append(" where s.status_enum IN ( ? ) ");
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), Long.class, ShareAccountStatusType.ACTIVE.getValue());
+
+    }
+
+    private Long membersWithShares(Long officeId){
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COUNT(Distinct s.client_id) from m_share_account s ");
+
+        if (officeId != null) {
+            sb.append("JOIN m_client c ON s.client_id = c.id ");
+        }
+
+        sb.append(" where s.status_enum IN ( ?, ?, ? ) ");
+
+        if (officeId != null) {
+            sb.append("AND c.office_id = ? ");
+            return this.jdbcTemplate.queryForObject(sb.toString(), Long.class, ShareAccountStatusType.SUBMITTED_AND_PENDING_APPROVAL.getValue(),
+                    ShareAccountStatusType.APPROVED.getValue(), ShareAccountStatusType.ACTIVE.getValue(), officeId);
+        }
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), Long.class, ShareAccountStatusType.SUBMITTED_AND_PENDING_APPROVAL.getValue(),
+                ShareAccountStatusType.APPROVED.getValue(), ShareAccountStatusType.ACTIVE.getValue());
+    }
+
+    private Long totalApprovedShares(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COUNT(DISTINCT s.id) from m_share_account s ");
+        sb.append(" where s.status_enum IN ( ? ) ");
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), Long.class, ShareAccountStatusType.APPROVED.getValue());
+    }
+
+    private Long totalPendingShares(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COALESCE(SUM(s.total_pending_shares), 0) from m_share_account s ");
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), Long.class);
+    }
+
+    private BigDecimal totalShareCapitalValue(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COALESCE(SUM(s.total_approved_shares * sp.unit_price), 0) from m_share_account s ");
+        sb.append(" join m_share_product sp on sp.id = s.product_id ");
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), BigDecimal.class);
+    }
+
+    private Long totalShareProducts(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COUNT(DISTINCT sp.id) from m_share_product sp ");
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), Long.class);
+    }
+
+    private Long totalIssuedShares(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COALESCE(SUM(sp.issued_shares), 0) from m_share_product sp ");
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), Long.class);
+
+    }
+
+    private Long totalSubscribedShares(){
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(" Select COALESCE(SUM(sp.totalsubscribed_shares), 0) from m_share_product sp ");
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), Long.class);
+    }
+
+    private Long largestShareholderShares(Long officeId){
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COALESCE(SUM(s.total_approved_shares), 0) AS total_shares from m_share_account s ");
+        sb.append(" left JOIN m_client c ON s.client_id = c.id ");
+        sb.append(" where s.status_enum = ? ");
+
+        if (officeId != null) {
+            sb.append("AND c.office_id = ? ");
+        }
+        sb.append(" GROUP BY s.client_id ");
+        sb.append(" ORDER BY total_shares DESC ");
+        sb.append(" LIMIT 1 ");
+
+        List<Long> result = (officeId != null) ? jdbcTemplate.queryForList(sb.toString(), Long.class, ShareAccountStatusType.ACTIVE.getValue(), officeId
+        ) : jdbcTemplate.queryForList(sb.toString(), Long.class, ShareAccountStatusType.ACTIVE.getValue());
+
+        return result.isEmpty() ? 0L : result.get(0);
+    }
+
+    private String largestShareholderName(Long officeId) {
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("SELECT c.display_name ");
+        sb.append("FROM m_share_account s ");
+        sb.append("LEFT JOIN m_client c ON s.client_id = c.id ");
+        sb.append("WHERE s.status_enum = ? ");
+
+        if (officeId != null) {
+            sb.append("AND c.office_id = ? ");
+        }
+
+        sb.append("GROUP BY s.client_id, c.display_name ");
+        sb.append("ORDER BY SUM(s.total_approved_shares) DESC ");
+        sb.append("LIMIT 1 ");
+
+        List<String> result = (officeId != null) ? jdbcTemplate.queryForList(sb.toString(), String.class, ShareAccountStatusType.ACTIVE.getValue(), officeId
+        ) : jdbcTemplate.queryForList(sb.toString(), String.class, ShareAccountStatusType.ACTIVE.getValue());
+
+        return result.isEmpty() ? "N/A" : result.get(0);
+    }
+
+    private Long newShareAccountsThisMonth(){
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COUNT(DISTINCT s.id) from m_share_account s ");
+        sb.append(" where s.status_enum = ? ");
+        sb.append(" AND submitted_date >= DATE_FORMAT(CURRENT_DATE, '%Y-%m-01')");
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), Long.class, ShareAccountStatusType.ACTIVE.getValue());
+    }
+
+    private Long sharesPurchasedThisMonth(){
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COALESCE(SUM(s.total_shares),0) as totalShares from m_share_account_transactions s ");
+        sb.append(" where s.type_enum = ? AND s.status_enum IN (?, ?, ?) ");
+        sb.append(" AND transaction_date >= DATE_FORMAT(CURRENT_DATE, '%Y-%m-01') AND s.is_active = ?" );
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), Long.class, PurchasedSharesStatusType.PURCHASED.getValue(), PurchasedSharesStatusType.APPLIED.getValue(), PurchasedSharesStatusType.APPROVED.getValue(), PurchasedSharesStatusType.PURCHASED.getValue(), true);
+    }
+
+    private BigDecimal totalShareCapitalValueCurrentMonth(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COALESCE(SUM(s.total_approved_shares * sp.unit_price), 0) from m_share_account s ");
+        sb.append(" left join m_share_product sp on sp.id = s.product_id ");
+        sb.append(" WHERE s.approved_date >= DATE_FORMAT(CURRENT_DATE, '%Y-%m-01') ");
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), BigDecimal.class);
+    }
+
+    private BigDecimal totalShareCapitalValuePreviousMonth(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select COALESCE(SUM(s.total_approved_shares * sp.unit_price), 0) from m_share_account s ");
+        sb.append(" left join m_share_product sp on sp.id = s.product_id ");
+        sb.append(" WHERE s.approved_date >= DATE_FORMAT(CURRENT_DATE - INTERVAL 1 MONTH, '%Y-%m-01') ");
+        sb.append(" AND s.approved_date < DATE_FORMAT(CURRENT_DATE, '%Y-%m-01') ");
+
+        return this.jdbcTemplate.queryForObject(sb.toString(), BigDecimal.class);
     }
 }
 

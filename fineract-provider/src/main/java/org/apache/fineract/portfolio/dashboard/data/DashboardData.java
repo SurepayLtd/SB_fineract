@@ -59,6 +59,9 @@ public class DashboardData implements Serializable {
     // 7. Profitability & Sustainability
     private final ProfitabilitySustainabilityData profitabilitySustainability;
 
+    //8. Share Insights
+    private final SharesInsightsData sharesInsightsData;
+
     /**
      * 1. Executive Snapshot - High-level absolute values showing overall SACCO position
      */
@@ -87,6 +90,9 @@ public class DashboardData implements Serializable {
         private final BigDecimal totalNewDeposits;
         private final BigDecimal totalDisbursements;
         private final BigDecimal totalWithdrawals;
+
+        //Shares
+        private final Long totalShareAccounts;
     }
 
     /**
@@ -256,6 +262,44 @@ public class DashboardData implements Serializable {
         // Average Savings per Group - Total Savings ÷ Total Groups
         private final BigDecimal averageSavingsPerGroup;
         private final BigDecimal totalSavings;
+    }
+
+    /**
+     * 9. Shares Insights - Share engagement and savings behaviour
+     */
+    @Getter
+    @Builder
+    public static class SharesInsightsData implements Serializable{
+        private static final long serialVersionUID = 1L;
+
+        // Participation
+        private Long totalShareAccounts;
+        private Long activeShareAccounts;
+        private Long membersWithShares;
+        private BigDecimal shareParticipationRate;
+
+        // Share Capital
+        private Long totalApprovedShares;
+        private Long totalPendingShares;
+        private BigDecimal totalShareCapitalValue;
+
+        // Product Statistics
+        private Long totalShareProducts;
+        private Long totalIssuedShares;
+        private Long totalSubscribedShares;
+        private Long availableShares;
+
+        // Ownership Insights
+        private Long largestShareholderShares;
+        private String largestShareholderName;
+        private Double ownershipConcentrationPercentage;
+
+        // Growth
+        private Long newShareAccountsThisMonth;
+        private Long sharesPurchasedThisMonth;
+        private BigDecimal shareCapitalGrowthThisMonth;
+
+
     }
 }
 

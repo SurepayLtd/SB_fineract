@@ -43,6 +43,7 @@ import org.apache.fineract.infrastructure.security.service.PlatformSecurityConte
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
 import org.apache.fineract.portfolio.accountdetails.domain.LoanChannel;
 import org.apache.fineract.portfolio.charge.data.ChargeData;
+import org.apache.fineract.portfolio.charge.service.ChargeEnumerations;
 import org.apache.fineract.portfolio.charge.service.ChargeReadPlatformService;
 import org.apache.fineract.portfolio.common.service.CommonEnumerations;
 import org.apache.fineract.portfolio.delinquency.data.DelinquencyBucketData;
@@ -886,6 +887,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     final BigDecimal chargeAmount = rs.getBigDecimal("chargeAmount");
                     final boolean penalty = rs.getBoolean("penalty");
                     final boolean active = rs.getBoolean("active");
+                    final Integer type = rs.getObject("type", Integer.class);
 
                     ChargeData charge = ChargeData.builder()
                             .id(chargeId)
@@ -893,6 +895,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                             .amount(chargeAmount)
                             .active(active)
                             .penalty(penalty)
+                            .chargeTimeType(ChargeEnumerations.chargeTimeType(type))
                             .build();
 
                     product.getCharges().add(charge);
@@ -984,7 +987,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     + "curr.name as currencyName, curr.internationalized_name_code as currencyNameCode, curr.display_symbol as currencyDisplaySymbol,"
                     + "lp.interest_recognition_on_disbursement_date as interestRecognitionOnDisbursementDate, "
                     + "lp.is_equal_amortization as isEqualAmortization, "
-                    + "ch.id as chargeId, ch.name as chargeName, ch.amount as chargeAmount, ch.is_active as active, ch.is_penalty as penalty "
+                    + "ch.id as chargeId, ch.name as chargeName, ch.amount as chargeAmount, ch.is_active as active, ch.is_penalty as penalty, ch.charge_time_enum as type "
                     + "from m_product_loan lp "
                     + " join m_currency curr on curr.code = lp.currency_code "
                     + " left join m_product_loan_charge plc on plc.product_loan_id = lp.id "

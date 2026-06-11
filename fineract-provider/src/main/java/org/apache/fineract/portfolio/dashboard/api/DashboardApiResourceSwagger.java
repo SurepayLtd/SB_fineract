@@ -45,6 +45,7 @@ final class DashboardApiResourceSwagger {
         public GetMemberSavingsInsightsResponse memberSavingsInsights;
         public GetGroupSavingsInsightsResponse groupSavingsInsights;
         public GetProfitabilitySustainabilityResponse profitabilitySustainability;
+        public GetShareInsightsResponse shareInsightsResponse;
     }
 
     @Schema(description = "GetExecutiveSnapshotResponse")
@@ -193,6 +194,45 @@ final class DashboardApiResourceSwagger {
         public BigDecimal averageSavingsPerGroup;
         @Schema(example = "30000000.00", description = "Total savings balance")
         public BigDecimal totalSavings;
+    }
+
+    @Schema(description = "GetShareInsightsResponse")
+    public static final class GetShareInsightsResponse {
+
+        @Schema(example = "150", description = "Total Share Accounts in the Sacco")
+        public Long totalShareAccounts;
+        @Schema(example = "60", description = "Active share accounts in the sacco")
+        public Long activeShareAccounts;
+        @Schema(example = "45", description = "Members with Active Shares")
+        public Long membersWithShares;
+        @Schema(example = "6.O", description = "Members with Shares/Total Sacco clients")
+        public BigDecimal shareParticipationRate;
+        @Schema(example = "1500", description = "Total approved shares of the sacco")
+        public Long totalApprovedShares;
+        @Schema(example = "1500", description = "Total pending shares of the sacco")
+        public Long totalPendingShares;
+        @Schema(example = "20000.00", description = "Total approved shares * unit price per share")
+        public BigDecimal totalShareCapitalValue;
+        @Schema(example = "20", description = "Total share products of the sacco")
+        public Long totalShareProducts;
+        @Schema(example = "15", description = "Total issued shares from all share products of the sacco")
+        public Long totalIssuedShares;
+        @Schema(example = "150", description = "Total subscribed shares from all share products of the sacco")
+        public Long totalSubscribedShares;
+        @Schema(example = "19", description = "Total issued shares - Total subscribed shares")
+        public Long availableShares;
+        @Schema(example = "19", description = "Client with highest shares")
+        public Long largestShareholderShares;
+        @Schema(example = "John Doe", description = "Client Details with highest shares")
+        public String largestShareholderName;
+        @Schema(example = "3000.00", description = "Client with highest Shares/Total Approved Shares %")
+        public Double ownershipConcentrationPercentage;
+        @Schema(example = "19", description = "Shares issued this month")
+        public Long newShareAccountsThisMonth;
+        @Schema(example = "19", description = "Value of Shares purchased this month")
+        public Long sharesPurchasedThisMonth;
+        @Schema(example = "19", description = "Share Capital Growth for current month")
+        public BigDecimal shareCapitalGrowthThisMonth;
     }
 
     @Schema(description = "GetProfitabilitySustainabilityResponse")

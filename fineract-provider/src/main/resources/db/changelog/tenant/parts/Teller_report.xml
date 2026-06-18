@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+    <changeSet id="teller_cashier_report" author="victor">
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Teller Transactions Report"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_category" value="Accounting"/>
+            <column name="report_sql" value="
+            select
+            y.`Currency`
+            ,y.`Cashier Name`
+            ,y. `Teller Name`
+            ,y.`Branch`
+            ,y.`entityType` as 'Entity'
+            ,y.`trxnDate` as 'Trxn Date'
+            ,y.`trxnId`   as 'Trxn No'
+            ,y.`Description`
+            ,y.`Act No` as 'Account No'
+            ,Case when y.`trxnType` in (101,103) then y.`trxnAmount` else 0  end as 'Cash In'
+            ,Case when y.`trxnType` in (102,104) then y.`trxnAmount` else 0  end as 'Cash Out'
+
+            from (
+            select * from (
+            select o.id as 'officeId' , o.name as 'Branch', t.id as 'tellerId', t.name as 'Teller Name', cht.cashier_id as 'cashierId'
+            ,s.display_name as 'Cashier Name', cht.id as 'trxnId', cht.txn_type as 'trxnType', cht.txn_amount as 'trxnAmount'
+            ,cht.txn_date as 'trxnDate', cht.txn_note as 'Description', cht.entity_id as 'entityId', null as 'Act No'
+            ,cht.entity_type as 'entityType', cht.created_date as 'createdDate', cht.currency_code as 'currencyId' , oc.name as 'Currency'
+
+            from m_cashier_transactions cht
+            left join m_cashiers c on c.id = cht.cashier_id
+            left join m_tellers t on t.id = c.teller_id
+            left join m_office o on o.id = t.office_id
+            left join m_staff s on s.id = c.staff_id
+            left join m_organisation_currency oc on oc.code = cht.currency_code
+
+            where (cht.cashier_id = ${cashierId} or '-1' = ${cashierId})
+            AND ( Date(cht.txn_date) between '${startDate}' AND '${endDate}' )
+            ) cashier_txns
+
+            union
+
+            (select
+            o.id as 'officeId',o.name as 'Branch', t.id as 'tellerId', t.name as 'Teller Name', c.id as 'cashierId', staff.display_name as 'Cashier Name'
+            ,sat.id as 'trxnId'
+            ,case when renum.enum_value in ('deposit','withdrawal fee', 'Pay Charge', 'Annual Fee') then 103 when renum.enum_value in ('withdrawal', 'Waive Charge', 'Interest Posting', 'Overdraft Interest', '') then 104 else 105 end as 'trxnType'
+            ,sat.amount as 'trxnAmount'
+            ,sat.transaction_date as 'trxnDate'
+            ,case
+            when g.id is null then concat(renum.enum_value, '  ','  for ', cl.id, ' - ',cl.display_name,' ',trim(n.note))
+            else concat(renum.enum_value, '  ',' Grp ', g.id,'  for ', cl.id, ' - ',cl.display_name,' ',trim(n.note)) end
+            as 'Description'
+
+            ,sav.id as 'entityId'
+            ,sav.account_no as 'Act No'
+            ,'Savings' as 'entityType'
+            ,sat.created_date as 'createdDate'
+            ,sav.currency_code as 'currencyId'
+            ,oc.name as 'Currency'
+
+            from m_savings_account_transaction sat
+            left join r_enum_value renum on sat.transaction_type_enum = renum.enum_id and renum.enum_name = 'savings_transaction_type_enum'
+            left join m_savings_account sav on sat.savings_account_id = sav.id
+            left join m_client cl on sav.client_id = cl.id
+            left join m_group_client gc on gc.client_id = cl.id
+            left join m_group g on g.id = gc.group_id
+            left join m_office o on cl.office_id = o.id
+            left join m_appuser user on sat.appuser_id = user.id
+            left join m_staff staff on user.staff_id = staff.id
+            left join m_cashiers c on c.staff_id = staff.id
+            left join m_tellers t on t.id = c.teller_id
+            join m_payment_detail payDetails on payDetails.id = sat.payment_detail_id
+            LEFT JOIN m_note n ON n.savings_account_id = sav.id AND n.savings_account_transaction_id  = sat.id
+            left join m_payment_type payType on payType.id = payDetails.payment_type_id
+            left join m_account_transfer_transaction acnttrans on (acnttrans.from_savings_transaction_id = sat.id or acnttrans.to_savings_transaction_id = sat.id)
+            left join m_organisation_currency oc on oc.code = sav.currency_code
+
+            where sat.is_reversed = 0
+            and (c.id = ${cashierId} or '-1' = ${cashierId})
+            and sat.transaction_date between '${startDate}' and '${endDate}'
+            and renum.enum_value in ('deposit','withdrawal fee', 'Pay Charge', 'withdrawal', 'Annual Fee', 'Waive Charge', 'Interest Posting', 'Overdraft Interest') and (sat.payment_detail_id IS NULL OR payType.is_cash_payment = 1) AND acnttrans.id IS NULL )
+
+            union all
+            (
+            select
+            o.id as 'officeId'
+            ,o.name as 'Branch'
+            ,t.id as 'tellerId'
+            ,t.name as 'Teller Name'
+            ,c.id as 'cashierId'
+            ,staff.display_name as 'Cashier Name'
+            ,lt.id as 'trxnId'
+
+            ,case when renum.enum_value in ('REPAYMENT_AT_DISBURSEMENT','REPAYMENT', 'RECOVERY_REPAYMENT', 'CHARGE_PAYMENT') then 103 when renum.enum_value in ('DISBURSEMENT', 'WAIVE_INTEREST', 'WRITEOFF', 'WAIVE_CHARGES') then 104
+            else 105 end as 'trxnType'
+            ,lt.amount as 'trxnAmount'
+            ,lt.transaction_date as 'trxnDate'
+
+            ,case
+            when g.id is null then concat(renum.enum_value, '  ','  for ', cl.id, ' - ',cl.display_name,' ',trim(n.note))
+            else concat(renum.enum_value, '  ',' Grp ', g.id,'  for ', cl.id, ' - ',cl.display_name,' ',trim(n.note)) end
+            as 'Description'
+
+            ,loan.id as 'entityId'
+            ,loan.account_no as 'Act No'
+            ,'Loans' as 'entityType'
+            ,lt.created_date as 'createdDate'
+
+            ,loan.currency_code as 'currencyId'
+            ,oc.name as 'Currency'
+
+            from m_loan_transaction lt
+            left join r_enum_value renum on lt.transaction_type_enum = renum.enum_id and renum.enum_name = 'loan_transaction_type_enum'
+            left join m_loan loan on lt.loan_id = loan.id
+            left join m_client cl on loan.client_id = cl.id
+            left join m_group_client gc on gc.client_id = cl.id
+            left join m_group g on g.id = gc.group_id
+            left join m_office o on cl.office_id = o.id
+            left join m_appuser user on lt.appuser_id = user.id
+            left join m_staff staff on user.staff_id = staff.id
+            left join m_cashiers c on c.staff_id = staff.id
+            left join m_tellers t on t.id = c.teller_id
+            left join m_payment_detail payDetails on payDetails.id = lt.payment_detail_id
+            left JOIN m_note n on n.loan_id = loan.id AND n.loan_transaction_id = lt.id
+            left join m_payment_type payType on payType.id = payDetails.payment_type_id
+            left join m_account_transfer_transaction acnttrans on (acnttrans.from_loan_transaction_id = lt.id or acnttrans.to_loan_transaction_id = lt.id)
+            left join m_organisation_currency oc on oc.code = loan.currency_code
+
+            where lt.is_reversed = 0
+            and (c.id = ${cashierId} or '-1' = ${cashierId})
+            and lt.transaction_date between '${startDate}' and '${endDate}'
+            and renum.enum_value in ('REPAYMENT_AT_DISBURSEMENT','REPAYMENT', 'RECOVERY_REPAYMENT','DISBURSEMENT', 'CHARGE_PAYMENT', 'WAIVE_CHARGES', 'WAIVE_INTEREST', 'WRITEOFF')
+            and (lt.payment_detail_id IS NULL OR payType.is_cash_payment = 1) AND acnttrans.id IS NULL )
+
+            UNION ALL
+            (
+            select
+            o.id as 'officeId'
+            ,o.name as 'Branch'
+            ,t.id as 'tellerId'
+            ,t.name as 'Teller Name'
+            ,c.id AS 'cashierId'
+            ,staff.display_name as 'Cashier Name'
+            ,ct.id AS 'trxnId'
+            ,case when renum.enum_value in ('PAY_CHARGE') then 103 when renum.enum_value in ('WAIVE_CHARGE') then 104 else 105 end as 'trxnType'
+            ,ct.amount as 'trxnAmount'
+            ,ct.transaction_date as 'trxnDate'
+
+            ,case
+            when g.id is null then concat(renum.enum_value, '  ','  for ', cl.id, ' - ',cl.display_name)
+            else concat(renum.enum_value, '  ',' Grp ', g.id,'  for ', cl.id, ' - ',cl.display_name) end
+            as 'Description'
+
+            ,cl.id as 'entityId'
+            ,cl.account_no as 'Act No'
+            ,'Clients' as 'entityType'
+            ,ct.created_date as 'createdDate'
+
+            ,ct.currency_code as 'currencyId'
+            ,oc.name as 'Currency'
+
+            from m_client_transaction ct
+            left join r_enum_value renum on ct.transaction_type_enum = renum.enum_id AND renum.enum_name = 'client_transaction_type_enum'
+            left join m_client cl on ct.client_id = cl.id
+            left join m_group_client gc on gc.client_id = cl.id
+            left join m_group g on g.id = gc.group_id
+            left join m_office o on cl.office_id = o.id
+            left join m_appuser user on ct.appuser_id = user.id
+            left join m_staff staff on user.staff_id = staff.id
+            left join m_cashiers c on c.staff_id = staff.id
+            left join m_tellers t on t.id = c.teller_id
+            left join m_payment_detail payDetails on payDetails.id = ct.payment_detail_id
+            left join m_payment_type payType on payType.id = payDetails.payment_type_id
+            left join m_organisation_currency oc on oc.code = ct.currency_code
+
+            where (c.id = ${cashierId} or '-1' = ${cashierId})
+            and ct.transaction_date between '${startDate}' and '${endDate}'
+            and renum.enum_value in ('PAY_CHARGE', 'WAIVE_CHARGE')
+            and (ct.payment_detail_id IS NULL OR payType.is_cash_payment = 1)
+            and ct.is_reversed = 0
+            ) )y
+            where (y.`officeId` = ${officeId} or '1' = ${officeId})
+            order by y.`currencyId`, y.`trxnDate`,y.`Cashier Name`,y.`Description`, y.`Teller Name`"
+            />
+            <column name="description" value="Teller/Cashier Transactions Report"/>
+            <column name="core_report" valueBoolean="true"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+        <insert tableName="stretchy_parameter">
+            <column name="parameter_name" value="CashierIDBranch"/>
+            <column name="parameter_variable" value="cashierId"/>
+            <column name="parameter_label" value="Cashier"/>
+            <column name="parameter_displayType" value="select"/>
+            <column name="parameter_FormatType" value="number"/>
+            <column name="parameter_default" value="0"/>
+            <column name="selectOne" value="Y"/>
+            <column name="selectAll" value="Y"/>
+            <column name="parameter_sql" value="select mc.id, display_name from m_cashiers mc join m_staff ms on mc.staff_id =ms.id where ms.office_id = ${officeId}"/>
+            <column name="parent_id" valueNumeric="5"/>
+        </insert>
+
+        <insert tableName="stretchy_parameter">
+            <column name="parameter_name" value="TellerIDBranch"/>
+            <column name="parameter_variable" value="tellerId"/>
+            <column name="parameter_label" value="Teller"/>
+            <column name="parameter_displayType" value="select"/>
+            <column name="parameter_FormatType" value="number"/>
+            <column name="parameter_default" value="0"/>
+            <column name="selectOne" value="Y"/>
+            <column name="selectAll" value="Y"/>
+            <column name="parameter_sql" value="select t.id ,t.name as `name` from m_tellers t join m_office mo on t.office_id = mo.id where mo.id = ${officeId} or ${officeId} = 1 "/>
+            <column name="parent_id" valueNumeric="5"/>
+        </insert>
+    </changeSet>
+    <changeSet id="teller_report_params" author="victor">
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Teller Transactions Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'startDate')"/>
+            <column name="report_parameter_name" value="startDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Teller Transactions Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'endDate')"/>
+            <column name="report_parameter_name" value="endDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Teller Transactions Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'officeId')"/>
+            <column name="report_parameter_name" value="officeId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Teller Transactions Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'TellerIDBranch')"/>
+            <column name="report_parameter_name" value="tellerId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Teller Transactions Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'CashierIDBranch' )"/>
+            <column name="report_parameter_name" value="cashierId"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

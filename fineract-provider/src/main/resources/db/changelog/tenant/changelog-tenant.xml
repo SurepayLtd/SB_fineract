@@ -196,4 +196,5 @@
     <include file="parts/Updated-OTC-MOMO-Reports.xml" relativeToChangelogFile="true"/>
     <include file="parts/mass-waiver.xml" relativeToChangelogFile="true"/>
     <include file="parts/Ussd-Loan-application.xml" relativeToChangelogFile="true"/>
+    <include file="parts/Teller_report.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

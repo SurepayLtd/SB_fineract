@@ -108,6 +108,15 @@ public interface DashboardReadPlatformService {
      */
     DashboardData.SharesInsightsData retrieveShareInsights(Long officeId);
 
+
+    /**
+     * Retrieves only the Momo Transactions Insights section of the dashboard.
+     *
+     * @param officeId optional office ID to filter data
+     * @return GroupSavingsInsightsData
+     */
+    DashboardData.MomoTransactions retrieveMomoTransactionsInsights(LocalDate startDate, LocalDate endDate, Long officeId);
+
     /**
      * Retrieves only the Profitability & Sustainability section of the dashboard.
      * 

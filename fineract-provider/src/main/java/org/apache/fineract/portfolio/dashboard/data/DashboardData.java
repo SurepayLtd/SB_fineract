@@ -62,6 +62,9 @@ public class DashboardData implements Serializable {
     //8. Share Insights
     private final SharesInsightsData sharesInsightsData;
 
+    //9. Momo Insights
+    private final MomoTransactions momoTransactions;
+
     /**
      * 1. Executive Snapshot - High-level absolute values showing overall SACCO position
      */
@@ -93,6 +96,9 @@ public class DashboardData implements Serializable {
 
         //Shares
         private final Long totalShareAccounts;
+
+        //Momo
+        private final BigDecimal overallMomoTransactions;
     }
 
     /**
@@ -298,8 +304,50 @@ public class DashboardData implements Serializable {
         private Long newShareAccountsThisMonth;
         private Long sharesPurchasedThisMonth;
         private BigDecimal shareCapitalGrowthThisMonth;
+    }
+
+    /**
+     * 10. Momo Transactions - Momo transactions: Loan and savings behaviour
+     */
+    @Getter
+    @Builder
+    public static class MomoTransactions implements Serializable{
+
+        /** Analysis **/
+        private Long transactionsToday;
+        private Long transactionsThisWeek;
+        private Long transactionsThisMonth;
+
+        private BigDecimal totalTransactionsToday;
+        private BigDecimal totalTransactionsThisWeek;
+        private BigDecimal totalTransactionsThisMonth;
+
+        /** Adoption **/
+        private Long activeMomoClients;
 
 
+        /** Savings Metrics **/
+        private Long savingsDepositTransactions;
+        private Long savingsWithdrawTransactions;
+
+        private BigDecimal savingsDeposits;
+        private BigDecimal savingsWithdrawals;
+
+        private BigDecimal netSavingsMovement;
+
+        /** Loan Metrics **/
+
+        private Long loanRepaymentTransactions;
+        private Long loanDisbursementTransactions;
+        private BigDecimal totalLoanRepayments;
+        private BigDecimal totalLoanDisbursements;
+
+        private BigDecimal netLoanMovement;
+
+        /** Overall **/
+        private BigDecimal overallTransactions;
+        private Long totalTransactions;
+        private BigDecimal averageTransactionValue;
     }
 }
 

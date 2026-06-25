@@ -46,6 +46,7 @@ final class DashboardApiResourceSwagger {
         public GetGroupSavingsInsightsResponse groupSavingsInsights;
         public GetProfitabilitySustainabilityResponse profitabilitySustainability;
         public GetShareInsightsResponse shareInsightsResponse;
+        public GetMomoTransactionsResponse momoTransactionsResponse;
     }
 
     @Schema(description = "GetExecutiveSnapshotResponse")
@@ -252,6 +253,51 @@ final class DashboardApiResourceSwagger {
         public BigDecimal portfolioPerLoanOfficer;
         @Schema(example = "10", description = "Number of loan officers")
         public Long numberOfLoanOfficers;
+    }
+
+    @Schema(description = "GetMomoTransactionsResponse")
+    public static final class GetMomoTransactionsResponse {
+
+        @Schema(example = "10", description = "Number of Transactions Today")
+        public Long transactionsToday;
+        @Schema(example = "10", description = "Number of Transactions this Week")
+        public Long transactionsThisWeek;
+        @Schema(example = "10", description = "Number of Transactions this Month")
+        public Long transactionsThisMonth;
+        @Schema(example = "25000", description = "Total Transactions this Today")
+        public BigDecimal totalTransactionsToday;
+        @Schema(example = "25000", description = "Total Transactions this Week")
+        public BigDecimal totalTransactionsThisWeek;
+        @Schema(example = "25000", description = "Total Transactions this Month")
+        public BigDecimal totalTransactionsThisMonth;
+        @Schema(example = "10", description = "Number of Active Momo Clients")
+        public Long activeMomoClients;
+        @Schema(example = "10", description = "Number of Deposit Transactions")
+        public Long savingsDepositTransactions;
+        @Schema(example = "10", description = "Number of Withdraw Transactions")
+        public Long savingsWithdrawTransactions;
+        @Schema(example = "1375000.00", description = "Total value of Deposits")
+        public BigDecimal savingsDeposits;
+        @Schema(example = "55000000.00", description = "Total value of withdraws")
+        public BigDecimal savingsWithdrawals;
+        @Schema(example = "18000", description = "Difference btn deposits and withdraws")
+        public BigDecimal netSavingsMovement;
+        @Schema(example = "10", description = "Number of loan repayments")
+        public Long loanRepaymentTransactions;
+        @Schema(example = "10", description = "Number of loan disbursements")
+        public Long loanDisbursementTransactions;
+        @Schema(example = "10000000.00", description = "Total value of Loan repayments")
+        public BigDecimal totalLoanRepayments;
+        @Schema(example = "5000000.00", description = "Total value of loan disbursements")
+        public BigDecimal totalLoanDisbursements;
+        @Schema(example = "18000", description = "Difference btn disbursements and repayments")
+        public BigDecimal netLoanMovement;
+        @Schema(example = "18000", description = "Sum of deposits, withdraws, repayments, disbursements")
+        public BigDecimal overallTransactions;
+        @Schema(example = "10", description = "Sum of count(deposits, withdraws, repayments, disbursements)")
+        public Long totalTransactions;
+        @Schema(example = "18000", description = "OverallTransactions / TotalTransactions")
+        public BigDecimal averageTransactionValue;
     }
 }
 

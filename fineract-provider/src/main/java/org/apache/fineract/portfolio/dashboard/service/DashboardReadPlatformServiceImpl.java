@@ -20,6 +20,7 @@ package org.apache.fineract.portfolio.dashboard.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
@@ -72,6 +73,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
                 .memberSavingsInsights(retrieveMemberSavingsInsights(officeId))
                 .groupSavingsInsightsData(retrieveGroupSavingsInsights(officeId))
                 .sharesInsightsData(retrieveShareInsights(officeId))
+                .momoTransactions(retrieveMomoTransactionsInsights(startDate, endDate, officeId))
                 .profitabilitySustainability(retrieveProfitabilitySustainability(startDate, endDate, officeId))
                 .build();
     }
@@ -107,6 +109,17 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         BigDecimal netPosition = totalCollections.add(totalNewDeposits)
                 .subtract(totalDisbursements).subtract(totalWithdrawals);
 
+        //Momo Transactions Metrics
+        BigDecimal totalWithdraws = getMomoTotalWithdrawals(startDate, endDate, officeId);
+        BigDecimal totalMomoDeposits = getMomoTotalDeposits(startDate, endDate, officeId);
+        BigDecimal totalRepayments = getTotalMomoRepayments(startDate, endDate, officeId);
+        BigDecimal totalMomoDisbursements = getTotalMomoDisbursements(startDate, endDate, officeId);
+
+
+
+        BigDecimal overallTransactions = totalMomoDeposits.add(totalWithdraws).add(totalMomoDisbursements).add(totalRepayments);
+
+
         return DashboardData.ExecutiveSnapshotData.builder()
                 .totalLoanPortfolio(totalLoanPortfolio)
                 .totalDeposits(totalDeposits)
@@ -118,6 +131,7 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
                 .totalDisbursements(totalDisbursements)
                 .totalWithdrawals(totalWithdrawals)
                 .totalShareAccounts(getTotalShareAccounts())
+                .overallMomoTransactions(overallTransactions)
                 .build();
     }
 
@@ -343,6 +357,66 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
                 .newShareAccountsThisMonth(newShareAccountsThisMonth)
                 .sharesPurchasedThisMonth(sharesPurchasedThisMonth)
                 .shareCapitalGrowthThisMonth(shareCapitalGrowthThisMonth)
+                .build();
+    }
+
+    @Override
+    public DashboardData.MomoTransactions retrieveMomoTransactionsInsights(LocalDate startDate, LocalDate endDate, Long officeId) {
+        LocalDate today = LocalDate.now();
+        LocalDate startOfWeek = today.with(DayOfWeek.MONDAY);
+        LocalDate startOfMonth = today.withDayOfMonth(1);
+
+        BigDecimal totalDeposits = getMomoTotalDeposits(startDate, endDate, officeId);
+        BigDecimal totalWithdraws = getMomoTotalWithdrawals(startDate, endDate, officeId);
+        Long countDeposits = getMomoDepositCount(startDate, endDate, officeId);
+        Long countWithdraws = getMomoWithdrawCount(startDate, endDate, officeId);
+        Long activeSavingClients = getActiveMomoSavingsClients(startDate, endDate, officeId);
+        BigDecimal totalDisbursements = getTotalMomoDisbursements(startDate, endDate, officeId);
+        BigDecimal totalRepayments = getTotalMomoRepayments(startDate, endDate, officeId);
+        Long countDisbursements = getMomoDisbursementCount(startDate, endDate, officeId);
+        Long countRepayments = getMomoRepaymentCount(startDate, endDate, officeId);
+        Long activeLoanClients = getActiveMomoLoanClients(startDate, endDate, officeId);
+        Long totalActiveClients = activeLoanClients + activeSavingClients;
+        BigDecimal netSavingsMovement = totalDeposits.subtract(totalWithdraws);
+        BigDecimal netLoanMovement = totalDisbursements.subtract(totalRepayments);
+        Long transactionsToday = getMomoDepositCount(today, today, officeId) + getMomoWithdrawCount(today, today, officeId) +
+                getMomoDisbursementCount(today, today, officeId) + getMomoRepaymentCount(today, today, officeId);
+        Long transactionsThisWeek = getMomoDepositCount(startOfWeek, today, officeId) + getMomoWithdrawCount(startOfWeek, today, officeId) +
+                getMomoDisbursementCount(startOfWeek, today, officeId) + getMomoRepaymentCount(startOfWeek, today, officeId);
+        Long transactionsThisMonth = getMomoDepositCount(startOfMonth, today, officeId) + getMomoWithdrawCount(startOfMonth, today, officeId) +
+                getMomoDisbursementCount(startOfMonth, today, officeId) + getMomoRepaymentCount(startOfMonth, today, officeId);
+        BigDecimal totalTransactionsToday = getMomoTotalDeposits(today, today, officeId).add(getMomoTotalWithdrawals(today, today, officeId)).add(
+                getTotalMomoDisbursements(today, today, officeId)).add(getTotalMomoRepayments(today, today, officeId));
+        BigDecimal totalTransactionsThisWeek = getMomoTotalDeposits(startOfWeek, today, officeId).add(getMomoTotalWithdrawals(startOfWeek, today, officeId)).add(
+                getTotalMomoDisbursements(startOfWeek, today, officeId)).add(getTotalMomoRepayments(startOfWeek, today, officeId));
+        BigDecimal totalTransactionsThisMonth = getMomoTotalDeposits(startOfMonth, today, officeId).add(getMomoTotalWithdrawals(startOfMonth, today, officeId)).add(
+                getTotalMomoDisbursements(startOfMonth, today, officeId)).add(getTotalMomoRepayments(startOfMonth, today, officeId));
+        BigDecimal overallTransactions = totalDeposits.add(totalWithdraws).add(totalDisbursements).add(totalRepayments);
+        Long overallCount = countDeposits + countWithdraws + countDisbursements + countRepayments;
+        BigDecimal averageTransactions = overallCount > 0 ?
+        overallTransactions.divide(BigDecimal.valueOf(overallCount),2, RoundingMode.HALF_UP): BigDecimal.ZERO;
+
+        return DashboardData.MomoTransactions.builder()
+                .transactionsToday(transactionsToday)
+                .transactionsThisWeek(transactionsThisWeek)
+                .transactionsThisMonth(transactionsThisMonth)
+                .totalTransactionsToday(totalTransactionsToday)
+                .totalTransactionsThisWeek(totalTransactionsThisWeek)
+                .totalTransactionsThisMonth(totalTransactionsThisMonth)
+                .activeMomoClients(totalActiveClients)
+                .savingsDepositTransactions(countDeposits)
+                .savingsWithdrawTransactions(countWithdraws)
+                .savingsDeposits(totalDeposits)
+                .savingsWithdrawals(totalWithdraws)
+                .netSavingsMovement(netSavingsMovement)
+                .loanRepaymentTransactions(countRepayments)
+                .loanDisbursementTransactions(countDisbursements)
+                .totalLoanRepayments(totalRepayments)
+                .totalLoanDisbursements(totalDisbursements)
+                .netLoanMovement(netLoanMovement)
+                .overallTransactions(overallTransactions)
+                .totalTransactions(overallCount)
+                .averageTransactionValue(averageTransactions)
                 .build();
     }
 
@@ -1042,6 +1116,286 @@ public class DashboardReadPlatformServiceImpl implements DashboardReadPlatformSe
         sb.append(" AND s.approved_date < DATE_FORMAT(CURRENT_DATE, '%Y-%m-01') ");
 
         return this.jdbcTemplate.queryForObject(sb.toString(), BigDecimal.class);
+    }
+
+    private BigDecimal getTotalMomoDisbursements(LocalDate startDate, LocalDate endDate, Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COALESCE(SUM(lt.amount), 0) FROM m_loan_transaction lt ");
+        sql.append("JOIN m_loan l ON lt.loan_id = l.id ");
+        sql.append("left join m_payment_detail mp on mp.id = lt.payment_detail_id ");
+        sql.append("left join m_payment_type pt on pt.id = mp.payment_type_id ");
+        if (officeId != null) {
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON g.id = l.group_id ");
+        }
+        sql.append("WHERE pt.id = 100 ");
+        sql.append("AND lt.transaction_type_enum = ? ");
+        sql.append("AND lt.is_reversed = false ");
+        sql.append("AND lt.transaction_date BETWEEN ? AND ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(LoanTransactionType.DISBURSEMENT.getValue());
+        params.add(startDate);
+        params.add(endDate);
+
+        if (officeId != null) {
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
+            params.add(officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
+    }
+
+    private BigDecimal getTotalMomoRepayments(LocalDate startDate, LocalDate endDate, Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COALESCE(SUM(lt.amount), 0) FROM m_loan_transaction lt ");
+        sql.append("JOIN m_loan l ON lt.loan_id = l.id ");
+        sql.append("left join m_payment_detail mp on mp.id = lt.payment_detail_id ");
+        sql.append("left join m_payment_type pt on pt.id = mp.payment_type_id ");
+        if (officeId != null) {
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON g.id = l.group_id ");
+        }
+        sql.append("WHERE pt.id = 100 ");
+        sql.append("AND lt.transaction_type_enum = ? ");
+        sql.append("AND lt.is_reversed = false ");
+        sql.append("AND lt.transaction_date BETWEEN ? AND ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(LoanTransactionType.REPAYMENT.getValue());
+        params.add(startDate);
+        params.add(endDate);
+
+        if (officeId != null) {
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
+            params.add(officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
+    }
+
+    private Long getMomoDisbursementCount(LocalDate startDate, LocalDate endDate, Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(DISTINCT lt.loan_id) FROM m_loan_transaction lt ");
+        sql.append("JOIN m_loan l ON lt.loan_id = l.id ");
+        sql.append("left join m_payment_detail mp on mp.id = lt.payment_detail_id ");
+        sql.append("left join m_payment_type pt on pt.id = mp.payment_type_id ");
+        if (officeId != null) {
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON l.group_id = g.id ");
+        }
+        sql.append("WHERE pt.id = 100 ");
+        sql.append("AND lt.transaction_type_enum = ? ");
+        sql.append("AND lt.is_reversed = false ");
+        sql.append("AND lt.transaction_date BETWEEN ? AND ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(LoanTransactionType.DISBURSEMENT.getValue());
+        params.add(startDate);
+        params.add(endDate);
+
+        if (officeId != null) {
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
+            params.add(officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
+    }
+
+    private Long getMomoRepaymentCount(LocalDate startDate, LocalDate endDate, Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(DISTINCT lt.loan_id) FROM m_loan_transaction lt ");
+        sql.append("JOIN m_loan l ON lt.loan_id = l.id ");
+        sql.append("left join m_payment_detail mp on mp.id = lt.payment_detail_id ");
+        sql.append("left join m_payment_type pt on pt.id = mp.payment_type_id ");
+        if (officeId != null) {
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON l.group_id = g.id ");
+        }
+        sql.append("WHERE pt.id = 100 ");
+        sql.append("AND lt.transaction_type_enum = ? ");
+        sql.append("AND lt.is_reversed = false ");
+        sql.append("AND lt.transaction_date BETWEEN ? AND ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(LoanTransactionType.REPAYMENT.getValue());
+        params.add(startDate);
+        params.add(endDate);
+
+        if (officeId != null) {
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
+            params.add(officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
+    }
+
+    private BigDecimal getMomoTotalDeposits(LocalDate startDate, LocalDate endDate, Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COALESCE(SUM(st.amount), 0) FROM m_savings_account_transaction st ");
+        sql.append("JOIN m_savings_account sa ON st.savings_account_id = sa.id ");
+        sql.append("left join m_payment_detail mp on mp.id = st.payment_detail_id ");
+        sql.append("left join m_payment_type pt on pt.id = mp.payment_type_id ");
+        if (officeId != null) {
+            sql.append("LEFT JOIN m_client c ON sa.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON sa.group_id = g.id ");
+        }
+        sql.append("WHERE pt.id = 100 ");
+        sql.append("AND st.transaction_type_enum = ? ");
+        sql.append("AND st.is_reversed = false ");
+        sql.append("AND st.transaction_date BETWEEN ? AND ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(SavingsAccountTransactionType.DEPOSIT.getValue());
+        params.add(startDate);
+        params.add(endDate);
+
+        if (officeId != null) {
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
+            params.add(officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
+    }
+
+
+    private BigDecimal getMomoTotalWithdrawals(LocalDate startDate, LocalDate endDate, Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COALESCE(SUM(st.amount), 0) FROM m_savings_account_transaction st ");
+        sql.append("JOIN m_savings_account sa ON st.savings_account_id = sa.id ");
+        sql.append("left join m_payment_detail mp on mp.id = st.payment_detail_id ");
+        sql.append("left join m_payment_type pt on pt.id = mp.payment_type_id ");
+        if (officeId != null) {
+            sql.append("LEFT JOIN m_client c ON sa.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON sa.group_id = g.id ");
+        }
+        sql.append("WHERE pt.id = 100 ");
+        sql.append("AND st.transaction_type_enum = ? ");
+        sql.append("AND st.is_reversed = false ");
+        sql.append("AND st.transaction_date BETWEEN ? AND ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(SavingsAccountTransactionType.WITHDRAWAL.getValue());
+        params.add(startDate);
+        params.add(endDate);
+
+        if (officeId != null) {
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
+            params.add(officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
+    }
+    private Long getMomoDepositCount(LocalDate startDate, LocalDate endDate, Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(DISTINCT st.savings_account_id) FROM m_savings_account_transaction st ");
+        sql.append("JOIN m_savings_account sa ON st.savings_account_id = sa.id ");
+        sql.append("left join m_payment_detail mp on mp.id = st.payment_detail_id ");
+        sql.append("left join m_payment_type pt on pt.id = mp.payment_type_id ");
+        if (officeId != null) {
+            sql.append("LEFT JOIN m_client c ON sa.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON sa.group_id = g.id ");
+        }
+        sql.append("WHERE pt.id = 100 ");
+        sql.append("AND st.transaction_type_enum = ? ");
+        sql.append("AND st.is_reversed = false ");
+        sql.append("AND st.transaction_date BETWEEN ? AND ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(SavingsAccountTransactionType.DEPOSIT.getValue());
+        params.add(startDate);
+        params.add(endDate);
+
+        if (officeId != null) {
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
+            params.add(officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
+    }
+
+    private Long getMomoWithdrawCount(LocalDate startDate, LocalDate endDate, Long officeId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(DISTINCT st.savings_account_id) FROM m_savings_account_transaction st ");
+        sql.append("JOIN m_savings_account sa ON st.savings_account_id = sa.id ");
+        sql.append("left join m_payment_detail mp on mp.id = st.payment_detail_id ");
+        sql.append("left join m_payment_type pt on pt.id = mp.payment_type_id ");
+        if (officeId != null) {
+            sql.append("LEFT JOIN m_client c ON sa.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON sa.group_id = g.id ");
+        }
+        sql.append("WHERE pt.id = 100 ");
+        sql.append("AND st.transaction_type_enum = ? ");
+        sql.append("AND st.is_reversed = false ");
+        sql.append("AND st.transaction_date BETWEEN ? AND ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(SavingsAccountTransactionType.WITHDRAWAL.getValue());
+        params.add(startDate);
+        params.add(endDate);
+
+        if (officeId != null) {
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
+            params.add(officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
+    }
+
+    private Long getActiveMomoSavingsClients(LocalDate startDate, LocalDate endDate, Long officeId) {
+
+        StringBuilder sql = new StringBuilder();
+        sql.append(" SELECT COUNT(DISTINCT CASE ");
+        sql.append(" WHEN sa.client_id IS NOT NULL THEN CONCAT('C-', sa.client_id) " );
+        sql.append(" ELSE CONCAT('G-', sa.group_id) END) FROM m_savings_account_transaction st ");
+        sql.append(" JOIN m_savings_account sa ON sa.id = st.savings_account_id ");
+        sql.append(" LEFT JOIN m_payment_detail mp ON mp.id = st.payment_detail_id ");
+        sql.append(" LEFT join m_payment_type pt on pt.id = mp.payment_type_id ");
+        if (officeId != null){
+            sql.append("LEFT JOIN m_client c ON sa.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON sa.group_id = g.id ");
+        }
+        sql.append(" WHERE pt.id = 100 ");
+        sql.append(" AND st.transaction_type_enum IN ( ?, ? ) ");
+        sql.append(" AND st.is_reversed = false ");
+        sql.append(" AND st.transaction_date BETWEEN ? AND ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(SavingsAccountTransactionType.DEPOSIT.getValue());
+        params.add(SavingsAccountTransactionType.WITHDRAWAL.getValue());
+        params.add(startDate);
+        params.add(endDate);
+
+        if (officeId != null) {
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
+            params.add(officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
+
+    }
+
+    private Long getActiveMomoLoanClients(LocalDate startDate, LocalDate endDate, Long officeId) {
+
+        StringBuilder sql = new StringBuilder();
+        sql.append(" SELECT COUNT(DISTINCT CASE ");
+        sql.append(" WHEN l.client_id IS NOT NULL THEN CONCAT('C-', l.client_id) " );
+        sql.append(" ELSE CONCAT('G-', l.group_id) END) FROM m_loan_transaction lt ");
+        sql.append(" JOIN m_loan l ON l.id = lt.loan_id ");
+        sql.append(" LEFT JOIN m_payment_detail mp ON mp.id = lt.payment_detail_id ");
+        sql.append(" LEFT join m_payment_type pt on pt.id = mp.payment_type_id ");
+        if (officeId != null){
+            sql.append("LEFT JOIN m_client c ON l.client_id = c.id ");
+            sql.append("LEFT JOIN m_group g ON l.group_id = g.id ");
+        }
+        sql.append(" WHERE pt.id = 100 ");
+        sql.append(" AND lt.transaction_type_enum IN ( ?, ? ) ");
+        sql.append(" AND lt.is_reversed = false ");
+        sql.append(" AND lt.transaction_date BETWEEN ? AND ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(LoanTransactionType.DISBURSEMENT.getValue());
+        params.add(LoanTransactionType.REPAYMENT.getValue());
+        params.add(startDate);
+        params.add(endDate);
+
+        if (officeId != null) {
+            sql.append("AND COALESCE(c.office_id, g.office_id) = ? ");
+            params.add(officeId);
+        }
+        return this.jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
+
     }
 }
 

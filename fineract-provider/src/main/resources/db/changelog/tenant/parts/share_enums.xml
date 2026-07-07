@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+    <changeSet id="share_enums" author="victor">
+
+        <insert tableName="r_enum_value">
+            <column name="enum_name" value="purchased_shares_status_type_enum"/>
+            <column name="enum_id" valueNumeric="0"/>
+            <column name="enum_message_property" value="INVALID"/>
+            <column name="enum_value" value="Invalid"/>
+            <column name="enum_type" valueNumeric="0"/>
+        </insert>
+
+        <insert tableName="r_enum_value">
+            <column name="enum_name" value="purchased_shares_status_type_enum"/>
+            <column name="enum_id" valueNumeric="100"/>
+            <column name="enum_message_property" value="APPLIED"/>
+            <column name="enum_value" value="Applied"/>
+            <column name="enum_type" valueNumeric="0"/>
+        </insert>
+
+        <insert tableName="r_enum_value">
+            <column name="enum_name" value="purchased_shares_status_type_enum"/>
+            <column name="enum_id" valueNumeric="300"/>
+            <column name="enum_message_property" value="APPROVED"/>
+            <column name="enum_value" value="Approved"/>
+            <column name="enum_type" valueNumeric="0"/>
+        </insert>
+
+        <insert tableName="r_enum_value">
+            <column name="enum_name" value="purchased_shares_status_type_enum"/>
+            <column name="enum_id" valueNumeric="400"/>
+            <column name="enum_message_property" value="REJECTED"/>
+            <column name="enum_value" value="Rejected"/>
+            <column name="enum_type" valueNumeric="0"/>
+        </insert>
+
+        <insert tableName="r_enum_value">
+            <column name="enum_name" value="purchased_shares_status_type_enum"/>
+            <column name="enum_id" valueNumeric="500"/>
+            <column name="enum_message_property" value="PURCHASED"/>
+            <column name="enum_value" value="Purchased"/>
+            <column name="enum_type" valueNumeric="0"/>
+        </insert>
+
+        <insert tableName="r_enum_value">
+            <column name="enum_name" value="purchased_shares_status_type_enum"/>
+            <column name="enum_id" valueNumeric="600"/>
+            <column name="enum_message_property" value="REDEEMED"/>
+            <column name="enum_value" value="Redeemed"/>
+            <column name="enum_type" valueNumeric="0"/>
+        </insert>
+
+        <insert tableName="r_enum_value">
+            <column name="enum_name" value="purchased_shares_status_type_enum"/>
+            <column name="enum_id" valueNumeric="700"/>
+            <column name="enum_message_property" value="CHARGE_PAYMENT"/>
+            <column name="enum_value" value="Charge"/>
+            <column name="enum_type" valueNumeric="0"/>
+        </insert>
+
+    </changeSet>
+</databaseChangeLog>

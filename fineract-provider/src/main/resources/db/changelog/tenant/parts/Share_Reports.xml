@@ -1,0 +1,851 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+    <changeSet id ="shares_listing_report" author="victor">
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Shares Client Listing"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_category" value="Shares"/>
+            <column name="report_sql" value="
+            SELECT
+                y.`Client Name`,
+                y.`Client Number`,
+                y.`Savings Account Number`,
+                y.`Share Account Number`,
+                y.share_product_name AS `Share Product`,
+                y.branch_name AS `Branch`,
+                y.`Date Registered`,
+                y.`Status`,
+                y.`Current Share Balance`
+            FROM
+            (
+                SELECT
+                    c.account_no AS `Client Number`,
+                    c.display_name AS `Client Name`,
+                    s.account_no AS `Savings Account Number`,
+                    sh.account_no AS `Share Account Number`,
+                    sp.id AS shareProductId,
+                    CONCAT(sp.name, '') AS share_product_name,
+                    o.id AS officeId,
+                    CONCAT(o.name, '') AS branch_name,
+                    sh.submitted_date AS `Date Registered`,
+                    CASE sh.status_enum
+                        WHEN 100 THEN 'Submitted And Pending Approval'
+                        WHEN 200 THEN 'Approved'
+                        WHEN 300 THEN 'Active'
+                        WHEN 600 THEN 'Closed'
+                        WHEN 500 THEN 'Rejected'
+                        ELSE 'Unknown'
+                    END AS `Status`,
+                    sh.total_approved_shares AS `Current Share Balance`
+                FROM m_share_account sh
+                JOIN m_client c
+                    ON c.id = sh.client_id
+                JOIN m_savings_account s
+                    ON s.id = sh.savings_account_id
+                JOIN m_share_product sp
+                    ON sp.id = sh.product_id
+                JOIN m_office o
+                    ON o.id = c.office_id
+            ) y
+            WHERE
+                (y.officeId = ${officeId} or '-1' = ${officeId})
+                AND (y.shareProductId = ${shareProductId} or '-1' = ${shareProductId})
+                AND y.`Date Registered` BETWEEN '${startDate}' AND '${endDate}'
+            ORDER BY
+                y.`Client Name`
+           "
+            />
+            <column name="description" value="Clients with Shares"/>
+            <column name="core_report" valueBoolean="true"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+        <insert tableName="stretchy_parameter">
+            <column name="parameter_name" value="shareProductIdSelectOne"/>
+            <column name="parameter_variable" value="shareProductId"/>
+            <column name="parameter_label" value="Product"/>
+            <column name="parameter_displayType" value="select"/>
+            <column name="parameter_FormatType" value="number"/>
+            <column name="parameter_default" value="0"/>
+            <column name="selectOne" value="Y"/>
+            <column name="selectAll" value="Y"/>
+            <column name="parameter_sql" value="select o.id, o.`name` from m_share_product o order by 2"/>
+            <column name="parent_id" valueNumeric="5"/>
+        </insert>
+
+    </changeSet>
+    <changeSet id="share_listing_report_params" author="victor">
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Shares Client Listing')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'startDate')"/>
+            <column name="report_parameter_name" value="startDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Shares Client Listing')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'endDate')"/>
+            <column name="report_parameter_name" value="endDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Shares Client Listing')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'officeId')"/>
+            <column name="report_parameter_name" value="officeId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Shares Client Listing')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'shareProductIdSelectOne')"/>
+            <column name="report_parameter_name" value="shareProductId"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id ="active_shares_listing_report" author="victor">
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Active Share Clients"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_category" value="Shares"/>
+            <column name="report_sql" value="
+        SELECT
+            y.`Client Name`,
+            y.`Client Number`,
+            y.`Savings Account Number`,
+            y.`Share Account Number`,
+            y.share_product_name AS `Share Product`,
+            y.branch_name AS `Branch`,
+            y.`Activation Date`,
+            y.`Current Share Held`,
+            y.`Status`
+        FROM
+        (
+            SELECT
+                c.account_no AS `Client Number`,
+                c.display_name AS `Client Name`,
+                s.account_no AS `Savings Account Number`,
+                sh.account_no AS `Share Account Number`,
+                sp.id AS shareProductId,
+                CONCAT(sp.name, '') AS share_product_name,
+                o.id AS officeId,
+                CONCAT(o.name, '') AS branch_name,
+                sh.approved_date AS `Activation Date`,
+                CASE sh.status_enum
+                    WHEN 100 THEN 'Submitted And Pending Approval'
+                    WHEN 200 THEN 'Approved'
+                    WHEN 300 THEN 'Active'
+                    WHEN 600 THEN 'Closed'
+                    WHEN 500 THEN 'Rejected'
+                    ELSE 'Unknown'
+                END AS `Status`,
+                sh.total_approved_shares AS `Current Share Held`
+            FROM m_share_account sh
+            JOIN m_client c
+                ON c.id = sh.client_id
+            JOIN m_savings_account s
+                ON s.id = sh.savings_account_id
+            JOIN m_share_product sp
+                ON sp.id = sh.product_id
+            JOIN m_office o
+                ON o.id = c.office_id
+            where sh.status_enum = 300
+        ) y
+        where
+            (y.officeId = ${officeId} or '-1' = ${officeId})
+            AND (y.shareProductId = ${shareProductId} or '-1' = ${shareProductId})
+            AND y.`Activation Date` BETWEEN '${startDate}' AND '${endDate}'
+        ORDER BY
+            y.`Client Name`
+"
+            />
+            <column name="description" value="Clients with Active Shares"/>
+            <column name="core_report" valueBoolean="true"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+    <changeSet id="share_active_report_params" author="victor">
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Active Share Clients')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'startDate')"/>
+            <column name="report_parameter_name" value="startDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Active Share Clients')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'endDate')"/>
+            <column name="report_parameter_name" value="endDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Active Share Clients')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'officeId')"/>
+            <column name="report_parameter_name" value="officeId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Active Share Clients')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'shareProductIdSelectOne')"/>
+            <column name="report_parameter_name" value="shareProductId"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id ="shares_transactions_report" author="victor">
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Share Transaction Report"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_category" value="Shares"/>
+            <column name="report_sql" value="
+            SELECT
+              y.`Transaction ID`,
+              y.branch_name as `Branch`,
+              y.product_name as `Product`,
+              y.`Client Account`,
+              y.`Client Name`,
+              y.`Savings Account`,
+              y.`Share Account`,
+              y.`Number of Shares`,
+              y.`Share Unit Price`,
+              y.`Amount`,
+              y.`Charges`,
+              y.`UserName`,
+              y.`Transaction Type`,
+              y.`Transaction Status`,
+              y.`Transaction Date`
+            FROM(
+                select st.id as `Transaction ID`, CONCAT(o.name, '') as branch_name, CONCAT(sp.name, '') as product_name,
+            c.account_no as `Client Account`, o.id as officeId, ur.id as userId, sp.id as shareProductId
+            , c.display_name as `Client Name`, s.account_no as `Savings Account`, sh.account_no as `Share Account`,
+            st.total_shares as `Number of Shares`, st.unit_price as `Share Unit Price`, st.amount_paid as Amount,
+            st.charge_amount as Charges, ur.username as UserName, st.type_enum AS transactionTypeEnum,
+            st.status_enum AS transactionStatusEnum,
+            case st.type_enum
+                when 0 then 'Invalid'
+                when 100 then 'Applied'
+                when 300 then 'Approved'
+                when 400 then 'Rejected'
+                when 500 then 'Purchased'
+                when 600 then 'Redeemed'
+                when 700 then 'ChargePayment'
+                else 'Unknown'
+            end as `Transaction Type`,
+            case st.status_enum
+                when 0 then 'Invalid'
+                when 100 then 'Applied'
+                when 300 then 'Approved'
+                when 400 then 'Rejected'
+                when 500 then 'Purchased'
+                when 600 then 'Redeemed'
+                when 700 then 'ChargePayment'
+                else 'Unknown'
+            end as `Transaction Status`, st.transaction_date as `Transaction Date`
+            from m_share_account_transactions st
+            join m_share_account sh on sh.id = st.account_id
+            join m_savings_account s on s.id = sh.savings_account_id
+            join m_appuser ur on ur.id = sh.submitted_userid
+            join m_client c on c.id = sh.client_id
+            join m_share_product sp on sp.id = sh.product_id
+            join m_office o on o.id = c.office_id
+            )y
+            where (y.officeId = ${officeId} or '-1' = ${officeId} )
+            and (y.shareProductId = ${shareProductId} or '-1' = ${shareProductId} )
+            and (y.userId = ${userId} or '-1' = ${userId} )
+            and (y.transactionTypeEnum = ${transactionType} or '-1' = ${transactionType} )
+            and (y.transactionStatusEnum = ${transactionStatus} or '-1' = ${transactionStatus} )
+            and y.`Transaction Date`  BETWEEN '${startDate}' AND '${endDate}'
+            order by y.`Client Name`
+            "
+            />
+            <column name="description" value="Share Transactions"/>
+            <column name="core_report" valueBoolean="true"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+        <insert tableName="stretchy_parameter">
+            <column name="parameter_name" value="SelectShareTransactionType"/>
+            <column name="parameter_variable" value="transactionType"/>
+            <column name="parameter_label" value="Transaction Type"/>
+            <column name="parameter_displayType" value="select"/>
+            <column name="parameter_FormatType" value="number"/>
+            <column name="parameter_default" value="-1"/>
+            <column name="selectOne" value="Y"/>
+            <column name="selectAll" value="Y"/>
+            <column name="parameter_sql" value="select enum_id as id, enum_value as value from r_enum_value where enum_name = 'purchased_shares_status_type_enum'"/>
+        </insert>
+
+        <insert tableName="stretchy_parameter">
+            <column name="parameter_name" value="SelectShareTransactionStatus"/>
+            <column name="parameter_variable" value="transactionStatus"/>
+            <column name="parameter_label" value="Transaction Status"/>
+            <column name="parameter_displayType" value="select"/>
+            <column name="parameter_FormatType" value="number"/>
+            <column name="parameter_default" value="-1"/>
+            <column name="selectOne" value="Y"/>
+            <column name="selectAll" value="Y"/>
+            <column name="parameter_sql" value="select enum_id as id, enum_value as value from r_enum_value where enum_name = 'purchased_shares_status_type_enum'"/>
+        </insert>
+
+        <insert tableName="stretchy_parameter">
+            <column name="parameter_name" value="SelectUserIdAll"/>
+            <column name="parameter_variable" value="userId"/>
+            <column name="parameter_label" value="User Id"/>
+            <column name="parameter_displayType" value="select"/>
+            <column name="parameter_FormatType" value="number"/>
+            <column name="parameter_default" value="-1"/>
+            <column name="selectOne" value="Y"/>
+            <column name="selectAll" value="Y"/>
+            <column name="parameter_sql" value="select au.id ,concat(au.firstname,' ',au.lastname) as `name`
+            from m_appuser au left join m_office mo on au.office_id = mo.id where mo.id = ${officeId} or ${officeId} = 1"/>
+            <column name="parent_id" valueNumeric="5"/>
+        </insert>
+
+    </changeSet>
+    <changeSet id="share_transactions_report_params" author="victor">
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Share Transaction Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'startDate')"/>
+            <column name="report_parameter_name" value="startDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Share Transaction Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'endDate')"/>
+            <column name="report_parameter_name" value="endDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Share Transaction Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'officeId')"/>
+            <column name="report_parameter_name" value="officeId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Share Transaction Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'shareProductIdSelectOne')"/>
+            <column name="report_parameter_name" value="shareProductId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Share Transaction Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'SelectShareTransactionType')"/>
+            <column name="report_parameter_name" value="transactionType"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Share Transaction Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'SelectShareTransactionStatus')"/>
+            <column name="report_parameter_name" value="transactionStatus"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Share Transaction Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'SelectUserIdAll')"/>
+            <column name="report_parameter_name" value="userId"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id ="shares_rejected_report" author="victor">
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Shares Rejected Report"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_category" value="Shares"/>
+            <column name="report_sql" value="
+             SELECT
+                y.`Client Name`,
+                y.`Client Number`,
+                y.`Savings Account Number`,
+                y.`Share Account Number`,
+                y.share_product_name AS `Share Product`,
+                y.branch_name AS `Branch`,
+                y.`Date Submitted`,
+                y.`Rejected Date`,
+                y.`Rejected By`,
+                y.`Status`,
+                y.`Rejection Reason`
+            FROM
+            (
+                SELECT
+                    c.account_no AS `Client Number`,
+                    c.display_name AS `Client Name`,
+                    s.account_no AS `Savings Account Number`,
+                    sh.account_no AS `Share Account Number`,
+                    sp.id AS shareProductId,
+                    CONCAT(sp.name, '') AS share_product_name,
+                    o.id AS officeId,
+                    CONCAT(o.name, '') AS branch_name,
+                    sh.rejected_date AS `Rejected Date`,
+                    sh.submitted_date as `Date Submitted`,
+                    ur.id as userId,
+                    ur.username as `Rejected By`,
+                    coalesce(n.note, 'Not Provided') as `Rejection Reason`,
+                    CASE sh.status_enum
+                        WHEN 100 THEN 'Submitted And Pending Approval'
+                        WHEN 200 THEN 'Approved'
+                        WHEN 300 THEN 'Active'
+                        WHEN 600 THEN 'Closed'
+                        WHEN 500 THEN 'Rejected'
+                        ELSE 'Unknown'
+                    END AS `Status`
+
+                FROM m_share_account sh
+                JOIN m_client c
+                    ON c.id = sh.client_id
+                JOIN m_savings_account s
+                    ON s.id = sh.savings_account_id
+                JOIN m_share_product sp
+                    ON sp.id = sh.product_id
+                JOIN m_office o
+                    ON o.id = c.office_id
+                JOIN m_appuser ur
+                    on ur.id = sh.rejected_userid
+                left JOIN m_note n
+                    on n.share_account_id = sh.id
+                where sh.status_enum = 500
+            ) y
+            where
+                (y.officeId = ${officeId} or '-1' = ${officeId})
+                and (y.userId = ${userId} or '-1' = ${userId} )
+                AND (y.shareProductId = ${shareProductId} or '-1' = ${shareProductId})
+                AND y.`Rejected Date` BETWEEN '${startDate}' AND '${endDate}'
+            ORDER BY
+                y.`Client Name`
+            "
+            />
+            <column name="description" value="Rejected Shares"/>
+            <column name="core_report" valueBoolean="true"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+    <changeSet id="share_rejected_report_params" author="victor">
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Shares Rejected Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'startDate')"/>
+            <column name="report_parameter_name" value="startDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Shares Rejected Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'endDate')"/>
+            <column name="report_parameter_name" value="endDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Shares Rejected Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'officeId')"/>
+            <column name="report_parameter_name" value="officeId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Shares Rejected Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'shareProductIdSelectOne')"/>
+            <column name="report_parameter_name" value="shareProductId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Shares Rejected Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'SelectUserIdAll')"/>
+            <column name="report_parameter_name" value="userId"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id ="shares_approved_report" author="victor">
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Approved Shares Report"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_category" value="Shares"/>
+            <column name="report_sql" value="
+             SELECT
+                y.`Client Name`,
+                y.`Client Number`,
+                y.`Savings Account Number`,
+                y.`Share Account Number`,
+                y.share_product_name AS `Share Product`,
+                y.branch_name AS `Branch`,
+                y.`Approved Shares`,
+                y.`Date Submitted`,
+                y.`Approved Date`,
+                y.`Approved By`,
+                y.`Status`,
+                y.`Approved Reason`
+            FROM
+            (
+                SELECT
+                    c.account_no AS `Client Number`,
+                    c.display_name AS `Client Name`,
+                    s.account_no AS `Savings Account Number`,
+                    sh.account_no AS `Share Account Number`,
+                    sp.id AS shareProductId,
+                    CONCAT(sp.name, '') AS share_product_name,
+                    o.id AS officeId,
+                    CONCAT(o.name, '') AS branch_name,
+                    sh.approved_date AS `Approved Date`,
+                    sh.submitted_date as `Date Submitted`,
+                    ur.id as userId,
+                    ur.username as `Approved By`,
+                    coalesce(n.note, 'Not Provided') as `Approved Reason`,
+                    CASE sh.status_enum
+                        WHEN 100 THEN 'Submitted And Pending Approval'
+                        WHEN 200 THEN 'Approved'
+                        WHEN 300 THEN 'Active'
+                        WHEN 600 THEN 'Closed'
+                        WHEN 500 THEN 'Rejected'
+                        ELSE 'Unknown'
+                    END AS `Status`,
+                sh.total_approved_shares as `Approved Shares`
+                FROM m_share_account sh
+                JOIN m_client c
+                    ON c.id = sh.client_id
+                JOIN m_savings_account s
+                    ON s.id = sh.savings_account_id
+                JOIN m_share_product sp
+                    ON sp.id = sh.product_id
+                JOIN m_office o
+                    ON o.id = c.office_id
+                JOIN m_appuser ur
+                    on ur.id = sh.approved_userid
+                left JOIN m_note n
+                    on n.share_account_id = sh.id
+                where sh.status_enum = 200
+            ) y
+            where
+                (y.officeId = ${officeId} or '-1' = ${officeId})
+                and (y.userId = ${userId} or '-1' = ${userId} )
+                AND (y.shareProductId = ${shareProductId} or '-1' = ${shareProductId})
+                AND y.`Approved Date` BETWEEN '${startDate}' AND '${endDate}'
+            ORDER BY
+                y.`Client Name`
+            "
+            />
+            <column name="description" value="Approved Shares"/>
+            <column name="core_report" valueBoolean="true"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+    <changeSet id="share_approved_report_params" author="victor">
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Approved Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'startDate')"/>
+            <column name="report_parameter_name" value="startDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Approved Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'endDate')"/>
+            <column name="report_parameter_name" value="endDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Approved Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'officeId')"/>
+            <column name="report_parameter_name" value="officeId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Approved Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'shareProductIdSelectOne')"/>
+            <column name="report_parameter_name" value="shareProductId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Approved Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'SelectUserIdAll')"/>
+            <column name="report_parameter_name" value="userId"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id ="shares_activated_report" author="victor">
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Activated Shares Report"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_category" value="Shares"/>
+            <column name="report_sql" value="
+             SELECT
+                y.`Client Name`,
+                y.`Client Number`,
+                y.`Savings Account Number`,
+                y.`Share Account Number`,
+                y.share_product_name AS `Share Product`,
+                y.branch_name AS `Branch`,
+                y.`Activated Shares`,
+                y.`Date Submitted`,
+                y.`Activated Date`,
+                y.`Activated By`,
+                y.`Status`
+            FROM
+            (
+                SELECT
+                    c.account_no AS `Client Number`,
+                    c.display_name AS `Client Name`,
+                    s.account_no AS `Savings Account Number`,
+                    sh.account_no AS `Share Account Number`,
+                    sp.id AS shareProductId,
+                    CONCAT(sp.name, '') AS share_product_name,
+                    o.id AS officeId,
+                    CONCAT(o.name, '') AS branch_name,
+                    sh.activated_date AS `Activated Date`,
+                    sh.submitted_date as `Date Submitted`,
+                    ur.id as userId,
+                    ur.username as `Activated By`,
+                    CASE sh.status_enum
+                        WHEN 100 THEN 'Submitted And Pending Approval'
+                        WHEN 200 THEN 'Approved'
+                        WHEN 300 THEN 'Active'
+                        WHEN 600 THEN 'Closed'
+                        WHEN 500 THEN 'Rejected'
+                        ELSE 'Unknown'
+                    END AS `Status`,
+                sh.total_approved_shares as `Activated Shares`
+                FROM m_share_account sh
+                JOIN m_client c
+                    ON c.id = sh.client_id
+                JOIN m_savings_account s
+                    ON s.id = sh.savings_account_id
+                JOIN m_share_product sp
+                    ON sp.id = sh.product_id
+                JOIN m_office o
+                    ON o.id = c.office_id
+                JOIN m_appuser ur
+                    on ur.id = sh.activated_userid
+                where sh.status_enum = 300
+            ) y
+            where
+                (y.officeId = ${officeId} or '-1' = ${officeId})
+                and (y.userId = ${userId} or '-1' = ${userId} )
+                AND (y.shareProductId = ${shareProductId} or '-1' = ${shareProductId})
+                AND y.`Activated Date` BETWEEN '${startDate}' AND '${endDate}'
+            ORDER BY
+                y.`Client Name`
+            "
+            />
+            <column name="description" value="Activated Shares"/>
+            <column name="core_report" valueBoolean="true"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+    <changeSet id="share_activated_report_params" author="victor">
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Activated Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'startDate')"/>
+            <column name="report_parameter_name" value="startDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Activated Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'endDate')"/>
+            <column name="report_parameter_name" value="endDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Activated Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'officeId')"/>
+            <column name="report_parameter_name" value="officeId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Activated Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'shareProductIdSelectOne')"/>
+            <column name="report_parameter_name" value="shareProductId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Activated Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'SelectUserIdAll')"/>
+            <column name="report_parameter_name" value="userId"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id ="shares_pending_report" author="victor">
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Pending Shares Report"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_category" value="Shares"/>
+            <column name="report_sql" value="
+             SELECT
+                y.`Client Name`,
+                y.`Client Number`,
+                y.`Savings Account Number`,
+                y.`Share Account Number`,
+                y.share_product_name AS `Share Product`,
+                y.branch_name AS `Branch`,
+                y.`Pending Shares`,
+                y.`Date Submitted`,
+                y.`Status`
+            FROM
+            (
+                SELECT
+                    c.account_no AS `Client Number`,
+                    c.display_name AS `Client Name`,
+                    s.account_no AS `Savings Account Number`,
+                    sh.account_no AS `Share Account Number`,
+                    sp.id AS shareProductId,
+                    CONCAT(sp.name, '') AS share_product_name,
+                    o.id AS officeId,
+                    CONCAT(o.name, '') AS branch_name,
+                    sh.submitted_date as `Date Submitted`,
+                    ur.id as userId,
+                    ur.username as `Submitted By`,
+                    CASE sh.status_enum
+                        WHEN 100 THEN 'Submitted And Pending Approval'
+                        WHEN 200 THEN 'Approved'
+                        WHEN 300 THEN 'Active'
+                        WHEN 600 THEN 'Closed'
+                        WHEN 500 THEN 'Rejected'
+                        ELSE 'Unknown'
+                    END AS `Status`,
+                sh.total_pending_shares as `Pending Shares`
+                FROM m_share_account sh
+                JOIN m_client c
+                    ON c.id = sh.client_id
+                JOIN m_savings_account s
+                    ON s.id = sh.savings_account_id
+                JOIN m_share_product sp
+                    ON sp.id = sh.product_id
+                JOIN m_office o
+                    ON o.id = c.office_id
+                JOIN m_appuser ur
+                    on ur.id = sh.submitted_userid
+                where sh.status_enum = 100
+            ) y
+            where
+                (y.officeId = ${officeId} or '-1' = ${officeId})
+                and (y.userId = ${userId} or '-1' = ${userId} )
+                AND (y.shareProductId = ${shareProductId} or '-1' = ${shareProductId})
+                AND y.`Date Submitted` BETWEEN '${startDate}' AND '${endDate}'
+            ORDER BY
+                y.`Client Name`
+            "
+            />
+            <column name="description" value="Pending Shares"/>
+            <column name="core_report" valueBoolean="true"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+    <changeSet id="share_pending_report_params" author="victor">
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Pending Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'startDate')"/>
+            <column name="report_parameter_name" value="startDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Pending Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'endDate')"/>
+            <column name="report_parameter_name" value="endDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Pending Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'officeId')"/>
+            <column name="report_parameter_name" value="officeId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Pending Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'shareProductIdSelectOne')"/>
+            <column name="report_parameter_name" value="shareProductId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Pending Shares Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'SelectUserIdAll')"/>
+            <column name="report_parameter_name" value="userId"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id ="highest_shares_listing_report" author="victor">
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Highest Shareholders"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_sql" value="
+             select
+                y.`Rank`,
+                y.`Client Name`,
+                y.`Client Number`,
+                y.`Savings Account Number`,
+                y.`Share Account Number`,
+                y.share_product_name AS `Share Product`,
+                y.branch_name AS `Branch`,
+                y.`Number of Shares`,
+                y.`Total Share Value`
+            FROM
+            (
+                SELECT
+                    CAST(
+                        ROW_NUMBER() OVER (
+                            ORDER BY x.`Number of Shares` DESC
+                        ) AS SIGNED
+                    ) AS `Rank`,
+                    x.*
+                FROM(
+                    select
+                        c.account_no AS `Client Number`,
+                        c.display_name AS `Client Name`,
+                        s.account_no AS `Savings Account Number`,
+                        sh.account_no AS `Share Account Number`,
+                        sp.id AS shareProductId,
+                        CONCAT(sp.name, '') AS share_product_name,
+                        o.id AS officeId,
+                        CONCAT(o.name, '') AS branch_name,
+                       coalesce(SUM(st.total_shares),0) AS `Number of Shares`,
+                       coalesce(SUM(st.amount),0) AS `Total Share Value`
+                    FROM m_share_account sh
+                    JOIN m_client c
+                        ON c.id = sh.client_id
+                    JOIN m_savings_account s
+                        ON s.id = sh.savings_account_id
+                    JOIN m_share_product sp
+                        ON sp.id = sh.product_id
+                    JOIN m_office o
+                        ON o.id = c.office_id
+                    JOIN m_share_account_transactions st
+                        on sh.id = st.account_id
+                    where sh.status_enum = 300 and st.type_enum = 500 and st.status_enum = 300
+                    GROUP by c.id, c.account_no, c.display_name, s.account_no, sh.account_no, sp.id, sp.name, o.id, o.name
+                )x
+            ) y
+            where
+                (y.officeId = ${officeId} or '-1' = ${officeId})
+                AND (y.shareProductId = ${shareProductId} or '-1' = ${shareProductId})
+                and (y.`Rank` &lt;= ${topN} or '-1' = ${topN} )
+            ORDER BY
+                y.`Number of Shares` desc
+            "
+            />
+            <column name="report_category" value="Shares"/>
+            <column name="description" value="Clients with highest Shares"/>
+            <column name="core_report" valueBoolean="true"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+        <insert tableName="stretchy_parameter">
+            <column name="parameter_name" value="topNSelectOne"/>
+            <column name="parameter_variable" value="topN"/>
+            <column name="parameter_label" value="TopN SharesHolders"/>
+            <column name="parameter_displayType" value="text"/>
+            <column name="parameter_FormatType" value="number"/>
+            <column name="parameter_default" value="10"/>
+        </insert>
+
+    </changeSet>
+    <changeSet id="highest_share_listing_report_params" author="victor">
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Highest Shareholders')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'officeId')"/>
+            <column name="report_parameter_name" value="officeId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Highest Shareholders')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'shareProductIdSelectOne')"/>
+            <column name="report_parameter_name" value="shareProductId"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Highest Shareholders')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_name  = 'topNSelectOne')"/>
+            <column name="report_parameter_name" value="topN"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

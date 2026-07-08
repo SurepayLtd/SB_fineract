@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-FROM azul/zulu-openjdk-alpine:17 AS builder
+FROM azul/zulu-openjdk-alpine:21 AS builder
 
 RUN apk update && apk add wget
 
@@ -36,7 +36,7 @@ WORKDIR /app/libs
 RUN wget -q https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.23/mysql-connector-java-8.0.23.jar
 # =========================================
 
-FROM azul/zulu-openjdk:17 as fineract
+FROM azul/zulu-openjdk:21 as fineract
 
 # RUN apk add --no-cache fontconfig
 COPY --from=builder /fineract/fineract-report/pentahoReports/*.properties /root/.mifosx/pentahoReports/
@@ -44,6 +44,7 @@ COPY --from=builder /fineract/fineract-report/pentahoReports/*.prpt /root/.mifos
 COPY --from=builder /fineract/fineract-report/pentahoReports/fonts/*.ttf /usr/local/share/fonts/
 COPY --from=builder /fineract/fineract-provider/build/libs/ /app
 COPY --from=builder /app/libs /app/libs
+COPY custom/docker/selfservice/selfservice-plugin-1.15.0-SNAPSHOT.jar /app/libs/
 
 ENV TZ="UTC"
 ENV FINERACT_HIKARI_DRIVER_SOURCE_CLASS_NAME="com.mysql.cj.jdbc.Driver"

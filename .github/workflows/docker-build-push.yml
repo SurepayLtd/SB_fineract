@@ -3,7 +3,7 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - surepay-dev
+      - configureSelfServicePluginForClientMobileApp
   pull_request:
     branches:
       - surepay-dev

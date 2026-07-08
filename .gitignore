@@ -1,5 +1,6 @@
 *.class
 *.jar
+!custom/docker/selfservice/*.jar
 *.war
 *.ear
 .classpath

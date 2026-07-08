@@ -44,7 +44,7 @@ COPY --from=builder /fineract/fineract-report/pentahoReports/*.prpt /root/.mifos
 COPY --from=builder /fineract/fineract-report/pentahoReports/fonts/*.ttf /usr/local/share/fonts/
 COPY --from=builder /fineract/fineract-provider/build/libs/ /app
 COPY --from=builder /app/libs /app/libs
-COPY custom/docker/selfservice/selfservice-plugin-1.15.0-SNAPSHOT.jar /app/libs/
+COPY custom/docker/selfservice/*.jar /app/libs/
 
 ENV TZ="UTC"
 ENV FINERACT_HIKARI_DRIVER_SOURCE_CLASS_NAME="com.mysql.cj.jdbc.Driver"

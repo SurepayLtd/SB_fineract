@@ -49,7 +49,7 @@ import org.springframework.stereotype.Service;
 /**
  * A service that picks up on tenants that are configured to auto-update their specific schema on application startup.
  */
-@Service
+@Service("tenantDatabaseUpgradeService")
 @Slf4j
 @RequiredArgsConstructor
 public class TenantDatabaseUpgradeService implements InitializingBean {

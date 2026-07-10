@@ -29,7 +29,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 
-@Entity
+@Entity(name = "CoreSelfBeneficiariesTPT")
 @Table(name = "m_selfservice_beneficiaries_tpt", uniqueConstraints = {
         @UniqueConstraint(columnNames = { "name", "app_user_id", "is_active" }, name = "name") })
 public class SelfBeneficiariesTPT extends AbstractPersistableCustom<Long> {

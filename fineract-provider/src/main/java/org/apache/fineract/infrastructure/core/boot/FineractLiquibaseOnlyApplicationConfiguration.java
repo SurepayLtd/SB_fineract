@@ -28,6 +28,7 @@ import org.springframework.boot.autoconfigure.liquibase.LiquibaseProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Conditional;
+import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGenerator;
 import org.springframework.context.annotation.Import;
 
 @Conditional(FineractLiquibaseOnlyApplicationCondition.class)
@@ -35,7 +36,7 @@ import org.springframework.context.annotation.Import;
 @EnableConfigurationProperties({ FineractProperties.class, LiquibaseProperties.class })
 @Import({ HikariCpConfig.class, JdbcConfig.class })
 @ComponentScan(basePackages = { "org.apache.fineract.infrastructure.core.service.migration",
-        "org.apache.fineract.infrastructure.core.service.database", "org.apache.fineract.infrastructure.core.service.tenant" })
+        "org.apache.fineract.infrastructure.core.service.database", "org.apache.fineract.infrastructure.core.service.tenant" }, nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class)
 public class FineractLiquibaseOnlyApplicationConfiguration implements InitializingBean {
 
     @Override

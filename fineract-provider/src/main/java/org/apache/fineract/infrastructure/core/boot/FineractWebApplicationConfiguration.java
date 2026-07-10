@@ -34,6 +34,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGenerator;
 import org.springframework.integration.annotation.IntegrationComponentScan;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -49,7 +50,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableTransactionManagement
 @EnableWebSecurity
 @EnableConfigurationProperties({ FineractProperties.class, LiquibaseProperties.class })
-@ComponentScan(basePackages = "org.apache.fineract.**")
+@ComponentScan(basePackages = "org.apache.fineract.**", nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class)
 @IntegrationComponentScan(basePackages = "org.apache.fineract.**")
 @Conditional(FineractWebApplicationCondition.class)
 @Slf4j

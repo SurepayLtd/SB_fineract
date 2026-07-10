@@ -28,7 +28,7 @@ import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.portfolio.client.domain.Client;
 
-@Entity
+@Entity(name = "CoreSelfServiceRegistration")
 @Table(name = "request_audit_table")
 public class SelfServiceRegistration extends AbstractPersistableCustom<Long> {
 

@@ -283,6 +283,15 @@ public class CommandWrapperBuilder {
         return this;
     }
 
+    public CommandWrapperBuilder changeUserPassword(final Long userId) {
+        this.actionName = "CHGPASSWORD";
+        this.entityName = "USER";
+        this.entityId = userId;
+        this.href = "/users/" + userId;
+        return this;
+    }
+
+
     public CommandWrapperBuilder createOffice() {
         this.actionName = "CREATE";
         this.entityName = "OFFICE";

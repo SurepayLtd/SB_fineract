@@ -3,7 +3,7 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - configureSelfServicePluginForClientMobileApp
+      - configureSelfSevicePluginForClientMobileApp
   pull_request:
     branches:
       - surepay-dev
@@ -52,6 +52,7 @@ jobs:
         run: ls -l custom/docker/selfservice/*.jar
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .

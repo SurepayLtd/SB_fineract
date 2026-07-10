@@ -42,7 +42,7 @@ import org.springframework.stereotype.Service;
  * {@link ThreadLocalContextUtil} is used to retrieve the {@link FineractPlatformTenant} for the request.
  */
 @Slf4j
-@Service
+@Service("tomcatJdbcDataSourcePerTenantService")
 @RequiredArgsConstructor
 public class TomcatJdbcDataSourcePerTenantService implements RoutingDataSourceService, ApplicationListener<ContextRefreshedEvent> {
 

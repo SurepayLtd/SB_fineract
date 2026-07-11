@@ -51,7 +51,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             List.of(new CommandWrapperBuilder().updateUser(null).build()));
 
     @Autowired
-    SpringSecurityPlatformSecurityContext(final ConfigurationDomainService configurationDomainService) {
+    public SpringSecurityPlatformSecurityContext(final ConfigurationDomainService configurationDomainService) {
         this.configurationDomainService = configurationDomainService;
     }
 

@@ -39,7 +39,7 @@ import org.springframework.stereotype.Service;
  * Wrapper around spring security's {@link SecurityContext} for extracted the current authenticated {@link AppUser}.
  */
 
-@Service
+@Service("springSecurityPlatformSecurityContext")
 public class SpringSecurityPlatformSecurityContext implements PlatformSecurityContext {
 
     // private static final Logger LOG =

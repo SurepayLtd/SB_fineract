@@ -21,6 +21,10 @@ package org.apache.fineract.infrastructure.documentmanagement.service;
 import java.io.InputStream;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.domain.Base64EncodedImage;
+import org.apache.fineract.infrastructure.documentmanagement.data.ImageCreateRequest;
+import org.apache.fineract.infrastructure.documentmanagement.data.ImageCreateResponse;
+import org.apache.fineract.infrastructure.documentmanagement.data.ImageDeleteRequest;
+import org.apache.fineract.infrastructure.documentmanagement.data.ImageDeleteResponse;
 import org.apache.fineract.infrastructure.documentmanagement.api.ImagesApiResource.EntityTypeForImages;
 import org.apache.fineract.infrastructure.documentmanagement.contentrepository.ContentRepository;
 import org.apache.fineract.infrastructure.documentmanagement.contentrepository.ContentRepositoryFactory;
@@ -162,6 +166,33 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
             image.setStorageType(storageType.getValue());
         }
         return image;
+    }
+
+    @Transactional
+    @Override
+    public ImageCreateResponse createImage(final ImageCreateRequest request) {
+        CommandProcessingResult result = saveOrUpdateImage(
+            request.getEntityType(),
+            request.getEntityId(),
+            request.getFileName(),
+            request.getStream(),
+            request.getSize()
+        );
+        return ImageCreateResponse.builder()
+            .resourceId(result.getResourceId())
+            .build();
+    }
+
+    @Transactional
+    @Override
+    public ImageDeleteResponse deleteImage(final ImageDeleteRequest request) {
+        CommandProcessingResult result = deleteImage(
+            request.getEntityType(),
+            request.getEntityId()
+        );
+        return ImageDeleteResponse.builder()
+            .resourceId(result.getResourceId())
+            .build();
     }
 
 }

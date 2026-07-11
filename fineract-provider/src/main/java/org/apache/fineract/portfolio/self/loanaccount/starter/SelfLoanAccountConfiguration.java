@@ -28,7 +28,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Configuration("coreSelfLoanAccountConfiguration")
 public class SelfLoanAccountConfiguration {
 
-    @Bean
+    @Bean("coreAppuserLoansMapperReadService")
     @ConditionalOnMissingBean(AppuserLoansMapperReadService.class)
     public AppuserLoansMapperReadService appuserLoansMapperReadService(JdbcTemplate jdbcTemplate) {
         return new AppuserLoansMapperReadServiceImpl(jdbcTemplate);

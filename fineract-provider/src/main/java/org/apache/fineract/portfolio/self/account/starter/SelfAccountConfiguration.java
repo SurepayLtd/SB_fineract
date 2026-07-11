@@ -37,20 +37,20 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Configuration("coreSelfAccountConfiguration")
 public class SelfAccountConfiguration {
 
-    @Bean
+    @Bean("coreSelfAccountTransferReadService")
     @ConditionalOnMissingBean(SelfAccountTransferReadService.class)
     public SelfAccountTransferReadService selfAccountTransferReadService(JdbcTemplate jdbcTemplate) {
         return new SelfAccountTransferReadServiceImpl(jdbcTemplate);
     }
 
-    @Bean
+    @Bean("coreSelfBeneficiariesTPTReadPlatformService")
     @ConditionalOnMissingBean(SelfBeneficiariesTPTReadPlatformService.class)
     public SelfBeneficiariesTPTReadPlatformService selfBeneficiariesTPTReadPlatformService(PlatformSecurityContext context,
             JdbcTemplate jdbcTemplate) {
         return new SelfBeneficiariesTPTReadPlatformServiceImpl(context, jdbcTemplate);
     }
 
-    @Bean
+    @Bean("coreSelfBeneficiariesTPTWritePlatformService")
     @ConditionalOnMissingBean(SelfBeneficiariesTPTWritePlatformService.class)
     public SelfBeneficiariesTPTWritePlatformService selfBeneficiariesTPTWritePlatformService(PlatformSecurityContext context,
             SelfBeneficiariesTPTRepository repository, SelfBeneficiariesTPTDataValidator validator,

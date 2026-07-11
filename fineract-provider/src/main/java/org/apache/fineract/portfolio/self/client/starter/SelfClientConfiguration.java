@@ -29,7 +29,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Configuration("coreSelfClientConfiguration")
 public class SelfClientConfiguration {
 
-    @Bean
+    @Bean("coreAppuserClientMapperReadService")
     @ConditionalOnMissingBean(AppuserClientMapperReadService.class)
     public AppuserClientMapperReadService appuserClientMapperReadService(JdbcTemplate jdbcTemplate, PlatformSecurityContext context) {
         return new AppuserClientMapperReadServiceImpl(jdbcTemplate, context);

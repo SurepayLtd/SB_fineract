@@ -41,13 +41,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Configuration("coreSelfRegistrationConfiguration")
 public class SelfRegistrationConfiguration {
 
-    @Bean
+    @Bean("coreSelfServiceRegistrationReadPlatformService")
     @ConditionalOnMissingBean(SelfServiceRegistrationReadPlatformService.class)
     public SelfServiceRegistrationReadPlatformService selfServiceRegistrationReadPlatformService(JdbcTemplate jdbcTemplate) {
         return new SelfServiceRegistrationReadPlatformServiceImpl(jdbcTemplate);
     }
 
-    @Bean
+    @Bean("coreSelfServiceRegistrationWritePlatformService")
     @ConditionalOnMissingBean(SelfServiceRegistrationWritePlatformService.class)
     public SelfServiceRegistrationWritePlatformService selfServiceRegistrationWritePlatformService(
 

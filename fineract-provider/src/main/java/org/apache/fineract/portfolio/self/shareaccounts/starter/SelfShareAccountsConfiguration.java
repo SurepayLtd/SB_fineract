@@ -29,7 +29,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Configuration("coreSelfShareAccountsConfiguration")
 public class SelfShareAccountsConfiguration {
 
-    @Bean
+    @Bean("coreAppUserShareAccountsMapperReadPlatformService")
     @ConditionalOnMissingBean(AppUserShareAccountsMapperReadPlatformService.class)
     public AppUserShareAccountsMapperReadPlatformService appUserShareAccountsMapperReadPlatformService(JdbcTemplate jdbcTemplate) {
         return new AppUserShareAccountsMapperReadPlatformServiceImpl(jdbcTemplate);

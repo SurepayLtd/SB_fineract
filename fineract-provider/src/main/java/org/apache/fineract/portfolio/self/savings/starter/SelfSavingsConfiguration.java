@@ -28,7 +28,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Configuration("coreSelfSavingsConfiguration")
 public class SelfSavingsConfiguration {
 
-    @Bean
+    @Bean("coreAppuserSavingsMapperReadService")
     @ConditionalOnMissingBean(AppuserSavingsMapperReadService.class)
     public AppuserSavingsMapperReadService appuserSavingsMapperReadService(JdbcTemplate jdbcTemplate) {
         return new AppuserSavingsMapperReadServiceImpl(jdbcTemplate);

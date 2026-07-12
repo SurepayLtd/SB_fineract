@@ -57,7 +57,7 @@
                 s.enabled,
                 s.last_time_password_updated,
                 s.password_never_expires,
-                s.password_reset_required,
+                FALSE,
                 FALSE AS is_self_service_user,
                 s.cannot_change_password
             FROM m_appuser s

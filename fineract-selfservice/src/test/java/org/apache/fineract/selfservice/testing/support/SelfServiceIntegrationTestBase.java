@@ -100,6 +100,9 @@ public abstract class SelfServiceIntegrationTestBase {
             .withCopyFileToContainer(
                 MountableFile.forHostPath("fineract-selfservice/build/libs/fineract-selfservice-1.11.1-SNAPSHOT.jar"),
                 "/app/plugins/selfservice-plugin.jar")
+            .withCopyFileToContainer(
+                MountableFile.forHostPath("fineract-provider/src/main/resources/db/changelog/db.changelog-master.xml"),
+                "/app/resources/db/changelog/db.changelog-master.xml")
 
             // Prepend the plugin JAR to the JIB container's classpath.
             .withCreateContainerCmdModifier(

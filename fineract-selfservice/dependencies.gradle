@@ -18,7 +18,11 @@
  */
 dependencies {
     implementation project(':fineract-core')
-    implementation project(':fineract-provider').sourceSets.main.output
+    if (System.getProperty("idea.sync.active") == "true" || System.getProperty("idea.active") == "true" || Boolean.getBoolean("idea.active")) {
+        implementation project(':fineract-provider')
+    } else {
+        implementation project(':fineract-provider').sourceSets.main.output
+    }
     implementation project(':fineract-loan')
     implementation project(':fineract-savings')
     implementation project(':fineract-accounting')

@@ -54,6 +54,7 @@ public class ServerApplication extends SpringBootServletInitializer {
     }
 
     public static void main(String[] args) throws IOException {
+        System.setProperty("liquibase.duplicateFileMode", "WARN");
         configureApplication(new SpringApplicationBuilder(ServerApplication.class)).run(args);
     }
 }

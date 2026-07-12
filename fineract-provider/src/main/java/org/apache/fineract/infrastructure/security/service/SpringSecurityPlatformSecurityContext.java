@@ -50,8 +50,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
     protected static final List<CommandWrapper> EXEMPT_FROM_PASSWORD_RESET_CHECK = new ArrayList<CommandWrapper>(
             List.of(new CommandWrapperBuilder().updateUser(null).build()));
 
-    @Autowired
-    SpringSecurityPlatformSecurityContext(final ConfigurationDomainService configurationDomainService) {
+    public SpringSecurityPlatformSecurityContext(final ConfigurationDomainService configurationDomainService) {
         this.configurationDomainService = configurationDomainService;
     }
 

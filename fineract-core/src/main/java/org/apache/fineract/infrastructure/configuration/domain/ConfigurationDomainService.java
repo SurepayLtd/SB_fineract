@@ -148,4 +148,6 @@ public interface ConfigurationDomainService {
     Integer retrieveMomoPaymentOtpExpiryMinutes();
     Integer retrieveMomoPaymentPinExpiryMonths();
 
+    boolean isSelfServiceEnabled();
+
 }

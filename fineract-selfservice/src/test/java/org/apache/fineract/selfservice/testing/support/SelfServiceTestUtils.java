@@ -37,6 +37,7 @@ public final class SelfServiceTestUtils {
   public static final String SELF_CLIENTS_PATH = CONTEXT_PATH + "/api/v1/self/clients";
   public static final String SELF_SAVINGS_PATH = CONTEXT_PATH + "/api/v1/self/savingsaccounts";
   public static final String SELF_LOANS_PATH = CONTEXT_PATH + "/api/v1/self/loans";
+  public static final String SELF_SHARE_ACCOUNTS_PATH = CONTEXT_PATH + "/api/v1/self/shareaccounts";
   public static final String SELF_LOAN_PRODUCTS_PATH = CONTEXT_PATH + "/api/v1/self/loanproducts";
   public static final String SELF_SAVINGS_PRODUCTS_PATH =
       CONTEXT_PATH + "/api/v1/self/savingsproducts";
@@ -50,7 +51,9 @@ public final class SelfServiceTestUtils {
       SELF_LOAN_SIMULATION_PATH + "/template";
 
   /** Tenant identifier expected by the self-service security filter. */
-  public static final String DEFAULT_TENANT = "default";
+  public static String getTenantId() {
+    return SelfServiceIntegrationTestBase.getTenantId();
+  }
 
   /** Builds a base-64 Basic Auth header value from username and password. */
   public static String basicAuthHeader(String username, String password) {
@@ -69,7 +72,7 @@ public final class SelfServiceTestUtils {
         .port(port)
         .contentType(ContentType.JSON)
         .accept(ContentType.JSON)
-        .header("Fineract-Platform-TenantId", DEFAULT_TENANT);
+        .header("Fineract-Platform-TenantId", getTenantId());
   }
 
   /**

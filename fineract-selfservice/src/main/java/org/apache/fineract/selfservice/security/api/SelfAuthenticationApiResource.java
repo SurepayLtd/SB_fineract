@@ -188,6 +188,9 @@ public class SelfAuthenticationApiResource {
             httpRequest);
       }
       throw ex;
+    } catch (org.springframework.security.core.AuthenticationException ex) {
+      log.error("Authentication exception occurred: {}", ex.getMessage(), ex);
+      throw new BadCredentialsException("Invalid credentials", ex);
     }
 
     final Collection<String> permissions = new ArrayList<>();

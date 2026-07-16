@@ -86,26 +86,10 @@ class SelfForgotPasswordApiResourceIntegrationTest extends SelfServiceIntegratio
         "Enrollment confirmation must succeed. Body: " + confirmResponse.body().asString());
   }
 
-  private String querySingleValue(String sql, String parameter) {
-    Properties properties = new Properties();
-    properties.setProperty("user", postgres.getUsername());
-    properties.setProperty("password", postgres.getPassword());
-    try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), properties);
-        PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setString(1, parameter);
-      try (ResultSet resultSet = statement.executeQuery()) {
-        if (!resultSet.next()) {
-          return "";
-        }
-        String value = resultSet.getString(1);
-        return value != null ? value.trim() : "";
-      }
-    } catch (SQLException e) {
-      throw new RuntimeException("Failed to query test database", e);
-    }
-  }
-
   private String fineractLogTail() {
+    if (fineract == null) {
+      return "<external fineract logs not accessible via testcontainers>";
+    }
     String logs = fineract.getLogs();
     if (logs == null || logs.isBlank()) {
       return "<no fineract logs available>";

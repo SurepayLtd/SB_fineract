@@ -217,9 +217,9 @@ public class SelfServiceRegistrationWritePlatformServiceImpl
         .notExceedingLengthOf(100);
 
     boolean isEmailAuthenticationMode =
-        authenticationMode.equalsIgnoreCase(SelfServiceApiConstants.emailModeParamName);
+        authenticationMode != null && authenticationMode.equalsIgnoreCase(SelfServiceApiConstants.emailModeParamName);
     boolean isAnyAuthenticationMode =
-        authenticationMode.equalsIgnoreCase(SelfServiceApiConstants.anyModeParamName);
+        authenticationMode != null && authenticationMode.equalsIgnoreCase(SelfServiceApiConstants.anyModeParamName);
 
     String mobileNumber = null;
     if (!isEmailAuthenticationMode) {

@@ -136,4 +136,38 @@ Supports transferring funds to external accounts, internal client accounts, and 
 
 ---
 
+## Running Integration Tests
+
+The `:fineract-selfservice` module contains full end-to-end integration tests using RestAssured. These can be run in two modes:
+
+### 1. Against an already running Fineract Backend (E2E Mode)
+To run the integration tests against your already running local Fineract instance (e.g. started via bootRun) without starting separate Docker Testcontainers, use the `-PcargoDisabled=true` flag:
+
+```bash
+# Run all integration tests against the running backend
+./gradlew :fineract-selfservice:test -PcargoDisabled=true
+
+# Run a specific integration test class
+./gradlew :fineract-selfservice:test --tests "org.apache.fineract.selfservice.loanaccount.api.SelfLoansApiIntegrationTest" -PcargoDisabled=true
+```
+
+By default, this mode connects to Fineract at `https://localhost:8443` and the database at `jdbc:mariadb://localhost:3318/fineract_default`. You can override these connection parameters via system properties:
+
+```bash
+./gradlew :fineract-selfservice:test -PcargoDisabled=true \
+  -Dfineract.it.port=8443 \
+  -Dfineract.it.jdbcUrl=jdbc:mariadb://localhost:3318/fineract_default \
+  -Dfineract.it.dbUsername=root \
+  -Dfineract.it.dbPassword=mysql
+```
+
+### 2. Isolated Mode (using Docker Testcontainers)
+To run the tests in an isolated, self-managed environment where Testcontainers spins up a dedicated Postgres database and Fineract backend instance, run:
+
+```bash
+./gradlew :fineract-selfservice:test
+```
+
+---
+
 > **Important:** To execute any of the self-service APIs, the self-service feature configuration must be enabled in Fineract Global Configurations. If it is disabled, all self-service requests will reject with `SelfServiceDisabledException`.

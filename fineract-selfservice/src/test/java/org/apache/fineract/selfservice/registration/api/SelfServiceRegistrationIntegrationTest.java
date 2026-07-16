@@ -7,7 +7,11 @@
 package org.apache.fineract.selfservice.registration.api;
 
 import static io.restassured.RestAssured.given;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import io.restassured.response.Response;
 import org.apache.fineract.selfservice.testing.support.SelfServiceIntegrationTestBase;
 import org.apache.fineract.selfservice.testing.support.SelfServiceTestUtils;
 import org.junit.jupiter.api.DisplayName;
@@ -50,5 +54,83 @@ class SelfServiceRegistrationIntegrationTest extends SelfServiceIntegrationTestB
         .then()
         .log().all()
         .statusCode(404);
+  }
+
+  @Test
+  @DisplayName("Full signup flow: seed client, request registration, then create self-service user")
+  void testSuccessfulRegistrationFlow() {
+    long clientId = System.currentTimeMillis();
+    String accountNo = "ACC" + clientId;
+    String firstName = "First" + clientId;
+    String lastName = "Last" + clientId;
+    String mobileNo = "555" + (clientId % 1000000);
+    String email = "test" + clientId + "@fineract.test";
+    String username = "user_" + clientId;
+    String password = "Strong#Abc123";
+
+    // 1. Seed the client record into the database
+    executeSqlInPostgres(
+        "INSERT INTO m_client (id, account_no, firstname, lastname, office_id, status_enum, mobile_no, email_address, created_by, last_modified_by) " +
+        "VALUES (%s, %s, %s, %s, 1, 300, %s, %s, 1, 1)",
+        clientId, accountNo, firstName, lastName, mobileNo, email
+    );
+
+    // 2. Call POST /v1/self/registration to create the registration request (which sends enrollment token)
+    String signupPayload =
+        """
+        {
+          "accountNumber": "%s",
+          "firstName": "%s",
+          "lastName": "%s",
+          "mobileNumber": "%s",
+          "email": "%s",
+          "username": "%s",
+          "password": "%s",
+          "authenticationMode": "email"
+        }
+        """.formatted(accountNo, firstName, lastName, mobileNo, email, username, password);
+
+    Response signupResponse =
+        given(SelfServiceTestUtils.requestSpec(getFineractPort()))
+            .body(signupPayload)
+            .when()
+            .post(SelfServiceTestUtils.SELF_REGISTRATION_PATH)
+            .then()
+            .log().all()
+            .statusCode(200)
+            .extract()
+            .response();
+
+    // Query token from the request_audit_table
+    String token = querySingleValue(
+        "SELECT external_authorization_token FROM request_audit_table WHERE username = ? AND request_type = 'REGISTRATION' ORDER BY id DESC LIMIT 1",
+        username
+    );
+    assertNotNull(token);
+    assertFalse(token.isBlank());
+
+    // 3. Confirm signup and create the self-service user via POST /v1/self/registration/user
+    String confirmPayload =
+        """
+        {
+          "externalAuthenticationToken": "%s"
+        }
+        """.formatted(token);
+
+    Response confirmResponse =
+        given(SelfServiceTestUtils.requestSpec(getFineractPort()))
+            .body(confirmPayload)
+            .when()
+            .post(SelfServiceTestUtils.SELF_REGISTRATION_PATH + "/user")
+            .then()
+            .log().all()
+            .statusCode(200)
+            .extract()
+            .response();
+
+    // 4. Verify the self-service user can now login
+    Response loginResponse =
+        SelfServiceTestUtils.authenticate(getFineractPort(), username, password);
+    assertEquals(200, loginResponse.getStatusCode());
   }
 }

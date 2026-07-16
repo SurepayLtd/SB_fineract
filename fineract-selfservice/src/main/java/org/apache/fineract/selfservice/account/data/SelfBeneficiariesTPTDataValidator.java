@@ -92,7 +92,7 @@ public class SelfBeneficiariesTPTDataValidator {
       throw new InvalidJsonException();
     }
 
-    final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
+    final Type typeOfMap = TypeToken.getParameterized(Map.class, String.class, Object.class).getType();
     this.fromApiJsonHelper.checkForUnsupportedParameters(
         typeOfMap, json, CREATE_REQUEST_DATA_PARAMETERS);
 
@@ -250,7 +250,7 @@ public class SelfBeneficiariesTPTDataValidator {
       throw new InvalidJsonException();
     }
 
-    final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
+    final Type typeOfMap = TypeToken.getParameterized(Map.class, String.class, Object.class).getType();
     this.fromApiJsonHelper.checkForUnsupportedParameters(
         typeOfMap, json, UPDATE_REQUEST_DATA_PARAMETERS);
 

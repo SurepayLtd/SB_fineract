@@ -121,7 +121,7 @@ public class SelfServiceRegistrationWritePlatformServiceImpl
   @Override
   public SelfServiceRegistration createRegistrationRequest(String apiRequestBodyAsJson) {
     Gson gson = new Gson();
-    final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
+    final Type typeOfMap = TypeToken.getParameterized(Map.class, String.class, Object.class).getType();
     final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
     final DataValidatorBuilder baseDataValidator =
         new DataValidatorBuilder(dataValidationErrors).resource("user");
@@ -318,7 +318,7 @@ public class SelfServiceRegistrationWritePlatformServiceImpl
     String username = null;
     try {
       Gson gson = new Gson();
-      final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
+      final Type typeOfMap = TypeToken.getParameterized(Map.class, String.class, Object.class).getType();
       final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
       final DataValidatorBuilder baseDataValidator =
           new DataValidatorBuilder(dataValidationErrors).resource("user");
@@ -414,7 +414,7 @@ public class SelfServiceRegistrationWritePlatformServiceImpl
   @Override
   public SelfServiceRegistration selfEnroll(String apiRequestBodyAsJson) {
     Gson gson = new Gson();
-    final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
+    final Type typeOfMap = TypeToken.getParameterized(Map.class, String.class, Object.class).getType();
     final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
     final DataValidatorBuilder baseDataValidator =
         new DataValidatorBuilder(dataValidationErrors).resource("user");
@@ -603,7 +603,7 @@ public class SelfServiceRegistrationWritePlatformServiceImpl
     // ... (confirmEnrollment remains exactly the same as your original code) ...
     // It already publishes USER_ACTIVATED correctly.
     Gson gson = new Gson();
-    final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
+    final Type typeOfMap = TypeToken.getParameterized(Map.class, String.class, Object.class).getType();
     final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
     final DataValidatorBuilder baseDataValidator =
         new DataValidatorBuilder(dataValidationErrors).resource("user");

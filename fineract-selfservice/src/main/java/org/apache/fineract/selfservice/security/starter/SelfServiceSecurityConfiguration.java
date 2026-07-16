@@ -58,6 +58,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.ExceptionTranslationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
+import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -90,7 +91,7 @@ public class SelfServiceSecurityConfiguration {
 
     http
         // Apply only to self-service endpoints
-        .securityMatcher("/api/v1/self/**", "/v1/self/**")
+        .securityMatchers(matchers -> matchers.requestMatchers(antMatcher("/api/v1/self/**"), antMatcher("/v1/self/**")))
 
         // Disable CSRF for public self-service APIs
         .csrf(AbstractHttpConfigurer::disable)
@@ -106,73 +107,73 @@ public class SelfServiceSecurityConfiguration {
             auth ->
                 auth
                     // === PUBLIC ENDPOINTS ===
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/registration")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/registration"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/registration/user")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/registration/user"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/registration/client-user")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/registration/client-user"))
                     .permitAll()
                     .requestMatchers(
-                        HttpMethod.POST, "/api/v1/self/registration/client-user/confirm")
+                        antMatcher(HttpMethod.POST, "/api/v1/self/registration/client-user/confirm"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/v1/self/registration")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/v1/self/registration"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/registration/user", "/v1/self/registration/user")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/registration/user"), antMatcher(HttpMethod.POST, "/v1/self/registration/user"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/registration/client-user", "/v1/self/registration/client-user")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/registration/client-user"), antMatcher(HttpMethod.POST, "/v1/self/registration/client-user"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/registration/client-user/confirm", "/v1/self/registration/client-user/confirm")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/registration/client-user/confirm"), antMatcher(HttpMethod.POST, "/v1/self/registration/client-user/confirm"))
                     .permitAll()
 
                     // Client Identity documents available in the platform
-                    .requestMatchers(HttpMethod.GET, "/api/v1/self/registration/identifiers")
+                    .requestMatchers(antMatcher(HttpMethod.GET, "/api/v1/self/registration/identifiers"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/v1/self/registration/identifiers")
+                    .requestMatchers(antMatcher(HttpMethod.GET, "/v1/self/registration/identifiers"))
                     .permitAll()
 
                     // External System Client Identity
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/identity/retrieve")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/identity/retrieve"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/v1/self/identity/retrieve")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/v1/self/identity/retrieve"))
                     .permitAll()
 
                     // Self authentication (login)
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/authentication")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/authentication"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/v1/self/authentication")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/v1/self/authentication"))
                     .permitAll()
 
                     // Password Reset
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/password")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/password"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/v1/self/password")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/v1/self/password"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/password/request")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/password/request"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/v1/self/password/request")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/v1/self/password/request"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/password/renew")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/password/renew"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/v1/self/password/renew")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/v1/self/password/renew"))
                     .permitAll()
 
                     // Public loan simulation endpoints (MX-250)
-                    .requestMatchers(HttpMethod.GET, "/api/v1/self/loans/simulate/products")
+                    .requestMatchers(antMatcher(HttpMethod.GET, "/api/v1/self/loans/simulate/products"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/v1/self/loans/simulate/products")
+                    .requestMatchers(antMatcher(HttpMethod.GET, "/v1/self/loans/simulate/products"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/self/loans/simulate/template")
+                    .requestMatchers(antMatcher(HttpMethod.GET, "/api/v1/self/loans/simulate/template"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/v1/self/loans/simulate/template")
+                    .requestMatchers(antMatcher(HttpMethod.GET, "/v1/self/loans/simulate/template"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/self/loans/simulate")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/api/v1/self/loans/simulate"))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/v1/self/loans/simulate")
+                    .requestMatchers(antMatcher(HttpMethod.POST, "/v1/self/loans/simulate"))
                     .permitAll()
                     // All other self-service endpoints require self-service authentication and must
                     // pass the self-service authorization manager (guards self vs non-self
                     // traffic).
-                    .requestMatchers("/api/v1/self/**", "/v1/self/**")
+                    .requestMatchers(antMatcher("/api/v1/self/**"), antMatcher("/v1/self/**"))
                     .access(SelfServiceUserAuthorizationManager.selfServiceUserAuthManager())
                     .anyRequest()
                     .permitAll());

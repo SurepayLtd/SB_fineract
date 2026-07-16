@@ -23,6 +23,7 @@ class SelfServiceRegistrationIntegrationTest extends SelfServiceIntegrationTestB
         .when()
         .post(SelfServiceTestUtils.SELF_REGISTRATION_PATH)
         .then()
+        .log().all()
         .statusCode(500);
   }
 
@@ -47,6 +48,7 @@ class SelfServiceRegistrationIntegrationTest extends SelfServiceIntegrationTestB
         .when()
         .post(SelfServiceTestUtils.SELF_REGISTRATION_PATH)
         .then()
+        .log().all()
         .statusCode(404);
   }
 }

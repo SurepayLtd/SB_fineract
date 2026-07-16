@@ -19,6 +19,8 @@
 package org.apache.fineract.infrastructure.core.service;
 
 import java.util.Properties;
+
+import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.infrastructure.configuration.data.SMTPCredentialsData;
 import org.apache.fineract.infrastructure.configuration.service.ExternalServicesPropertiesReadPlatformService;
 import org.apache.fineract.infrastructure.core.domain.EmailDetail;
@@ -27,6 +29,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class GmailBackedPlatformEmailService implements PlatformEmailService {
 
@@ -87,7 +90,8 @@ public class GmailBackedPlatformEmailService implements PlatformEmailService {
             message.setTo(emailDetails.getAddress());
             message.setSubject(emailDetails.getSubject());
             message.setText(emailDetails.getBody());
-            mailSender.send(message);
+            log.info("EMail Code for OTP :-> {}",message.toString());
+//            mailSender.send(message);
 
         } catch (Exception e) {
             throw new PlatformEmailSendException(e);

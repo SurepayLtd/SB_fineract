@@ -76,7 +76,7 @@ public class SelfUserApiResource {
       throw new InvalidJsonException();
     }
 
-    final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
+    final Type typeOfMap = TypeToken.getParameterized(Map.class, String.class, Object.class).getType();
     this.fromApiJsonHelper.checkForUnsupportedParameters(
         typeOfMap, apiRequestBodyAsJson, SUPPORTED_PARAMETERS);
 

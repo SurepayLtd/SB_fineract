@@ -38,33 +38,7 @@ public abstract class SelfServiceIntegrationTestBase {
   private static String cachedTenantId = null;
 
   public static String getTenantId() {
-    if (cachedTenantId != null) {
-      return cachedTenantId;
-    }
-    String prop = System.getProperty("fineract.it.tenantId");
-    if (prop != null && !prop.isBlank()) {
-      cachedTenantId = prop;
-      return cachedTenantId;
-    }
-    if (isSkipContainers()) {
-      // Dynamically query fineract_tenants to get the first tenant identifier
-      String tenantsUrl = System.getProperty("fineract.it.tenantsUrl", "jdbc:mariadb://localhost:3318/fineract_tenants");
-      String user = System.getProperty("fineract.it.dbUsername", "root");
-      String password = System.getProperty("fineract.it.dbPassword", "mysql");
-      try (java.sql.Connection conn = java.sql.DriverManager.getConnection(tenantsUrl, user, password);
-           java.sql.Statement stmt = conn.createStatement();
-           java.sql.ResultSet rs = stmt.executeQuery("SELECT identifier FROM tenants LIMIT 1")) {
-        if (rs.next()) {
-          cachedTenantId = rs.getString("identifier");
-          LOG.info("Dynamically detected tenant identifier from database: {}", cachedTenantId);
-          return cachedTenantId;
-        }
-      } catch (Exception e) {
-        LOG.warn("Failed to dynamically detect tenant from database, falling back to 'default'", e);
-      }
-    }
-    cachedTenantId = "default";
-    return cachedTenantId;
+    return "default";
   }
 
   static {

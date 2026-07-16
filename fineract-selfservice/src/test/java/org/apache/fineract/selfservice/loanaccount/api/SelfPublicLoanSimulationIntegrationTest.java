@@ -41,6 +41,10 @@ class SelfPublicLoanSimulationIntegrationTest extends SelfServiceIntegrationTest
 
   @BeforeAll
   static void seedLoanProduct() {
+    // Delete first to support repeatable test seeding on both MariaDB and PostgreSQL
+    executeSqlInPostgres("DELETE FROM m_product_loan_configurable_attributes WHERE id = %s", SEEDED_PRODUCT_ID);
+    executeSqlInPostgres("DELETE FROM m_product_loan WHERE id = %s", SEEDED_PRODUCT_ID);
+
     // Seed a minimal loan product into the tenant database.
     executeSqlInPostgres(
         """
@@ -60,7 +64,7 @@ class SelfPublicLoanSimulationIntegrationTest extends SelfServiceIntegrationTest
           1, 1, 0.00,
           'mifos-standard-strategy', 'Mifos style',
           1, 365, false
-        ) ON CONFLICT (id) DO NOTHING;
+        )
         """,
         SEEDED_PRODUCT_ID);
 
@@ -80,7 +84,7 @@ class SelfPublicLoanSimulationIntegrationTest extends SelfServiceIntegrationTest
           true, true,
           true, true, true,
           true
-        ) ON CONFLICT (id) DO NOTHING;
+        )
         """,
         SEEDED_PRODUCT_ID, SEEDED_PRODUCT_ID);
   }

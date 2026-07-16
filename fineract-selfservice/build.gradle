@@ -33,6 +33,10 @@ compileJava {
 
 tasks.named('test') {
     dependsOn tasks.named('jar')
+    useJUnitPlatform()
+    testLogging {
+        showStandardStreams = true
+    }
     
     // Forward all command-line system properties (e.g. -Dkey=val) to the test execution JVM
     systemProperties = System.getProperties() as Map<String, ?>

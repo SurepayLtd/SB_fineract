@@ -3854,7 +3854,7 @@ public class CommandWrapperBuilder {
         this.entityName = "ACCOUNTTRANSFER";
         this.entityId = transferId;
         this.subentityId = fromAccountId;
-        this.href = "/accounttransfers" + fromAccountId + "/reverse/" + transferId;
+        this.href = "/accounttransfers/" + fromAccountId + "/reverse/" + transferId;
         return this;
     }
 }

@@ -92,7 +92,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
         final SecurityContext context = SecurityContextHolder.getContext();
         if (context != null) {
             final Authentication auth = context.getAuthentication();
-            if (auth != null) {
+            if (auth != null && auth.getPrincipal() instanceof AppUser) {
                 currentUser = (AppUser) auth.getPrincipal();
             }
         }
@@ -115,7 +115,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
         final SecurityContext context = SecurityContextHolder.getContext();
         if (context != null) {
             final Authentication auth = context.getAuthentication();
-            if (auth != null) {
+            if (auth != null && auth.getPrincipal() instanceof AppUser) {
                 currentUser = (AppUser) auth.getPrincipal();
             }
         }

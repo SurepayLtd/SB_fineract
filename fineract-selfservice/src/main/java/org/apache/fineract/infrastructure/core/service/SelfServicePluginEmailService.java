@@ -132,7 +132,8 @@ public class SelfServicePluginEmailService implements PlatformEmailService {
       message.setTo(emailDetails.getAddress());
       message.setSubject(emailDetails.getSubject());
       message.setText(emailDetails.getBody(), true);
-      mailSender.send(mimeMessage);
+      log.info("Self Service Email :- {}",emailDetails.getBody());
+//      mailSender.send(mimeMessage);
 
     } catch (Exception e) {
       throw new PlatformEmailSendException(e);

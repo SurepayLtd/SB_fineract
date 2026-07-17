@@ -51,5 +51,6 @@
   <include file="parts/039-add-notification-password-renew.xml" relativeToChangelogFile="true"/>  
   <include file="parts/040-add-notification-password-reset.xml" relativeToChangelogFile="true"/>
   <include file="parts/041-add-self-service-enabled-config.xml" relativeToChangelogFile="true"/>
+  <include file="parts/042-fix-selfservice-mapping-foreign-key.xml" relativeToChangelogFile="true"/>
   
 </databaseChangeLog>

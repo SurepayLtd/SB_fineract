@@ -3849,11 +3849,12 @@ public class CommandWrapperBuilder {
         return this;
     }
 
-    public CommandWrapperBuilder undoAccountTransfer(final Long transferId) {
+    public CommandWrapperBuilder undoAccountTransfer(final Long transferId, final Long fromAccountId) {
         this.actionName = "ACTION_UNDO";
         this.entityName = "ACCOUNTTRANSFER";
         this.entityId = transferId;
-        this.href = "/accounttransfers";
+        this.subentityId = fromAccountId;
+        this.href = "/accounttransfers" + fromAccountId + "/reverse/" + transferId;
         return this;
     }
 }

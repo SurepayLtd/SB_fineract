@@ -3848,4 +3848,12 @@ public class CommandWrapperBuilder {
         this.href = "/v1/loans/external-id/" + loanExternalId + "/interest-pauses/" + variationId;
         return this;
     }
+
+    public CommandWrapperBuilder undoAccountTransfer(final Long transferId) {
+        this.actionName = "ACTION_UNDO";
+        this.entityName = "ACCOUNTTRANSFER";
+        this.entityId = transferId;
+        this.href = "/accounttransfers";
+        return this;
+    }
 }

@@ -29,10 +29,8 @@ import com.google.common.collect.Lists;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
+
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
@@ -51,15 +49,20 @@ import org.apache.fineract.portfolio.account.domain.AccountTransferDetails;
 import org.apache.fineract.portfolio.account.domain.AccountTransferRepository;
 import org.apache.fineract.portfolio.account.domain.AccountTransferTransaction;
 import org.apache.fineract.portfolio.account.domain.AccountTransferType;
+import org.apache.fineract.portfolio.account.exception.AccountTransferNotFoundException;
+import org.apache.fineract.portfolio.account.exception.AccountTransferTransactionNotFoundException;
 import org.apache.fineract.portfolio.account.exception.DifferentCurrenciesException;
+import org.apache.fineract.portfolio.loanaccount.api.LoanApiConstants;
 import org.apache.fineract.portfolio.loanaccount.data.HolidayDetailDTO;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanAccountDomainService;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionType;
 import org.apache.fineract.portfolio.loanaccount.exception.InvalidPaidInAdvanceAmountException;
+import org.apache.fineract.portfolio.loanaccount.service.LoanAccountTransferReversalService;
 import org.apache.fineract.portfolio.loanaccount.service.LoanAssembler;
 import org.apache.fineract.portfolio.loanaccount.service.LoanReadPlatformService;
+import org.apache.fineract.portfolio.loanaccount.service.LoanWritePlatformService;
 import org.apache.fineract.portfolio.paymentdetail.domain.PaymentDetail;
 import org.apache.fineract.portfolio.savings.SavingsTransactionBooleanValues;
 import org.apache.fineract.portfolio.savings.domain.GSIMRepositoy;
@@ -88,6 +91,7 @@ public class AccountTransfersWritePlatformServiceImpl implements AccountTransfer
     private final ConfigurationDomainService configurationDomainService;
     private final ExternalIdFactory externalIdFactory;
     private final FineractProperties fineractProperties;
+    private final LoanAccountTransferReversalService loanWritePlatformService;
 
     @Transactional
     @Override
@@ -516,6 +520,10 @@ public class AccountTransfersWritePlatformServiceImpl implements AccountTransfer
         return fromAccountType.isLoanAccount() && toAccountType.isSavingsAccount();
     }
 
+    private boolean isLoanToLoanAccountTransfer(final PortfolioAccountType fromAccountType, final PortfolioAccountType toAccountType) {
+        return fromAccountType.isLoanAccount() && toAccountType.isLoanAccount();
+    }
+
     private boolean isSavingsToLoanAccountTransfer(final PortfolioAccountType fromAccountType, final PortfolioAccountType toAccountType) {
         return fromAccountType.isSavingsAccount() && toAccountType.isLoanAccount();
     }
@@ -577,5 +585,59 @@ public class AccountTransfersWritePlatformServiceImpl implements AccountTransfer
         // }
 
         return builder.build();
+    }
+
+    @Override
+    @Transactional
+    public CommandProcessingResult accountTransferReversal(JsonCommand command) {
+
+        AccountTransferTransaction transferTransaction = this.accountTransferRepository.findById(command.entityId())
+                .orElseThrow(() -> new AccountTransferTransactionNotFoundException(command.entityId()));
+
+        AccountTransferDetails accountTransferDetails = transferTransaction.accountTransferDetails();
+
+        if (accountTransferDetails.getAccountTransferTransactions().stream().anyMatch(AccountTransferTransaction::isReversed)) {
+            throw new GeneralPlatformDomainRuleException("error.msg.account.transfer.already.reversed",
+                    "Account transfer is already reversed", command.entityId());
+        }
+
+        PortfolioAccountType fromAccountType = accountTransferDetails.fromLoanAccount() != null ? PortfolioAccountType.LOAN
+                : accountTransferDetails.fromSavingsAccount() != null ? PortfolioAccountType.SAVINGS : throwUnsupported();
+
+        PortfolioAccountType toAccountType = accountTransferDetails.toLoanAccount() != null ? PortfolioAccountType.LOAN
+                : accountTransferDetails.toSavingsAccount() != null ? PortfolioAccountType.SAVINGS : throwUnsupported();
+
+        if (isSavingsToSavingsAccountTransfer(fromAccountType, toAccountType)) {
+            for (AccountTransferTransaction transaction: accountTransferDetails.getAccountTransferTransactions()){
+                this.savingsAccountWritePlatformService.undoTransaction(transaction.getFromSavingsTransaction().getSavingsAccount().getId(), transaction.getFromSavingsTransaction().getId(), true);
+                this.savingsAccountWritePlatformService.undoTransaction(transaction.getToSavingsTransaction().getSavingsAccount().getId(), transaction.getToSavingsTransaction().getId(), true);
+                transaction.reverse();
+            }
+        } else if (isSavingsToLoanAccountTransfer(fromAccountType, toAccountType)) {
+
+            for (AccountTransferTransaction transaction: accountTransferDetails.getAccountTransferTransactions()){
+                this.savingsAccountWritePlatformService.undoTransaction(transaction.getFromSavingsTransaction().getSavingsAccount().getId(), transaction.getFromSavingsTransaction().getId(), true);
+                this.loanWritePlatformService.adjustLoanTransaction(transaction.getToLoanTransaction().getLoan().getId(), transaction.getToLoanTransaction().getId(), command);
+                transaction.reverse();
+            }
+
+        } else if (isLoanToSavingsAccountTransfer(fromAccountType, toAccountType)) {
+            for (AccountTransferTransaction transaction: accountTransferDetails.getAccountTransferTransactions()){
+                this.loanWritePlatformService.adjustLoanTransaction(transaction.getFromLoanTransaction().getLoan().getId(), transaction.getFromLoanTransaction().getId(), command);
+                this.savingsAccountWritePlatformService.undoTransaction(transaction.getToSavingsTransaction().getSavingsAccount().getId(), transaction.getToLoanTransaction().getId(), true);
+                transaction.reverse();
+            }
+        }else if (isLoanToLoanAccountTransfer(fromAccountType, toAccountType)){
+            throw new UnsupportedOperationException("Undo Loan to Loan Account Transfer is not implemented");
+        }
+
+        final CommandProcessingResultBuilder builder = new CommandProcessingResultBuilder() //
+                .withEntityId(accountTransferDetails.getId());
+
+        return builder.build();
+    }
+
+    private static PortfolioAccountType throwUnsupported() {
+        throw new UnsupportedOperationException("Undo account transfer only be supported between Loan-Saving, Saving-Saving accounts");
     }
 }

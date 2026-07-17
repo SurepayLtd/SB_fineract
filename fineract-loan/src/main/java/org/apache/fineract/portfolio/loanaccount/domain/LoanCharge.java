@@ -511,6 +511,8 @@ public class LoanCharge extends AbstractAuditableWithUTCDateTimeCustom<Long> {
         return this.dueDate; // TODO delete duplicated method
     }
 
+
+
     public boolean determineIfFullyPaid() {
         if (this.amount == null) {
             return true;
@@ -914,6 +916,25 @@ public class LoanCharge extends AbstractAuditableWithUTCDateTimeCustom<Long> {
             this.amountOutstanding = calculateAmountOutstanding(incrementBy.getCurrency());
         }
         return amountDeductedOnThisCharge;
+    }
+
+    public void undoWaive(final MonetaryCurrency currency, final Integer loanInstallmentNumber) {
+        if (isInstalmentFee()) {
+            final LoanInstallmentCharge chargePerInstallment = getInstallmentLoanCharge(loanInstallmentNumber);
+            chargePerInstallment.undoWaive();
+            Money amountReversed = chargePerInstallment.getAmountOutstanding(currency);
+            this.amountWaived = this.amountWaived.subtract(amountReversed.getAmount());
+            this.amountOutstanding = this.amountOutstanding.add(amountReversed.getAmount());
+            if (!determineIfFullyPaid()) {
+                this.paid = false;
+                this.waived = false;
+            }
+            return;
+        }
+        this.amountOutstanding = this.amountWaived;
+        this.amountWaived = BigDecimal.ZERO;
+        this.paid = false;
+        this.waived = false;
     }
 
     public LoanInstallmentCharge getLastPaidOrPartiallyPaidInstallmentLoanCharge(MonetaryCurrency currency) {

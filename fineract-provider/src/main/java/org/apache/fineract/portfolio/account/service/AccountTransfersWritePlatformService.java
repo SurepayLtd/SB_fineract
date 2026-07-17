@@ -41,4 +41,6 @@ public interface AccountTransfersWritePlatformService extends AccountTransfersSe
     void reverseTransfersWithFromAccountTransactions(Collection<Long> fromTransactionIds, PortfolioAccountType accountTypeId);
 
     AccountTransferDetails repayLoanWithTopup(AccountTransferDTO accountTransferDTO);
+
+    CommandProcessingResult accountTransferReversal(JsonCommand command);
 }

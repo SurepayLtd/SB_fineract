@@ -24,6 +24,10 @@ import java.util.Map;
 import org.apache.fineract.accounting.provisioning.domain.ProvisioningEntry;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
+import org.apache.fineract.investor.domain.ExternalAssetOwner;
+import org.apache.fineract.investor.domain.ExternalAssetOwnerTransfer;
+import org.apache.fineract.portfolio.loanaccount.domain.Loan;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 
 public interface JournalEntryWritePlatformService {
 

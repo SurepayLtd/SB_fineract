@@ -24,6 +24,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+
+import lombok.Getter;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 import org.apache.fineract.infrastructure.core.service.MathUtil;
 import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
@@ -111,6 +113,13 @@ public class LoanInstallmentCharge extends AbstractPersistableCustom<Long> imple
         return BigDecimal.ZERO.compareTo(calculateOutstanding()) == 0;
     }
 
+    public void undoWaive() {
+        this.amountOutstanding = this.amountWaived;
+        this.amountWaived = BigDecimal.ZERO;
+        this.paid = false;
+        this.waived = false;
+    }
+
     public void undoWaive(final BigDecimal amountOutstanding, final BigDecimal amountWaived) {
         this.amountOutstanding = amountOutstanding;
         this.amountWaived = amountWaived;
@@ -154,6 +163,13 @@ public class LoanInstallmentCharge extends AbstractPersistableCustom<Long> imple
 
     public BigDecimal getAmountOutstanding() {
         return this.amountOutstanding;
+    }
+    public Money getAmountOutstanding(final MonetaryCurrency currency) {
+        return Money.of(currency, this.amountOutstanding);
+    }
+
+    public BigDecimal getAmountWaived(){
+        return this.amountWaived;
     }
 
     private BigDecimal calculateAmountOutstanding(final MonetaryCurrency currency) {

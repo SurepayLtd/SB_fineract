@@ -202,4 +202,20 @@ public class AccountTransfersApiResource {
 
         return this.toApiJsonSerializer.serialize(result);
     }
+
+    @POST
+    @Path("{accountTransferTransactionId}")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Operation on active account transfer", operationId = "accountTransferOperation", description = "In case of command=`undo`: Ability to undo a transfer of monetary funds from one account to another.")
+    public CommandProcessingResult accountTransferOperation(
+            @PathParam("accountTransferTransactionId") @Parameter(description = "accountTransferTransactionId") final Long accountTransferTransactionId,
+            @QueryParam("command") @Parameter(description = "command") final String commandParam, @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+        final CommandWrapper commandRequest = switch (commandParam) {
+            case "undo" -> new CommandWrapperBuilder().withJson(apiRequestBodyAsJson).undoAccountTransfer(accountTransferTransactionId).build();
+            default -> throw new UnsupportedOperationException("Unsupported command: " + commandParam);
+        };
+
+        return commandsSourceWritePlatformService.logCommandSource(commandRequest);
+    }
 }

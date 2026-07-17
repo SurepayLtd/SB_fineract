@@ -65,5 +65,15 @@
         </addColumn>
     </changeSet>
 
+    <changeSet author="victor" id="add-undo-account-transfer">
+    <insert tableName="m_permission">
+        <column name="grouping" value="portfolio" />
+        <column name="code" value="ACTION_UNDO_ACCOUNTTRANSFER" />
+        <column name="entity_name" value="ACCOUNTTRANSFER" />
+        <column name="action_name" value="ACTION_UNDO" />
+        <column name="can_maker_checker" valueBoolean="false" />
+    </insert>
+    </changeSet>
+
 
 </databaseChangeLog>

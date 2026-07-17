@@ -49,8 +49,10 @@ import org.apache.fineract.portfolio.account.service.StandingInstructionWritePla
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
 import org.apache.fineract.portfolio.common.service.DropdownReadPlatformService;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanAccountDomainService;
+import org.apache.fineract.portfolio.loanaccount.service.LoanAccountTransferReversalService;
 import org.apache.fineract.portfolio.loanaccount.service.LoanAssembler;
 import org.apache.fineract.portfolio.loanaccount.service.LoanReadPlatformService;
+import org.apache.fineract.portfolio.loanaccount.service.LoanWritePlatformService;
 import org.apache.fineract.portfolio.savings.domain.GSIMRepositoy;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccountAssembler;
 import org.apache.fineract.portfolio.savings.service.SavingsAccountDomainService;
@@ -88,11 +90,11 @@ public class AccountConfiguration {
             LoanAccountDomainService loanAccountDomainService, SavingsAccountWritePlatformService savingsAccountWritePlatformService,
             AccountTransferDetailRepository accountTransferDetailRepository, LoanReadPlatformService loanReadPlatformService,
             GSIMRepositoy gsimRepository, ConfigurationDomainService configurationDomainService, ExternalIdFactory externalIdFactory,
-            FineractProperties fineractProperties) {
+            FineractProperties fineractProperties, LoanAccountTransferReversalService loanWritePlatformService) {
         return new AccountTransfersWritePlatformServiceImpl(accountTransfersDataValidator, accountTransferAssembler,
                 accountTransferRepository, savingsAccountAssembler, savingsAccountDomainService, loanAccountAssembler,
                 loanAccountDomainService, savingsAccountWritePlatformService, accountTransferDetailRepository, loanReadPlatformService,
-                gsimRepository, configurationDomainService, externalIdFactory, fineractProperties);
+                gsimRepository, configurationDomainService, externalIdFactory, fineractProperties, loanWritePlatformService);
     }
 
     @Bean

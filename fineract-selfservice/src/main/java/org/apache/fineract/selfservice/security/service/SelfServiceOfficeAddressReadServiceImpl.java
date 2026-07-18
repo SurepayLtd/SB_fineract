@@ -6,6 +6,8 @@
  */
 package org.apache.fineract.selfservice.security.service;
 
+import jakarta.annotation.PostConstruct;
+import java.sql.ResultSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -37,11 +39,32 @@ public class SelfServiceOfficeAddressReadServiceImpl
 
   private final JdbcTemplate jdbcTemplate;
 
+  private volatile boolean officeAddressTableAvailable;
+
+  @PostConstruct
+  void checkTableAvailability() {
+    try {
+      jdbcTemplate.execute(
+          (org.springframework.jdbc.core.ConnectionCallback<Void>)
+              conn -> {
+                try (ResultSet rs =
+                    conn.getMetaData().getTables(null, null, "m_office_address", null)) {
+                  officeAddressTableAvailable = rs.next();
+                }
+                return null;
+              });
+    } catch (Exception e) {
+      log.warn(
+          "Failed to detect m_office_address table availability; address country retrieval disabled", e);
+      officeAddressTableAvailable = false;
+    }
+  }
+
   /** {@inheritDoc} */
   @Override
   public String retrieveOfficeCountryByClientId(final Long clientId) {
-    if (clientId == null) {
-      log.debug("clientId is null; returning empty country");
+    if (clientId == null || !officeAddressTableAvailable) {
+      log.debug("clientId is null or m_office_address table not available; returning empty country");
       return "";
     }
     try {

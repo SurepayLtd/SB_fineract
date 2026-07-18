@@ -87,6 +87,7 @@ public class SelfServiceSecurityConfiguration {
   @Autowired private SelfServiceAuthenticationTokenService tokenService;
 
   @Bean
+  @Order(1)
   public SecurityFilterChain selfServiceSecurityFilterChain(HttpSecurity http) throws Exception {
 
     http

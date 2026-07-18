@@ -91,7 +91,7 @@ public class GmailBackedPlatformEmailService implements PlatformEmailService {
             message.setSubject(emailDetails.getSubject());
             message.setText(emailDetails.getBody());
             log.info("EMail Code for OTP :-> {}",message.toString());
-//            mailSender.send(message);
+            mailSender.send(message);
 
         } catch (Exception e) {
             throw new PlatformEmailSendException(e);

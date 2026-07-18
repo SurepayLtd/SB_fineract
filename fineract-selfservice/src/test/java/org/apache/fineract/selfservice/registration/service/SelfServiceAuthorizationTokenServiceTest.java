@@ -51,7 +51,7 @@ class SelfServiceAuthorizationTokenServiceTest {
 
   @Test
   void calculateExpiry_usesConfiguredSeconds() {
-    when(env.getProperty("mifos.self.service.token.expiry.time", Integer.class, 30)).thenReturn(45);
+    when(env.getProperty("mifos.self.service.token.expiry.time", Integer.class, 300)).thenReturn(45);
     SelfServiceAuthorizationTokenService service = new SelfServiceAuthorizationTokenService(env);
     LocalDateTime createdAt = LocalDateTime.of(2026, 4, 13, 10, 0, 0);
 
@@ -61,13 +61,13 @@ class SelfServiceAuthorizationTokenServiceTest {
   }
 
   @Test
-  void calculateExpiry_defaultsToThirtySeconds() {
-    when(env.getProperty("mifos.self.service.token.expiry.time", Integer.class, 30)).thenReturn(30);
+  void calculateExpiry_defaultsToThreeHundredSeconds() {
+    when(env.getProperty("mifos.self.service.token.expiry.time", Integer.class, 300)).thenReturn(300);
     SelfServiceAuthorizationTokenService service = new SelfServiceAuthorizationTokenService(env);
     LocalDateTime createdAt = LocalDateTime.of(2026, 4, 13, 10, 0, 0);
 
     LocalDateTime expiresAt = service.calculateExpiry(createdAt);
 
-    assertEquals(createdAt.plusSeconds(30), expiresAt);
+    assertEquals(createdAt.plusSeconds(300), expiresAt);
   }
 }

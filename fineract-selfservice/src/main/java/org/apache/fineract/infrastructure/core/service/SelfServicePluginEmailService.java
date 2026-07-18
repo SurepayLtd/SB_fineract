@@ -133,7 +133,7 @@ public class SelfServicePluginEmailService implements PlatformEmailService {
       message.setSubject(emailDetails.getSubject());
       message.setText(emailDetails.getBody(), true);
       log.info("Self Service Email :- {}",emailDetails.getBody());
-//      mailSender.send(mimeMessage);
+      mailSender.send(mimeMessage);
 
     } catch (Exception e) {
       throw new PlatformEmailSendException(e);
@@ -168,7 +168,7 @@ public class SelfServicePluginEmailService implements PlatformEmailService {
 
     } catch (Exception e) {
       log.error("Error sending email details {}",e.getMessage());
-//      throw new PlatformEmailSendException(e);
+      throw new PlatformEmailSendException(e);
     }
   }
 

@@ -18,10 +18,10 @@ public class SelfServiceAuthorizationTokenService {
   private static final int DEFAULT_STRING_LENGTH = 32;
   private static final int MAX_TOKEN_LENGTH = 100;
   private static final String DEFAULT_TOKEN_TYPE = "uuidv7";
-  private static final int DEFAULT_EXPIRY_SECONDS = 30; // Constant for clarity/default docs
+  private static final int DEFAULT_EXPIRY_SECONDS = 300; // Constant for clarity/default docs
 
   // Keep @Value for Spring bean (backward compat + config override)
-  @Value("${mifos.self.service.token.expiry.time:30}")
+  @Value("${mifos.self.service.token.expiry.time:300}")
   private int configuredExpirySeconds; // Renamed for clarity
 
   private final Environment env;

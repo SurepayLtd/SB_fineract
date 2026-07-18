@@ -37,12 +37,12 @@ public class SelfServiceEnablerSecurityFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        boolean selfServiceEnabled = false;
+        boolean selfServiceEnabled = true;
         try {
             selfServiceEnabled = configurationDomainService.isSelfServiceEnabled();
         } catch (Exception e) {
-            // Default to false for safeguard
-            selfServiceEnabled = false;
+            // Default to true when property is not yet initialized/found in the database
+            selfServiceEnabled = true;
         }
 
         if (!selfServiceEnabled) {

@@ -590,6 +590,8 @@ public class AccountTransfersWritePlatformServiceImpl implements AccountTransfer
     @Transactional
     public CommandProcessingResult accountTransferReversal(JsonCommand command) {
 
+        Long fromAccountId = command.subentityId();
+
         AccountTransferTransaction transferTransaction = this.accountTransferRepository.findById(command.entityId())
                 .orElseThrow(() -> new AccountTransferTransactionNotFoundException(command.entityId()));
 
@@ -608,23 +610,44 @@ public class AccountTransfersWritePlatformServiceImpl implements AccountTransfer
 
         if (isSavingsToSavingsAccountTransfer(fromAccountType, toAccountType)) {
             for (AccountTransferTransaction transaction: accountTransferDetails.getAccountTransferTransactions()){
-                this.savingsAccountWritePlatformService.undoTransaction(transaction.getFromSavingsTransaction().getSavingsAccount().getId(), transaction.getFromSavingsTransaction().getId(), true);
-                this.savingsAccountWritePlatformService.undoTransaction(transaction.getToSavingsTransaction().getSavingsAccount().getId(), transaction.getToSavingsTransaction().getId(), true);
-                transaction.reverse();
+                if (fromAccountId.equals(transaction.getToSavingsTransaction().getSavingsAccount().getId())) {
+                    this.savingsAccountWritePlatformService.undoTransaction(transaction.getFromSavingsTransaction().getSavingsAccount().getId(), transaction.getFromSavingsTransaction().getId(), true);
+                    this.savingsAccountWritePlatformService.undoTransaction(transaction.getToSavingsTransaction().getSavingsAccount().getId(), transaction.getToSavingsTransaction().getId(), true);
+                    transaction.reverse();
+                }else {
+                    throw new GeneralPlatformDomainRuleException("error.msg.account.transfer.invalid.source.account",
+                            "The source account is not authorized to initiate this transfer",
+                            fromAccountId
+                    );
+                }
             }
         } else if (isSavingsToLoanAccountTransfer(fromAccountType, toAccountType)) {
 
             for (AccountTransferTransaction transaction: accountTransferDetails.getAccountTransferTransactions()){
-                this.savingsAccountWritePlatformService.undoTransaction(transaction.getFromSavingsTransaction().getSavingsAccount().getId(), transaction.getFromSavingsTransaction().getId(), true);
-                this.loanWritePlatformService.adjustLoanTransaction(transaction.getToLoanTransaction().getLoan().getId(), transaction.getToLoanTransaction().getId(), command);
-                transaction.reverse();
+                if (fromAccountId.equals(transaction.getToLoanTransaction().getLoan().getId())) {
+                    this.savingsAccountWritePlatformService.undoTransaction(transaction.getFromSavingsTransaction().getSavingsAccount().getId(), transaction.getFromSavingsTransaction().getId(), true);
+                    this.loanWritePlatformService.adjustLoanTransaction(transaction.getToLoanTransaction().getLoan().getId(), transaction.getToLoanTransaction().getId(), command);
+                    transaction.reverse();
+                }else {
+                    throw new GeneralPlatformDomainRuleException("error.msg.account.transfer.invalid.source.account",
+                            "The source account is not authorized to initiate this transfer",
+                            fromAccountId
+                    );
+                }
             }
 
         } else if (isLoanToSavingsAccountTransfer(fromAccountType, toAccountType)) {
             for (AccountTransferTransaction transaction: accountTransferDetails.getAccountTransferTransactions()){
-                this.loanWritePlatformService.adjustLoanTransaction(transaction.getFromLoanTransaction().getLoan().getId(), transaction.getFromLoanTransaction().getId(), command);
-                this.savingsAccountWritePlatformService.undoTransaction(transaction.getToSavingsTransaction().getSavingsAccount().getId(), transaction.getToLoanTransaction().getId(), true);
-                transaction.reverse();
+                if (fromAccountId.equals(transaction.getToSavingsTransaction().getSavingsAccount().getId())) {
+                    this.loanWritePlatformService.adjustLoanTransaction(transaction.getFromLoanTransaction().getLoan().getId(), transaction.getFromLoanTransaction().getId(), command);
+                    this.savingsAccountWritePlatformService.undoTransaction(transaction.getToSavingsTransaction().getSavingsAccount().getId(), transaction.getToLoanTransaction().getId(), true);
+                    transaction.reverse();
+                }else {
+                    throw new GeneralPlatformDomainRuleException("error.msg.account.transfer.invalid.source.account",
+                            "The source account is not authorized to initiate this transfer",
+                            fromAccountId
+                    );
+                }
             }
         }else if (isLoanToLoanAccountTransfer(fromAccountType, toAccountType)){
             throw new UnsupportedOperationException("Undo Loan to Loan Account Transfer is not implemented");

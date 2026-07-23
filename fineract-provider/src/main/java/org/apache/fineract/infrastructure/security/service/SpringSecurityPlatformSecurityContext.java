@@ -50,8 +50,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
     protected static final List<CommandWrapper> EXEMPT_FROM_PASSWORD_RESET_CHECK = new ArrayList<CommandWrapper>(
             List.of(new CommandWrapperBuilder().updateUser(null).build()));
 
-    @Autowired
-    SpringSecurityPlatformSecurityContext(final ConfigurationDomainService configurationDomainService) {
+    public SpringSecurityPlatformSecurityContext(final ConfigurationDomainService configurationDomainService) {
         this.configurationDomainService = configurationDomainService;
     }
 
@@ -93,7 +92,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
         final SecurityContext context = SecurityContextHolder.getContext();
         if (context != null) {
             final Authentication auth = context.getAuthentication();
-            if (auth != null) {
+            if (auth != null && auth.getPrincipal() instanceof AppUser) {
                 currentUser = (AppUser) auth.getPrincipal();
             }
         }
@@ -116,7 +115,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
         final SecurityContext context = SecurityContextHolder.getContext();
         if (context != null) {
             final Authentication auth = context.getAuthentication();
-            if (auth != null) {
+            if (auth != null && auth.getPrincipal() instanceof AppUser) {
                 currentUser = (AppUser) auth.getPrincipal();
             }
         }

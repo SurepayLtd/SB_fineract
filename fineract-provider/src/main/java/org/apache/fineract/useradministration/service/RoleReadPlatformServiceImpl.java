@@ -22,7 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import org.apache.fineract.infrastructure.core.domain.JdbcSupport;
-import org.apache.fineract.portfolio.self.registration.SelfServiceApiConstants;
+
 import org.apache.fineract.useradministration.data.RoleData;
 import org.apache.fineract.useradministration.exception.RoleNotFoundException;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -55,7 +55,7 @@ public class RoleReadPlatformServiceImpl implements RoleReadPlatformService {
 
     @Override
     public Collection<RoleData> retrieveAllSelfServiceRoles() {
-        final String role = SelfServiceApiConstants.SELF_SERVICE_USER_ROLE;
+        final String role = AppUserConstants.SELF_SERVICE_USER_ROLE;
         final String sql = "select " + this.roleRowMapper.schema() + " where r.name = ? order by r.id";
 
         return this.jdbcTemplate.query(sql, this.roleRowMapper, role); // NOSONAR

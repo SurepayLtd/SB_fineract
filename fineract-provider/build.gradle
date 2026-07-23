@@ -358,18 +358,22 @@ gitProperties {
 generateGitProperties.outputs.upToDateWhen { false }
 
 // NOTE: Gradle suggested these dependencies
-jar.dependsOn resolve
-test.dependsOn resolve
-checkstyleMain.dependsOn resolve
-checkstyleTest.dependsOn resolve
+if (System.getProperty("idea.sync.active") != "true" && System.getProperty("idea.active") != "true") {
+    jar.dependsOn resolve
+    test.dependsOn resolve
+    checkstyleMain.dependsOn resolve
+    checkstyleTest.dependsOn resolve
+    spotbugsTest.dependsOn resolve
+    resolveMainClassName.dependsOn resolve
+}
 rat.dependsOn prepareInputYaml
-spotbugsTest.dependsOn resolve
 compileTestJava.dependsOn ':fineract-client:processResources', ':fineract-avro-schemas:processResources'
-resolveMainClassName.dependsOn resolve
 processResources.dependsOn compileJava
 
 javadoc {
-    dependsOn resolve
+    if (System.getProperty("idea.sync.active") != "true" && System.getProperty("idea.active") != "true") {
+        dependsOn resolve
+    }
 }
 
 task devRun(type: org.springframework.boot.gradle.tasks.run.BootRun) {

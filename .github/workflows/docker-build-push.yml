@@ -3,10 +3,10 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - addSelfServicePluginAsAModule
+      - surepay-dev
   pull_request:
     branches:
-      - addSelfServicePluginAsAModule
+      - surepay-dev
 
 env:
   REGISTRY: docker.io

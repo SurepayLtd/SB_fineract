@@ -33,4 +33,5 @@ public final class AppUserConstants {
     public static final String SYSTEM_USER_NAME = "system";
     public static final Long ADMIN_USER_ID = 1L;
     public static final Long SYSTEM_USER_ID = 2L;
+    public static final String SELF_SERVICE_USER_ROLE = "Self Service User";
 }

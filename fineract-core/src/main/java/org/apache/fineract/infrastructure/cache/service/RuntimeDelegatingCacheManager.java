@@ -90,28 +90,25 @@ public class RuntimeDelegatingCacheManager implements CacheManager, Initializing
 
         final boolean noCacheEnabled = !ehcacheEnabled;
 
-        switch (toCacheType) {
-            case INVALID -> {
-                log.warn("Invalid cache type used");
+        if (toCacheType == CacheType.INVALID) {
+            log.warn("Invalid cache type used");
+        } else if (toCacheType == CacheType.NO_CACHE) {
+            if (!noCacheEnabled) {
+                changes.put(CacheApiConstants.CACHE_TYPE_PARAMETER, toCacheType.getValue());
             }
-            case NO_CACHE -> {
-                if (!noCacheEnabled) {
-                    changes.put(CacheApiConstants.CACHE_TYPE_PARAMETER, toCacheType.getValue());
-                }
-                currentCacheManager = defaultCacheManager;
+            currentCacheManager = defaultCacheManager;
+        } else if (toCacheType == CacheType.SINGLE_NODE) {
+            if (!ehcacheEnabled) {
+                changes.put(CacheApiConstants.CACHE_TYPE_PARAMETER, toCacheType.getValue());
+                clearEhCache();
             }
-            case SINGLE_NODE -> {
-                if (!ehcacheEnabled) {
-                    changes.put(CacheApiConstants.CACHE_TYPE_PARAMETER, toCacheType.getValue());
-                    clearEhCache();
-                }
-                currentCacheManager = ehCacheManager;
+            currentCacheManager = ehCacheManager;
 
-                if (currentCacheManager.getCacheNames().isEmpty()) {
-                    log.error("No caches configured for activated CacheManager {}", currentCacheManager);
-                }
+            if (currentCacheManager.getCacheNames().isEmpty()) {
+                log.error("No caches configured for activated CacheManager {}", currentCacheManager);
             }
-            case MULTI_NODE -> throw new UnsupportedOperationException("Multi node cache is not supported");
+        } else if (toCacheType == CacheType.MULTI_NODE) {
+            throw new UnsupportedOperationException("Multi node cache is not supported");
         }
 
         return changes;

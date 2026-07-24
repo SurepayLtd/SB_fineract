@@ -23,6 +23,7 @@ import org.apache.fineract.infrastructure.core.service.Page;
 import org.apache.fineract.portfolio.account.data.StandingInstructionDTO;
 import org.apache.fineract.portfolio.account.data.StandingInstructionData;
 import org.apache.fineract.portfolio.account.data.StandingInstructionDuesData;
+import org.springframework.data.domain.Pageable;
 
 public interface StandingInstructionReadPlatformService {
 
@@ -33,7 +34,7 @@ public interface StandingInstructionReadPlatformService {
 
     StandingInstructionData retrieveOne(Long instructionId);
 
-    Collection<StandingInstructionData> retrieveAll(Integer status);
+    Collection<StandingInstructionData> retrieveAll(Pageable pageable, Integer status);
 
     StandingInstructionDuesData retriveLoanDuesData(Long loanId);
 

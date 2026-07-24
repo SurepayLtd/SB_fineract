@@ -61,6 +61,7 @@ import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
 import org.apache.fineract.portfolio.common.service.CommonEnumerations;
 import org.apache.fineract.portfolio.common.service.DropdownReadPlatformService;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.util.CollectionUtils;
@@ -328,7 +329,7 @@ public class StandingInstructionReadPlatformServiceImpl implements StandingInstr
     }
 
     @Override
-    public Collection<StandingInstructionData> retrieveAll(final Integer status) {
+    public Collection<StandingInstructionData> retrieveAll(Pageable pageable, final Integer status) {
         final StringBuilder sqlBuilder = new StringBuilder(200);
         String businessDate = sqlGenerator.currentBusinessDate();
         sqlBuilder.append("select ");
@@ -337,8 +338,10 @@ public class StandingInstructionReadPlatformServiceImpl implements StandingInstr
                 .append(" where atsi.status=? and " + businessDate + " >= atsi.valid_from and (atsi.valid_till IS NULL or " + businessDate
                         + " < atsi.valid_till) ")
                 .append(" and  (atsi.last_run_date <> " + businessDate + " or atsi.last_run_date IS NULL)")
-                .append(" ORDER BY atsi.priority DESC");
-        return this.jdbcTemplate.query(sqlBuilder.toString(), this.standingInstructionMapper, status);
+                .append(" ORDER BY atsi.priority DESC")
+                .append(" LIMIT ? OFFSET ? ");
+
+        return this.jdbcTemplate.query(sqlBuilder.toString(), this.standingInstructionMapper, status, pageable.getPageSize(), pageable.getOffset());
     }
 
     @Override

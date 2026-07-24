@@ -27,32 +27,34 @@ import org.apache.fineract.infrastructure.security.utils.ColumnValidator;
 import org.apache.fineract.organisation.office.service.OfficeReadPlatformService;
 import org.apache.fineract.portfolio.account.data.AccountTransfersDataValidator;
 import org.apache.fineract.portfolio.account.data.StandingInstructionDataValidator;
-import org.apache.fineract.portfolio.account.domain.AccountTransferAssembler;
-import org.apache.fineract.portfolio.account.domain.AccountTransferDetailRepository;
+import org.apache.fineract.portfolio.account.service.AccountAssociationsReadPlatformServiceImpl;
+import org.apache.fineract.portfolio.account.service.PortfolioAccountReadPlatformServiceImpl;
+import org.apache.fineract.portfolio.account.service.AccountTransfersWritePlatformServiceImpl;
+import org.apache.fineract.portfolio.account.service.AccountTransfersWritePlatformService;
+import org.apache.fineract.portfolio.account.service.PortfolioAccountReadPlatformService;
+import org.apache.fineract.portfolio.account.service.AccountTransfersReadPlatformServiceImpl;
+import org.apache.fineract.portfolio.account.service.AccountTransfersReadPlatformService;
+import org.apache.fineract.portfolio.account.service.StandingInstructionHistoryReadPlatformService;
+import org.apache.fineract.portfolio.account.service.StandingInstructionReadPlatformService;
+import org.apache.fineract.portfolio.account.service.StandingInstructionHistoryReadPlatformServiceImpl;
+import org.apache.fineract.portfolio.account.service.StandingInstructionWritePlatformServiceImpl;
+import org.apache.fineract.portfolio.account.service.StandingInstructionReadPlatformServiceImpl;
+import org.apache.fineract.portfolio.account.service.StandingInstructionHistoryWriteServiceImpl;
+import org.apache.fineract.portfolio.account.service.StandingInstructionWritePlatformService;
+import org.apache.fineract.portfolio.account.service.StandingInstructionHistoryWriteService;
 import org.apache.fineract.portfolio.account.domain.AccountTransferRepository;
+import org.apache.fineract.portfolio.account.domain.StandingInstructionHistoryRepository;
 import org.apache.fineract.portfolio.account.domain.StandingInstructionAssembler;
 import org.apache.fineract.portfolio.account.domain.StandingInstructionRepository;
+import org.apache.fineract.portfolio.account.domain.AccountTransferDetailRepository;
+import org.apache.fineract.portfolio.account.domain.AccountTransferAssembler;
 import org.apache.fineract.portfolio.account.service.AccountAssociationsReadPlatformService;
-import org.apache.fineract.portfolio.account.service.AccountAssociationsReadPlatformServiceImpl;
-import org.apache.fineract.portfolio.account.service.AccountTransfersReadPlatformService;
-import org.apache.fineract.portfolio.account.service.AccountTransfersReadPlatformServiceImpl;
-import org.apache.fineract.portfolio.account.service.AccountTransfersWritePlatformService;
-import org.apache.fineract.portfolio.account.service.AccountTransfersWritePlatformServiceImpl;
-import org.apache.fineract.portfolio.account.service.PortfolioAccountReadPlatformService;
-import org.apache.fineract.portfolio.account.service.PortfolioAccountReadPlatformServiceImpl;
-import org.apache.fineract.portfolio.account.service.StandingInstructionHistoryReadPlatformService;
-import org.apache.fineract.portfolio.account.service.StandingInstructionHistoryReadPlatformServiceImpl;
-import org.apache.fineract.portfolio.account.service.StandingInstructionReadPlatformService;
-import org.apache.fineract.portfolio.account.service.StandingInstructionReadPlatformServiceImpl;
-import org.apache.fineract.portfolio.account.service.StandingInstructionWritePlatformService;
-import org.apache.fineract.portfolio.account.service.StandingInstructionWritePlatformServiceImpl;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
 import org.apache.fineract.portfolio.common.service.DropdownReadPlatformService;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanAccountDomainService;
 import org.apache.fineract.portfolio.loanaccount.service.LoanAccountTransferReversalService;
 import org.apache.fineract.portfolio.loanaccount.service.LoanAssembler;
 import org.apache.fineract.portfolio.loanaccount.service.LoanReadPlatformService;
-import org.apache.fineract.portfolio.loanaccount.service.LoanWritePlatformService;
 import org.apache.fineract.portfolio.savings.domain.GSIMRepositoy;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccountAssembler;
 import org.apache.fineract.portfolio.savings.service.SavingsAccountDomainService;
@@ -109,6 +111,12 @@ public class AccountConfiguration {
     public StandingInstructionHistoryReadPlatformService standingInstructionHistoryReadPlatformService(JdbcTemplate jdbcTemplate,
             ColumnValidator columnValidator, DatabaseSpecificSQLGenerator sqlGenerator, PaginationHelper paginationHelper) {
         return new StandingInstructionHistoryReadPlatformServiceImpl(jdbcTemplate, columnValidator, sqlGenerator, paginationHelper);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(StandingInstructionHistoryWriteService.class)
+    public StandingInstructionHistoryWriteService standingInstructionHistoryWriteService(StandingInstructionHistoryRepository standingInstructionHistoryRepository, AccountTransfersWritePlatformService accountTransfersWritePlatformService, StandingInstructionRepository standingInstructionRepository) {
+        return new StandingInstructionHistoryWriteServiceImpl(standingInstructionHistoryRepository, accountTransfersWritePlatformService, standingInstructionRepository);
     }
 
     @Bean

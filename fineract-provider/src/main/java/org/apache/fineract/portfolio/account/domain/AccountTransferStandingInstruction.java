@@ -287,4 +287,8 @@ public class AccountTransferStandingInstruction extends AbstractPersistableCusto
         this.status = StandingInstructionStatus.DELETED.getValue();
         this.name = this.name + "_deleted_" + this.getId();
     }
+
+    public void setLatsRunDate(LocalDate latsRunDate) {
+        this.latsRunDate = latsRunDate;
+    }
 }

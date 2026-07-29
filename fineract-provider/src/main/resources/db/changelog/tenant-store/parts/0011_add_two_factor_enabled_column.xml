@@ -29,4 +29,22 @@
             </column>
         </addColumn>
     </changeSet>
+    <changeSet id="tenant-agent-mapper" author="victor">
+        <addColumn tableName="tenants">
+            <column name="agent_name" type="VARCHAR(150)"/>
+            <column name="agent_code" type="VARCHAR(150)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet id="default-agent" author="victor">
+        <sql>
+            UPDATE tenants
+            SET agent_name = 'Fineract'
+            WHERE agent_name IS NULL;
+        </sql>
+        <sql>
+            UPDATE tenants
+            SET agent_code = '0001'
+            where agent_code IS NULL;
+        </sql>
+    </changeSet>
 </databaseChangeLog>

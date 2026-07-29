@@ -24,6 +24,6 @@ public class TenantModuleRootFilter implements IncludeAllFilter {
 
     @Override
     public boolean include(String changeLogPath) {
-        return changeLogPath.endsWith("db/changelog/tenant/module/selfservice/module-changelog-master.xml");
+        return changeLogPath.endsWith("module-changelog-master.xml");
     }
 }

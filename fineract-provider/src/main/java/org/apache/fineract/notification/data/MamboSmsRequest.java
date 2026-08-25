@@ -15,11 +15,11 @@ public class MamboSmsRequest implements Serializable {
 
 
     private String message;
-    private List<String> recipients;
+    private String recipients;
     private String message_category;
     private String sender_id;
 
-    public MamboSmsRequest(String message, List<String> recipients) {
+    public MamboSmsRequest(String message, String recipients) {
         this.message = message;
         this.recipients = recipients;
     }

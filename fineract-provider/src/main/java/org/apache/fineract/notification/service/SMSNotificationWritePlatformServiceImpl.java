@@ -98,7 +98,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
 
         if (mamboEnabled) {
             var mamboSmsRequest = new MamboSmsRequest(
-                    smsNotificationData.getMessage(), List.of(smsNotificationData.getPhoneNumber())
+                    smsNotificationData.getMessage(), smsNotificationData.getPhoneNumber()
             );
             var response = sendMamboSms(mamboSmsRequest);
             return;
@@ -198,7 +198,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
 
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-                headers.setBearerAuth(mamboSms.getApiKey());
+                headers.set("Authorization", mamboSms.getApiKey());
 
                 HttpEntity<MamboSmsRequest> entity = new HttpEntity<>(mamboSmsRequest, headers);
 

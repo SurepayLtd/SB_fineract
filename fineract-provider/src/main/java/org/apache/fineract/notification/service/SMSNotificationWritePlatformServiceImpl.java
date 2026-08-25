@@ -42,8 +42,12 @@ import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityEx
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.infrastructure.security.data.OTPRequest;
 import org.apache.fineract.infrastructure.security.service.TwoFactorConfigurationService;
+import org.apache.fineract.notification.data.MamboSmsRequest;
+import org.apache.fineract.notification.data.MamboSmsResponse;
 import org.apache.fineract.notification.data.SmsNotificationData;
 import org.apache.fineract.notification.data.SmsTypeEnum;
+import org.apache.fineract.notification.domain.MamboSms;
+import org.apache.fineract.notification.domain.MamboSmsRepository;
 import org.apache.fineract.notification.domain.SMSNotification;
 import org.apache.fineract.notification.domain.SMSNotificationRepository;
 import org.apache.fineract.portfolio.client.domain.Client;
@@ -54,6 +58,14 @@ import org.apache.fineract.portfolio.savings.domain.SavingsAccountTransaction;
 import org.apache.fineract.useradministration.domain.AppUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -68,9 +80,40 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
     public static final String FORM_URL_CONTENT_TYPE = "application/json";
 
     private final SMSNotificationRepository smsNotificationRepository;
+    private final MamboSmsRepository mamboSmsRepository;
+
 
     @Override
     public void sendSms(SmsNotificationData smsNotificationData) {
+
+        boolean surePayEnabled = configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS)
+                .isEnabled();
+
+        boolean mamboEnabled = configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_MAMBO_SMS_NOTIFICATIONS)
+                .isEnabled();
+
+        if (surePayEnabled && mamboEnabled) {
+            throw new GeneralPlatformDomainRuleException("error.msg.sms.multiple.providers.enabled", "Only one SMS provider can be enabled at a time.");
+        }
+
+        if (mamboEnabled) {
+            var mamboSmsRequest = new MamboSmsRequest(
+                    smsNotificationData.getMessage(), List.of(smsNotificationData.getPhoneNumber())
+            );
+            var response = sendMamboSms(mamboSmsRequest);
+            return;
+        }
+
+        if (surePayEnabled) {
+            sendSurePaySms(smsNotificationData);
+            return;
+        }
+
+        log.info("No SMS provider enabled for tenant {}", ThreadLocalContextUtil.getTenant().getName());
+
+    }
+
+    private void sendSurePaySms(SmsNotificationData smsNotificationData){
 
         final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
                 .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
@@ -82,8 +125,8 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
 
             if (smsNotification.isEmpty()){
                 throw new GeneralPlatformDomainRuleException("error.msg.sms.failed.due.missing.activation.details",
-                            "SMS sending has failed due to missing activation credentials.");
-            };
+                        "SMS sending has failed due to missing activation credentials.");
+            }
 
             smsNotificationData.setSender(smsNotification.get().getVendorCode());
             smsNotificationData.setService(getConfigProperty("sms.service"));
@@ -130,6 +173,85 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         }
     }
 
+
+    private MamboSmsResponse sendMamboSms(MamboSmsRequest mamboSmsRequest) {
+
+        MamboSmsResponse smsResponse = new MamboSmsResponse();
+
+        final GlobalConfigurationProperty property = configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_MAMBO_SMS_NOTIFICATIONS);
+
+        if (property.isEnabled()) {
+
+            MamboSms mamboSms = mamboSmsRepository.findById(1L)
+                    .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.sms.failed.due.missing.activation.details",
+                            "SMS sending has failed due to missing activation credentials."));
+
+            mamboSmsRequest.setSender_id("MamboSMS");
+            mamboSmsRequest.setMessage_category("non_customised");
+
+            log.info("MamboBody: {}", mamboSmsRequest);
+
+            try {
+                RestTemplate restTemplate = new RestTemplate();
+
+                String url = getConfigProperty("mambo.api.url");
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+                headers.setBearerAuth(mamboSms.getApiKey());
+
+                HttpEntity<MamboSmsRequest> entity = new HttpEntity<>(mamboSmsRequest, headers);
+
+                ResponseEntity<MamboSmsResponse> responseEntity = restTemplate.exchange(url, HttpMethod.POST, entity, MamboSmsResponse.class);
+
+                log.info("MamboResponse: {}", responseEntity);
+
+                if (responseEntity.getBody() != null) {
+                    return handleResponse(responseEntity);
+                }
+
+                return smsResponse
+                        .setStatusCode(String.valueOf(responseEntity.getStatusCode().value()))
+                        .setSuccess(false)
+                        .setMessages(List.of("Empty response received from Mambo SMS API."));
+
+            } catch (HttpClientErrorException e) {
+                log.error("Mambo client error: {}", e.getMessage());
+                return handleClientError(e);
+
+            } catch (HttpServerErrorException e) {
+                log.error("Mambo server error: {}", e.getMessage());
+
+                return smsResponse
+                        .setStatusCode("500")
+                        .setSuccess(false)
+                        .setMessages(List.of("Mambo SMS server encountered an internal error."));
+
+            } catch (ResourceAccessException e) {
+                log.error("Unable to reach Mambo SMS API", e);
+
+                return smsResponse
+                        .setStatusCode("503")
+                        .setSuccess(false)
+                        .setMessages(List.of("Unable to connect to Mambo SMS service."));
+
+            } catch (Exception e) {
+                log.error("Unexpected Mambo SMS error", e);
+
+                return smsResponse
+                        .setStatusCode("500")
+                        .setSuccess(false)
+                        .setMessages(List.of("Unexpected error while sending SMS."));
+            }
+        }else {
+            log.info("** Mambo SMS Notification is disabled for this Tenant :-> " + ThreadLocalContextUtil.getTenant().getName());
+            return smsResponse
+                    .setSuccess(false)
+                    .setMessages(List.of("Mambo Sms disbled for this Tenant"))
+                    .setStatusCode("400");
+        }
+    }
+
     private String getConfigProperty(String propertyName) {
         return this.env.getProperty(propertyName);
     }
@@ -141,13 +263,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
     @Override
     public void processLoanSmsNotification(Loan loan, SmsTypeEnum smsType, LoanTransaction transaction) {
 
-        final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
-                .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
-
-        if (!property.isEnabled()) {
-            log.info("** SMS Notification is disabled for this Tenant :-> " + ThreadLocalContextUtil.getTenant().getName());
-            return;
-        }
+        smsPropertyEnabled();
 
         String clientName = null;
         if (loan.client() != null){
@@ -261,13 +377,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
     public void processSavingsAccountSmsNotification(SavingsAccount savingsAccount, SmsTypeEnum smsType,
             SavingsAccountTransaction transaction) {
 
-        final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
-                .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
-
-        if (!property.isEnabled()) {
-            log.info("** SMS Notification is disabled for this Tenant :-> " + ThreadLocalContextUtil.getTenant().getName());
-            return;
-        }
+        smsPropertyEnabled();
 
         String clientName = null;
         if (savingsAccount.getClient() != null){
@@ -345,13 +455,9 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
     @Override
     public void processOTPSmsNotification(AppUser user, OTPRequest request) {
 
-        final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
-                .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
+        smsPropertyEnabled();
+
         log.info(" :: -> Generated OTP message for user {} is {}", user.getUsername(), request.getToken());
-        if (!property.isEnabled()) {
-            log.info("** SMS Notification is disabled for this Tenant :-> " + ThreadLocalContextUtil.getTenant().getName());
-            return;
-        }
 
         if (user.getStaff() == null) {
             log.warn("User {} does not have staff associated, cannot send OTP SMS", user.getUsername());
@@ -368,6 +474,85 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         String messageId = String.format("OTP-TOKEN-%s", user.getId());
         log.info("Generated OTP message for user {} is {}", user.getUsername(), message);
         sendSms(new SmsNotificationData(mobileNo, message, messageId));
+    }
+
+    private MamboSmsResponse handleResponse(ResponseEntity<MamboSmsResponse> responseEntity) {
+
+        MamboSmsResponse response = responseEntity.getBody();
+
+        if (response == null) {
+            response = new MamboSmsResponse();
+        }
+
+        int status = responseEntity.getStatusCode().value();
+
+        switch (status) {
+
+            case 200:
+                response.setStatusCode("200");
+                response.setSuccess(Boolean.TRUE.equals(response.getSuccess()));
+                if (response.getMessages() == null || response.getMessages().isEmpty()) {
+                    response.setMessages(List.of("Request processed successfully."));
+                }
+                break;
+
+            case 201:
+                response.setStatusCode("201");
+                response.setSuccess(true);
+                if (response.getMessages() == null || response.getMessages().isEmpty()) {
+                    response.setMessages(List.of("SMS sent successfully."));
+                }
+                break;
+
+            default:
+                response.setStatusCode(String.valueOf(status));
+                response.setSuccess(false);
+                response.setMessages(List.of("Unexpected response from Mambo SMS."));
+        }
+
+        return response;
+    }
+    private MamboSmsResponse handleClientError(HttpClientErrorException exception) {
+
+        MamboSmsResponse response = new MamboSmsResponse();
+
+        int status = exception.getStatusCode().value();
+
+        response.setStatusCode(String.valueOf(status));
+        response.setSuccess(false);
+
+        switch (status) {
+
+            case 400:
+                response.setMessages(List.of("Bad request. Missing or invalid parameters."));
+                break;
+
+            case 401:
+                response.setMessages(List.of("Unauthorized. Invalid or missing API key."));
+                break;
+
+            case 405:
+                response.setMessages(List.of("Method not allowed. Invalid HTTP method."));
+                break;
+
+            default:
+                response.setMessages(List.of(exception.getResponseBodyAsString()));
+        }
+
+        return response;
+    }
+
+    private void smsPropertyEnabled(){
+        boolean surePayEnabled = configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS)
+                .isEnabled();
+
+        boolean mamboEnabled = configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_MAMBO_SMS_NOTIFICATIONS)
+                .isEnabled();
+
+        if (!surePayEnabled && !mamboEnabled) {
+            log.info("** SMS Notification is disabled for this Tenant :-> " + ThreadLocalContextUtil.getTenant().getName());
+            return;
+        }
     }
 
 }

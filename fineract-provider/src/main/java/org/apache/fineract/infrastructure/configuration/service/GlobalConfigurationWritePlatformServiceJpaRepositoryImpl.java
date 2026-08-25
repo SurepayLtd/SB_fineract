@@ -20,6 +20,7 @@ package org.apache.fineract.infrastructure.configuration.service;
 
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.apache.fineract.infrastructure.configuration.api.GlobalConfigurationConstants;
 import org.apache.fineract.infrastructure.configuration.data.GlobalConfigurationDataValidator;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationProperty;
@@ -28,6 +29,7 @@ import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +57,31 @@ public class GlobalConfigurationWritePlatformServiceJpaRepositoryImpl implements
             this.globalConfigurationDataValidator.validateForUpdate(command);
 
             final GlobalConfigurationProperty configItemForUpdate = this.repository.findOneWithNotFoundDetection(configId);
+
+            final Boolean enabled = command.booleanObjectValueOfParameterNamed("enabled");
+
+            final String name = configItemForUpdate.getName();
+
+            String smsProvider = null;
+
+            if (enabled) {
+
+                if (name.equalsIgnoreCase(GlobalConfigurationConstants.ENABLE_MAMBO_SMS_NOTIFICATIONS)) {
+                    smsProvider = GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS;
+                } else if (name.equalsIgnoreCase(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS)) {
+                    smsProvider = GlobalConfigurationConstants.ENABLE_MAMBO_SMS_NOTIFICATIONS;
+                }
+
+                if (smsProvider != null) {
+                    GlobalConfigurationProperty otherConfig = repository.findOneByNameWithNotFoundDetection(smsProvider);
+
+                    if (otherConfig != null && otherConfig.isEnabled()) {
+                        throw new GeneralPlatformDomainRuleException("error.msg.sms.provider.already.enabled", "Only one SMS provider can be enabled at a time. Disable " +
+                                        otherConfig.getName() + " first."
+                        );
+                    }
+                }
+            }
 
             final Map<String, Object> changes = configItemForUpdate.update(command);
 

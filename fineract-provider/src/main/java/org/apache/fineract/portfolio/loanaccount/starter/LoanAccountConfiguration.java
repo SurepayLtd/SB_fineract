@@ -36,7 +36,9 @@ import org.apache.fineract.infrastructure.momo.domain.MomoCredentialDetailReposi
 import org.apache.fineract.infrastructure.momo.domain.MomoLoanPaymentTransactionRepository;
 import org.apache.fineract.infrastructure.momo.service.SurePayMomoPaymentIntegrationWritePlatformServiceImpl;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.infrastructure.security.service.TwoFactorConfigurationService;
 import org.apache.fineract.infrastructure.security.utils.ColumnValidator;
+import org.apache.fineract.notification.domain.MamboSmsRepository;
 import org.apache.fineract.notification.domain.SMSNotificationRepository;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
 import org.apache.fineract.organisation.holiday.domain.HolidayRepository;
@@ -494,8 +496,8 @@ public class LoanAccountConfiguration {
     @Bean
     @ConditionalOnMissingBean(SMSNotificationWritePlatformServiceImpl.class)
     public SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService(
-            GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper, SMSNotificationRepository smsNotificationRepository) {
-        return new SMSNotificationWritePlatformServiceImpl(configurationRepositoryWrapper, smsNotificationRepository);
+            GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper, SMSNotificationRepository smsNotificationRepository, MamboSmsRepository mamboSmsRepository) {
+        return new SMSNotificationWritePlatformServiceImpl(configurationRepositoryWrapper, smsNotificationRepository, mamboSmsRepository);
     }
 
     @Bean

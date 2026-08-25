@@ -19,6 +19,8 @@
 package org.apache.fineract.notification.service;
 
 import org.apache.fineract.infrastructure.security.data.OTPRequest;
+import org.apache.fineract.notification.data.MamboSmsRequest;
+import org.apache.fineract.notification.data.MamboSmsResponse;
 import org.apache.fineract.notification.data.SmsNotificationData;
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;

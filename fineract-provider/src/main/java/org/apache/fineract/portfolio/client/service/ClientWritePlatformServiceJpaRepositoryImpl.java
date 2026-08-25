@@ -293,8 +293,10 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             final ExternalId externalId = externalIdFactory.createFromCommand(command, ClientApiConstants.externalIdParamName);
 
+            String phone = validatePhone(mobileNo);
+
             final Client newClient = Client.instance(currentUser, status, clientOffice, clientParentGroup, accountNo, firstname, middlename,
-                    lastname, fullname, activationDate, officeJoiningDate, externalId, mobileNo, emailAddress, staff, submittedOnDate,
+                    lastname, fullname, activationDate, officeJoiningDate, externalId, phone, emailAddress, staff, submittedOnDate,
                     savingsProductId, savingsAccountId, dataOfBirth, gender, clientType, clientClassification, legalForm.getValue(),
                     isStaff);
 
@@ -446,8 +448,9 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             if (command.isChangeInStringParameterNamed(ClientApiConstants.mobileNoParamName, clientForUpdate.getMobileNo())) {
                 final String newValue = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
-                changes.put(ClientApiConstants.mobileNoParamName, newValue);
-                clientForUpdate.setMobileNo(StringUtils.defaultIfEmpty(newValue, null));
+                String phone = validatePhone(newValue);
+                changes.put(ClientApiConstants.mobileNoParamName, phone);
+                clientForUpdate.setMobileNo(StringUtils.defaultIfEmpty(phone, null));
             }
 
             if (command.isChangeInStringParameterNamed(ClientApiConstants.emailAddressParamName, clientForUpdate.getEmailAddress())) {
@@ -1125,17 +1128,8 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 otp = new java.util.Random().nextInt(90000) + 10000;
             } while (this.clientRepository.findByOtpCode(otp) != null);
 
-            if (!client.isActive()) {
-                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");
-            }
+            validate(client);
 
-            // Send sms message with otp token
-            final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
-                    .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
-            if (!property.isEnabled()) {
-                throw new GeneralPlatformDomainRuleException("error.msg.sms.is.not.enabled",
-                        "Sms is not enabled on this platform. Activate it to proceed");
-            }
             messageId = String.format("ACTIVATED-PIN-%s", UUID.randomUUID());
             if (client.getMobileNo() != null && messageId != null) {
                 smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),
@@ -1171,9 +1165,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
 
-            if (!client.isActive()) {
-                throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");
-            }
+            validate(client);
 
             client.setMomoPaymentActive(false);
             client.setLastDeactivatedMomoDate(DateUtils.getBusinessLocalDate());
@@ -1353,5 +1345,68 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
         if (client.getPinCode() == null || !client.getPinCode().equals(hashedPassword)) {
             throw new GeneralPlatformDomainRuleException("validation.msg.client.pin.invalid", "Invalid PIN", "pinCode", pinCode);
         }
+    }
+
+    private void validate(Client client){
+
+        if (!client.isActive()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");
+        }
+
+        if (client.getMobileNo() == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.missing.phonenumber", "Client account is has no phone");
+        }
+
+        // Send sms message with otp token
+        boolean surePayProperty = this.configurationRepositoryWrapper
+                .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS).isEnabled();
+
+        boolean mamboProperty = this.configurationRepositoryWrapper
+                .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_MAMBO_SMS_NOTIFICATIONS).isEnabled();
+
+        if (!surePayProperty && !mamboProperty) {
+            throw new GeneralPlatformDomainRuleException("error.msg.sms.is.not.enabled",
+                    "Sms is not enabled on this platform. Activate it to proceed");
+        }
+    }
+
+    public String validatePhone(final String phone) {
+
+        if (phone == null || phone.trim().isEmpty()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.phone.validation.failed",
+                    "Mobile number is required.");
+        }
+
+        String mobileNo = phone.trim().replace(" ", "");
+        if (mobileNo.startsWith("+")) {
+            mobileNo = mobileNo.substring(1);
+        }
+
+        if (mobileNo.startsWith("256")) {
+            if (mobileNo.length() != 12) {
+                throw new GeneralPlatformDomainRuleException("error.msg.phone.validation.failed",
+                        "Phone number starting with 256 must be exactly 12 digits.");
+            }
+            return mobileNo;
+        }
+
+        if (mobileNo.startsWith("0")) {
+            if (mobileNo.length() != 10) {
+                throw new GeneralPlatformDomainRuleException("error.msg.phone.validation.failed",
+                        "Phone number starting with 0 must be exactly 10 digits.");
+            }
+            return "256" + mobileNo.substring(1);
+        }
+
+        if (mobileNo.startsWith("7")) {
+            if (mobileNo.length() != 9) {
+                throw new GeneralPlatformDomainRuleException("error.msg.phone.validation.failed",
+                        "Phone number starting with 7 must be exactly 9 digits.");
+            }
+            return "256" + mobileNo;
+        }
+
+        throw new GeneralPlatformDomainRuleException("error.msg.phone.validation.failed",
+                "Invalid Ugandan mobile number format.");
     }
 }

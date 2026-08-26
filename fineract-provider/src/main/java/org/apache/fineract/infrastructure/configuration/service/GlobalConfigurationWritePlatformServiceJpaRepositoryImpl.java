@@ -30,6 +30,7 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
+import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +67,16 @@ public class GlobalConfigurationWritePlatformServiceJpaRepositoryImpl implements
 
             if (enabled) {
 
+                final String tenant = ThreadLocalContextUtil.getTenant().getTenantIdentifier();
+                //LOG.info("Tenant: {}", tenant);
+
                 if (name.equalsIgnoreCase(GlobalConfigurationConstants.ENABLE_MAMBO_SMS_NOTIFICATIONS)) {
+                    if (!tenant.equalsIgnoreCase("Twekembe")){
+                        throw new GeneralPlatformDomainRuleException(
+                                "error.msg.sms.provider.not.supported.for.tenant",
+                                "Mambo SMS is only available for the Twekembe tenant. Please enable SurePay SMS for this tenant instead."
+                        );
+                    }
                     smsProvider = GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS;
                 } else if (name.equalsIgnoreCase(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS)) {
                     smsProvider = GlobalConfigurationConstants.ENABLE_MAMBO_SMS_NOTIFICATIONS;

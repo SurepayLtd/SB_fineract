@@ -1,0 +1,34 @@
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+    <changeSet author="victor" id="mambo-sms-implementation">
+        <insert tableName="c_configuration">
+            <column name="name" value="enable-mambo-sms-notifications"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="victor" author="mambo_sms_table">
+        <createTable tableName="m_mambo_sms_credentials">
+
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="tenant_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="api_key" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

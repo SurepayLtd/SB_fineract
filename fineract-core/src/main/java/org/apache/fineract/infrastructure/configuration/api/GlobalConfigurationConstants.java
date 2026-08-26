@@ -77,6 +77,7 @@ public final class GlobalConfigurationConstants {
     public static final String ENABLE_PAYMENT_HUB_INTEGRATION = "enable-payment-hub-integration";
     public static final String ENABLE_IMMEDIATE_CHARGE_ACCRUAL_POST_MATURITY = "enable-immediate-charge-accrual-post-maturity";
     public static final String ENABLE_SMS_NOTIFICATIONS = "enable-sms-notifications";
+    public static final String ENABLE_MAMBO_SMS_NOTIFICATIONS = "enable-mambo-sms-notifications";
     public static final String ENABLE_SURE_MOBILE_MONEY_PAYMENT = "enable-surepay-mobile-money-payment";
     public static final String SEND_SMS_NOTIFICATION_WHEN_LOAN_CREATED = "send-sms-notification-when-loan-account-is-created";
     public static final String SEND_SMS_NOTIFICATION_WHEN_LOAN_APPROVED = "send-sms-notification-when-loan-account-is-approved";

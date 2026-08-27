@@ -148,6 +148,33 @@
             <column name="can_maker_checker" valueBoolean="false" />
         </insert>
     </changeSet>
+    
+    <changeSet id="pin_improvements" author="victor">
+        <addColumn tableName="m_client">
+            <column name="pin_attempts" type="INT"/>
+            <column name="is_pin_blocked" type="boolean" defaultValueBoolean="false"/>
+            <column name="pin_blocked_at" type="DATETIME"/>
+            <column name="pin_reset_at" type="DATETIME"/>
+            <column name="pin_requires_change" type="boolean" defaultValueBoolean="false"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet author="victor" id="add-pin-improvement-permissios">
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="UPDATECLIENTPIN_CLIENT" />
+            <column name="entity_name" value="CLIENT" />
+            <column name="action_name" value="UPDATECLIENTPIN" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="UNBLOCKCLIENTPIN_CLIENT" />
+            <column name="entity_name" value="CLIENT" />
+            <column name="action_name" value="UNBLOCKCLIENTPIN" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+    </changeSet>
 
 
 </databaseChangeLog>

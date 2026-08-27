@@ -713,6 +713,24 @@ public class CommandWrapperBuilder {
         return this;
     }
 
+    public CommandWrapperBuilder updateClientPin(final Long clientId) {
+        this.actionName = "UPDATECLIENTPIN";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/updatepin";
+        return this;
+    }
+
+    public CommandWrapperBuilder unblockClientPin(final Long clientId) {
+        this.actionName = "UNBLOCKCLIENTPIN";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/unblockpin";
+        return this;
+    }
+
     public CommandWrapperBuilder validateClientPin(final Long clientId) {
         this.actionName = "VALIDATECLIENTPIN";
         this.entityName = "CLIENT";

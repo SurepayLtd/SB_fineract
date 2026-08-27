@@ -305,6 +305,43 @@ public class ClientsApiResource {
         return toApiJsonSerializer.serialize(result);
     }
 
+    @POST
+    @Path("{clientId}/updatePin")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Update Client PIN", description = "Updates a PIN for a client.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = ClientsApiResourceSwagger.PostClientsClientIdRequest.class)))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = ClientsApiResourceSwagger.PostClientsClientIdResponse.class))) })
+    public String updateClientPin(@PathParam("clientId") @Parameter(description = "clientId") final Long clientId,
+                                  @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+        final CommandWrapper commandRequest = new CommandWrapperBuilder() //
+                .updateClientPin(clientId) //
+                .withJson(apiRequestBodyAsJson) //
+                .build(); //
+
+        final CommandProcessingResult result = commandsSourceWritePlatformService.logCommandSource(commandRequest);
+
+        return toApiJsonSerializer.serialize(result);
+    }
+
+    @POST
+    @Path("{clientId}/unblockClientPin")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Unblock Client Mobile Banking (USSD)", description = "Unblocks USSD mobile banking for a client.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = ClientsApiResourceSwagger.DeleteClientsClientIdResponse.class))) })
+    public String unblockClientPin(@PathParam("clientId") @Parameter(description = "clientId") final Long clientId) {
+        final CommandWrapper commandRequest = new CommandWrapperBuilder() //
+                .unblockClientPin(clientId) //
+                .build(); //
+
+        final CommandProcessingResult result = commandsSourceWritePlatformService.logCommandSource(commandRequest);
+
+        return toApiJsonSerializer.serialize(result);
+    }
+
     @DELETE
     @Path("{clientId}")
     @Consumes({ MediaType.APPLICATION_JSON })

@@ -33,6 +33,8 @@ import org.apache.fineract.portfolio.client.domain.ClientTransaction;
 import org.apache.fineract.portfolio.client.domain.ClientTransactionRepositoryWrapper;
 import org.apache.fineract.portfolio.client.exception.ClientTransactionCannotBeUndoneException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -84,6 +86,12 @@ public class ClientTransactionWritePlatformServiceJpaRepositoryImpl implements C
                 .withOfficeId(client.officeId()) //
                 .withClientId(clientId) //
                 .build();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveFailedAttempt(Client client, Integer maxAttempts) {
+        client.handlePinAttempts(maxAttempts);
+        clientRepository.saveAndFlush(client);
     }
 
     private void generateAccountingEntries(ClientTransaction clientTransaction) {

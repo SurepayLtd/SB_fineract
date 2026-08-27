@@ -234,6 +234,21 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     @Column(name = "proposed_transfer_date")
     private LocalDate proposedTransferDate;
 
+    @Column(name = "pin_attempts")
+    private Integer pinAttempts;
+
+    @Column(name = "is_pin_blocked")
+    private boolean pinBlocked;
+
+    @Column(name = "pin_blocked_at")
+    private LocalDateTime pinBlockedAt;
+
+    @Column(name = "pin_reset_at")
+    private LocalDateTime pinResetAt;
+
+    @Column(name = "pin_requires_change")
+    private boolean pinRequiresChange;
+
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "client", orphanRemoval = true, fetch = FetchType.LAZY)
     protected Set<ClientIdentifier> identifiers = new HashSet<>();
 
@@ -738,6 +753,48 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
         this.status = ClientStatus.PENDING.getValue();
     }
 
+    public void handlePinAttempts(final Integer maxAttempts) {
+
+        if (this.pinBlocked) {
+            return;
+        }
+
+        if (maxAttempts == null || maxAttempts <= 0) {
+            throw new IllegalArgumentException("Maximum PIN attempts must be greater than zero.");
+        }
+
+        if (this.pinAttempts == null) {
+            this.pinAttempts = 0;
+        }
+
+        this.pinAttempts++;
+
+        if (this.pinAttempts >= maxAttempts) {
+            this.pinAttempts = maxAttempts;
+            blockPin();
+        }
+    }
+
+    public void blockPin(){
+        this.pinBlocked = true;
+        this.pinBlockedAt = LocalDateTime.now();
+        this.momoPaymentActive = false;
+        this.lastDeactivatedMomoDate = LocalDate.now();
+    }
+
+    public void unBlockPin(){
+        this.pinBlocked = false;
+        this.pinBlockedAt = null;
+        this.pinAttempts = 0;
+        this.momoPaymentActive = true;
+        this.lastActivatedMomoDate = LocalDate.now();
+        this.pinResetAt = LocalDateTime.now();
+    }
+
+    public boolean canTransactViaUssd() {
+        return this.momoPaymentActive && !this.pinBlocked;
+    }
+
     public void setLegalForm(Integer legalForm) {
         this.legalForm = legalForm;
     }
@@ -810,5 +867,37 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
     public void setPinCode(final String pinCode) {
         this.pinCode = pinCode;
+    }
+
+    public Integer getPinAttempts() {
+        return pinAttempts;
+    }
+
+    public void setPinAttempts(Integer pinAttempts) {
+        this.pinAttempts = pinAttempts;
+    }
+
+    public boolean isPinBlocked() {
+        return pinBlocked;
+    }
+
+    public void setPinBlocked(boolean pinBlocked) {
+        this.pinBlocked = pinBlocked;
+    }
+
+    public LocalDateTime getPinBlockedAt() {
+        return pinBlockedAt;
+    }
+
+    public void setPinBlockedAt(LocalDateTime pinBlockedAt) {
+        this.pinBlockedAt = pinBlockedAt;
+    }
+
+    public boolean isPinRequiresChange() {
+        return pinRequiresChange;
+    }
+
+    public void setPinRequiresChange(boolean pinRequiresChange) {
+        this.pinRequiresChange = pinRequiresChange;
     }
 }

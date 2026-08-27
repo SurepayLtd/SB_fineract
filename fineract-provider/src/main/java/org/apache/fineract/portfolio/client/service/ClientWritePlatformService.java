@@ -59,4 +59,9 @@ public interface ClientWritePlatformService {
 
     CommandProcessingResult validateClientPin(Long clientId, JsonCommand command);
 
+    CommandProcessingResult unblockClientPin(Long clientId);
+
+    CommandProcessingResult updateClientPin(Long clientId, JsonCommand command);
+
+
 }

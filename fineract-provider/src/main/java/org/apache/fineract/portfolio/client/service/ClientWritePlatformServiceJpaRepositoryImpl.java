@@ -138,8 +138,6 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     private final ClientTransactionWritePlatformService clientTransactionWritePlatformService;
 
     private final static Integer MAX_PIN_ATTEMPTS =3;
-    private final static Integer MAX_PIN_LENGTH =4;
-
 
 
     @Transactional
@@ -1377,6 +1375,11 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
 
+            Integer otp;
+            do {
+                otp = new java.util.Random().nextInt(90000) + 10000;
+            } while (this.clientRepository.findByOtpCode(otp) != null);
+
             validate(client);
 
             if (!client.isPinBlocked()) {
@@ -1385,13 +1388,25 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             }
 
             client.unBlockPin();
+            client.setOtpCode(otp);
             client.setPinRequiresChange(true);
+            final Integer otpExpiryMinutes = this.configurationDomainService.retrieveMomoPaymentOtpExpiryMinutes();
+            client.setMomoPaymentOtpExpiry(DateUtils.getLocalDateTimeOfTenant().plusMinutes(otpExpiryMinutes));
             this.clientRepository.saveAndFlush(client);
 
             messageId = String.format("UNBLOCK-PIN-%s", UUID.randomUUID());
             if (client.getMobileNo() != null ) {
                 smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),
-                                String.format("Hello %s, your Mobile Banking PIN has been successfully unblocked. You can now transact via USSD.", client.getDisplayName()), messageId));
+                        String.format(
+                                "Hello %s, your Mobile Banking PIN has been successfully unblocked. "
+                                        + "Use OTP %s to set a new PIN. This OTP expires in %s minutes. "
+                                        + "Do not share it with anyone.",
+                                client.getDisplayName(),
+                                otp,
+                                otpExpiryMinutes
+                        ),
+                        messageId
+                ));
             }
 
             return new CommandProcessingResultBuilder() //
@@ -1407,16 +1422,25 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
     @Transactional
     @Override
-    public CommandProcessingResult updateClientPin(Long clientId, JsonCommand command) {
+    public CommandProcessingResult resetClientPin(Long clientId, JsonCommand command) {
         this.context.authenticatedUser();
-        this.fromApiJsonDeserializer.validatCreateClientPin(command);
+        this.fromApiJsonDeserializer.validatePinResetClientPin(command);
         String messageId = null;
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
             final Integer pinCode = command.integerValueOfParameterNamed(ClientApiConstants.pinCodeParamName);
+            final Integer otpCode = command.integerValueOfParameterNamed(ClientApiConstants.otpCodeParamName);
             final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
 
             validatePinSetup(client, mobileNo, pinCode);
+
+            if (client.getOtpCode() == null || !client.getOtpCode().equals(otpCode)) {
+                throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.invalid", "Invalid OTP", "otpCode", otpCode);
+            }
+
+            if (DateUtils.isAfter(DateUtils.getLocalDateTimeOfTenant(), client.getMomoPaymentOtpExpiry())) {
+                throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.expired", "OTP has expired", "otpCode", otpCode);
+            }
 
             if (client.getPinCode() == null) {
                 throw new GeneralPlatformDomainRuleException("error.msg.client.pin.not.set",
@@ -1441,6 +1465,82 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             client.setPinCode(hashedPassword);
             client.setPinRequiresChange(false);
+            final Integer pinExpiryMonths = this.configurationDomainService.retrieveMomoPaymentPinExpiryMonths();
+            client.setPinExpiryDate(DateUtils.getBusinessLocalDate().plusMonths(pinExpiryMonths));
+            this.clientRepository.saveAndFlush(client);
+
+            messageId = String.format("CREATE-PIN-%s", UUID.randomUUID());
+
+            smsNotificationWritePlatformService.sendSms(
+                    new SmsNotificationData(client.getMobileNo(),
+                            String.format("Hello %s, your Mobile Banking PIN has been updated successfully.", client.getDisplayName()), messageId)
+            );
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityExternalId(client.getExternalId()) //
+                    .withOfficeId(client.officeId()) //
+                    .withClientId(clientId) //
+                    .withEntityId(clientId) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult selfServiceChangePin(Long clientId, JsonCommand command) {
+        this.context.authenticatedUser();
+        this.fromApiJsonDeserializer.validateSelfServiceUpdateClientPin(command);
+        String messageId = null;
+        try {
+            final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
+            final Integer newPinCode = command.integerValueOfParameterNamed(ClientApiConstants.newPinCodeParamName);
+            final Integer oldPinCode = command.integerValueOfParameterNamed(ClientApiConstants.oldPinCodeParamName);
+            final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
+
+            validatePinSetup(client, mobileNo, newPinCode);
+
+            if (client.getPinBlockedAt() != null){
+                throw new GeneralPlatformDomainRuleException("error.msg.invalid.action",
+                        "Pin setup is blocked. Inquiry from you bank/sacco for help.");
+            }
+
+            if (client.getPinCode() == null) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.pin.not.set",
+                        "No Mobile Banking PIN has been set for this account. Please create a PIN before attempting to update it."
+                );
+            }
+
+            if (client.isPinRequiresChange()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.client.pin.change.required",
+                        "Self Service PIN change not supported. Inquiry from you bank/sacco for help"
+                );
+            }
+
+            final String salt = client.getId() + client.getMobileNo();
+            final String oldHashedPassword = new HashingPasswordEncoder().encode(salt + oldPinCode);
+            final String newHashedPassword = new HashingPasswordEncoder().encode(salt + newPinCode);
+
+
+            if (!client.getPinCode().equals(oldHashedPassword)){
+                throw new GeneralPlatformDomainRuleException("error.msg.client.pin.not.matching",
+                        "Invalid old pin code."
+                );
+            }
+            if (client.getPinCode().equals(newHashedPassword)){
+                throw new GeneralPlatformDomainRuleException("error.msg.client.pin.reused",
+                        "The new PIN cannot be the same as your current PIN."
+                );
+            }
+
+            client.setPinCode(newHashedPassword);
             final Integer pinExpiryMonths = this.configurationDomainService.retrieveMomoPaymentPinExpiryMonths();
             client.setPinExpiryDate(DateUtils.getBusinessLocalDate().plusMonths(pinExpiryMonths));
             this.clientRepository.saveAndFlush(client);
@@ -1534,11 +1634,6 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
     public void validatePinSetup(Client client, String mobileNo, Integer pinCode){
 
-        if (pinCode.toString().length() != MAX_PIN_LENGTH){
-            throw new GeneralPlatformDomainRuleException("error.msg.client.account.invalid.pin.length",
-                    "The PIN must be exactly 4 digits."
-            );
-        }
 
         if (!client.isActive()) {
             throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");

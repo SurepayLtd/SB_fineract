@@ -713,12 +713,21 @@ public class CommandWrapperBuilder {
         return this;
     }
 
-    public CommandWrapperBuilder updateClientPin(final Long clientId) {
+    public CommandWrapperBuilder resetClientPin(final Long clientId) {
+        this.actionName = "RESETCLIENTPIN";
+        this.entityName = "CLIENT";
+        this.entityId = clientId;
+        this.clientId = clientId;
+        this.href = "/clients/" + clientId + "/resetpin";
+        return this;
+    }
+
+    public CommandWrapperBuilder selfChangeClientPin(final Long clientId) {
         this.actionName = "UPDATECLIENTPIN";
         this.entityName = "CLIENT";
         this.entityId = clientId;
         this.clientId = clientId;
-        this.href = "/clients/" + clientId + "/updatepin";
+        this.href = "/clients/" + clientId + "/selfchangepin";
         return this;
     }
 

@@ -306,17 +306,37 @@ public class ClientsApiResource {
     }
 
     @POST
-    @Path("{clientId}/updatePin")
+    @Path("{clientId}/resetPin")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
-    @Operation(summary = "Update Client PIN", description = "Updates a PIN for a client.")
+    @Operation(summary = "Reset Client PIN", description = "Resets a PIN for a client.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = ClientsApiResourceSwagger.PostClientsClientIdRequest.class)))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = ClientsApiResourceSwagger.PostClientsClientIdResponse.class))) })
-    public String updateClientPin(@PathParam("clientId") @Parameter(description = "clientId") final Long clientId,
+    public String resetClientPin(@PathParam("clientId") @Parameter(description = "clientId") final Long clientId,
                                   @Parameter(hidden = true) final String apiRequestBodyAsJson) {
         final CommandWrapper commandRequest = new CommandWrapperBuilder() //
-                .updateClientPin(clientId) //
+                .resetClientPin(clientId) //
+                .withJson(apiRequestBodyAsJson) //
+                .build(); //
+
+        final CommandProcessingResult result = commandsSourceWritePlatformService.logCommandSource(commandRequest);
+
+        return toApiJsonSerializer.serialize(result);
+    }
+
+    @POST
+    @Path("{clientId}/selfChangePin")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Self Change Client PIN", description = "Self Change a PIN for a client.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = ClientsApiResourceSwagger.PostClientsClientIdRequest.class)))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = ClientsApiResourceSwagger.PostClientsClientIdResponse.class))) })
+    public String selfChangeClientPin(@PathParam("clientId") @Parameter(description = "clientId") final Long clientId,
+                                  @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+        final CommandWrapper commandRequest = new CommandWrapperBuilder() //
+                .selfChangeClientPin(clientId) //
                 .withJson(apiRequestBodyAsJson) //
                 .build(); //
 

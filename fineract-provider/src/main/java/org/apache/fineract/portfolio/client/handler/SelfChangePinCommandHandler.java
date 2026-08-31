@@ -12,13 +12,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @CommandType(entity = "CLIENT", action = "UPDATECLIENTPIN")
 @RequiredArgsConstructor
-public class UpdatePinCommandHandler implements NewCommandSourceHandler {
+public class SelfChangePinCommandHandler implements NewCommandSourceHandler {
 
     private final ClientWritePlatformService clientWritePlatformService;
 
     @Transactional
     @Override
     public CommandProcessingResult processCommand(JsonCommand command) {
-        return clientWritePlatformService.updateClientPin(command.entityId(), command);
+        return clientWritePlatformService.selfServiceChangePin(command.entityId(), command);
     }
 }

@@ -176,5 +176,15 @@
         </insert>
     </changeSet>
 
+    <changeSet author="victor" id="add-pin-improvement-reset-permissions">
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="RESETCLIENTPIN_CLIENT" />
+            <column name="entity_name" value="CLIENT" />
+            <column name="action_name" value="RESETCLIENTPIN" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+    </changeSet>
+
 
 </databaseChangeLog>

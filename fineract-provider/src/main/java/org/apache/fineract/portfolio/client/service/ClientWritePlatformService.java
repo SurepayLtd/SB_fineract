@@ -61,7 +61,9 @@ public interface ClientWritePlatformService {
 
     CommandProcessingResult unblockClientPin(Long clientId);
 
-    CommandProcessingResult updateClientPin(Long clientId, JsonCommand command);
+    CommandProcessingResult resetClientPin(Long clientId, JsonCommand command);
+
+    CommandProcessingResult selfServiceChangePin(Long clientId, JsonCommand command);
 
 
 }

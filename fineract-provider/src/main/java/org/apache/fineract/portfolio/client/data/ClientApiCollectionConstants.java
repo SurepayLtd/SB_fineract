@@ -86,4 +86,10 @@ public class ClientApiCollectionConstants extends ClientApiConstants {
     protected static final Set<String> VALIDATE_CLIENT_PIN_REQUEST_DATA_PARAMETERS = new HashSet<>(
             Arrays.asList(pinCodeParamName, mobileNoParamName, localeParamName));
 
+    protected static final Set<String> VALIDATE_CLIENT_PIN_UPDATE_DATA_PARAMETERS = new HashSet<>(
+            Arrays.asList(newPinCodeParamName, oldPinCodeParamName, mobileNoParamName, localeParamName));
+
+    protected static final Set<String> VALIDATE_PIN_RESET_DATA_PARAMETERS = new HashSet<>(
+            Arrays.asList(otpCodeParamName, pinCodeParamName, mobileNoParamName, localeParamName));
+
 }

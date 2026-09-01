@@ -129,6 +129,7 @@ public final class ClientData implements Comparable<ClientData>, Serializable {
     private LocalDate lastActivatedMomoDate;
     private LocalDate lastDeactivatedMomoDate;
     private String momoPaymentOtpExpiry;
+    private boolean pinBlocked;
 
 
     public static ClientData importClientEntityInstance(Long legalFormId, Integer rowIndex, String fullname, Long officeId,
@@ -387,6 +388,7 @@ public final class ClientData implements Comparable<ClientData>, Serializable {
         client.setLastActivatedMomoDate(clientData.getLastActivatedMomoDate());
         client.setLastDeactivatedMomoDate(clientData.getLastActivatedMomoDate());
         client.setMomoPaymentOtpExpiry(clientData.getMomoPaymentOtpExpiry());
+        client.setPinBlocked(clientData.isPinBlocked());
 
         return client;
 

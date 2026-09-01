@@ -95,7 +95,9 @@ import org.apache.fineract.portfolio.charge.domain.Charge;
 import org.apache.fineract.portfolio.charge.domain.ChargeRepositoryWrapper;
 import org.apache.fineract.portfolio.charge.domain.ChargeTimeType;
 import org.apache.fineract.portfolio.client.domain.Client;
+import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.client.exception.ClientNotActiveException;
+import org.apache.fineract.portfolio.client.service.ClientTransactionWritePlatformService;
 import org.apache.fineract.portfolio.group.domain.Group;
 import org.apache.fineract.portfolio.group.exception.GroupNotActiveException;
 import org.apache.fineract.portfolio.note.domain.Note;
@@ -175,6 +177,11 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
     private final PaymentDetailRepository paymentDetailRepository;
     private final GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper;
     private final SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService;
+    private final ClientTransactionWritePlatformService clientTransactionWritePlatformService;
+    private final ClientRepositoryWrapper clientRepository;
+
+    private final static Integer MAX_PIN_ATTEMPTS =3;
+
 
     @Transactional
     @Override
@@ -1977,12 +1984,27 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
             throw new GeneralPlatformDomainRuleException("error.msg.phone.number.submitted.does.not.match.with.client.saved.phone.number",
                     "Mobile Number submitted is invalid");
         }
+        if (client.isPinBlocked()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.pin.blocked",
+                    "Your PIN has been blocked after too many failed attempts. Contact your Bank/Sacco for support"
+            );
+        }
+
+        if (client.isPinRequiresChange()){
+            throw new GeneralPlatformDomainRuleException("error.msg.client.pin.requires.change",
+                    "Your PIN needs to be changed"
+            );
+        }
 
         final String salt = client.getId() + client.getMobileNo();
         final String hashedPassword = new HashingPasswordEncoder().encode(salt + pinCode);
 
         if (client.getPinCode() == null || !client.getPinCode().equals(hashedPassword)) {
+            clientTransactionWritePlatformService.saveFailedAttempt(client, MAX_PIN_ATTEMPTS);
             throw new GeneralPlatformDomainRuleException("validation.msg.client.pin.invalid", "Invalid PIN", "pinCode", pinCode);
+        }else {
+            client.setPinAttempts(0);
+            this.clientRepository.save(client);
         }
     }
 }

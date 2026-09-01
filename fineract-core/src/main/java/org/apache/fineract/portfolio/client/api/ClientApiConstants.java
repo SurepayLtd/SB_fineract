@@ -59,6 +59,8 @@ public class ClientApiConstants {
     public static final String CREATE_CLIENT_PIN_COMMAND = "createClientPin";
     public static final String VALIDATE_CLIENT_PIN_COMMAND = "validateClientPin";
     public static final String pinCodeParamName = "pinCode";
+    public static final String oldPinCodeParamName = "oldPinCode";
+    public static final String newPinCodeParamName = "newPinCode";
 
     public static final String otpCodeParamName = "otpCode";
 

@@ -228,6 +228,9 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     @Column(name = "pin_code")
     private String pinCode;
 
+    @Column(name = "otp_used")
+    private boolean otpUsed;
+
     @Column(name = "pin_expiry_date")
     private LocalDate pinExpiryDate;
 

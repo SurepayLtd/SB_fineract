@@ -1149,6 +1149,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             }
 
             client.setOtpCode(otp);
+            client.setOtpUsed(false);
             final Integer otpExpiryMinutes = this.configurationDomainService.retrieveMomoPaymentOtpExpiryMinutes();
             client.setMomoPaymentOtpExpiry(DateUtils.getLocalDateTimeOfTenant().plusMinutes(otpExpiryMinutes));
             this.clientRepository.saveAndFlush(client);
@@ -1214,7 +1215,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             if (!client.isActive()) {
                 throw new GeneralPlatformDomainRuleException("error.msg.client.account.is.not.activate", "Client account is not activate");
             }
-            if (client.getOtpCode() == null || !client.getOtpCode().equals(otpCode)) {
+            if (client.getOtpCode() == null || !client.getOtpCode().equals(otpCode) || client.isOtpUsed()) {
                 throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.invalid", "Invalid OTP", "otpCode", otpCode);
             }
 
@@ -1223,6 +1224,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             }
 
             client.setMomoPaymentActive(true);
+            client.setOtpUsed(true);
             client.setLastActivatedMomoDate(DateUtils.getBusinessLocalDate());
             this.clientRepository.saveAndFlush(client);
 
@@ -1254,7 +1256,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final Integer pinCode = command.integerValueOfParameterNamed(ClientApiConstants.pinCodeParamName);
             final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
 
-            validatePinSetup(client, mobileNo, pinCode);
+            validatePinSetup(client, mobileNo);
 
             if (client.getPinCode() != null) {
                 throw new GeneralPlatformDomainRuleException("error.msg.client.pin.already.exists",
@@ -1389,6 +1391,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             client.unBlockPin();
             client.setOtpCode(otp);
+            client.setOtpUsed(false);
             client.setPinRequiresChange(true);
             final Integer otpExpiryMinutes = this.configurationDomainService.retrieveMomoPaymentOtpExpiryMinutes();
             client.setMomoPaymentOtpExpiry(DateUtils.getLocalDateTimeOfTenant().plusMinutes(otpExpiryMinutes));
@@ -1398,9 +1401,9 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             if (client.getMobileNo() != null ) {
                 smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),
                         String.format(
-                                "Hello %s, your Mobile Banking PIN has been successfully unblocked. "
-                                        + "Use OTP %s to set a new PIN. This OTP expires in %s minutes. "
-                                        + "Do not share it with anyone.",
+                                "Hello %s, your Mobile Banking PIN has been unblocked. "
+                                        + "Use OTP %s to set a new PIN. Expires in %s minutes. "
+                                        + "Do not share.",
                                 client.getDisplayName(),
                                 otp,
                                 otpExpiryMinutes
@@ -1432,9 +1435,9 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final Integer otpCode = command.integerValueOfParameterNamed(ClientApiConstants.otpCodeParamName);
             final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
 
-            validatePinSetup(client, mobileNo, pinCode);
+            validatePinSetup(client, mobileNo);
 
-            if (client.getOtpCode() == null || !client.getOtpCode().equals(otpCode)) {
+            if (client.getOtpCode() == null || !client.getOtpCode().equals(otpCode) || client.isOtpUsed()) {
                 throw new GeneralPlatformDomainRuleException("validation.msg.client.otp.invalid", "Invalid OTP", "otpCode", otpCode);
             }
 
@@ -1465,6 +1468,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             client.setPinCode(hashedPassword);
             client.setPinRequiresChange(false);
+            client.setOtpUsed(true);
             final Integer pinExpiryMonths = this.configurationDomainService.retrieveMomoPaymentPinExpiryMonths();
             client.setPinExpiryDate(DateUtils.getBusinessLocalDate().plusMonths(pinExpiryMonths));
             this.clientRepository.saveAndFlush(client);
@@ -1505,7 +1509,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final Integer oldPinCode = command.integerValueOfParameterNamed(ClientApiConstants.oldPinCodeParamName);
             final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
 
-            validatePinSetup(client, mobileNo, newPinCode);
+            validatePinSetup(client, mobileNo);
 
             if (client.getPinBlockedAt() != null){
                 throw new GeneralPlatformDomainRuleException("error.msg.invalid.action",
@@ -1632,7 +1636,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 "Invalid Ugandan mobile number format.");
     }
 
-    public void validatePinSetup(Client client, String mobileNo, Integer pinCode){
+    public void validatePinSetup(Client client, String mobileNo){
 
 
         if (!client.isActive()) {

@@ -16,8 +16,10 @@ package org.apache.fineract.selfservice.security.service;
 
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.security.service.SpringSecurityPlatformSecurityContext;
+import org.apache.fineract.useradministration.domain.AppUserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
 /**
  * Overrides the core {@code springSecurityPlatformSecurityContext} bean with a subclass that
@@ -31,7 +33,10 @@ public class SelfServiceSecurityBridgeConfiguration {
 
   @Bean("springSecurityPlatformSecurityContext")
   public SpringSecurityPlatformSecurityContext springSecurityPlatformSecurityContext(
-      ConfigurationDomainService configurationDomainService) {
-    return new SelfServiceCompatibleSecurityContext(configurationDomainService);
+      ConfigurationDomainService configurationDomainService,
+      AppUserRepository appUserRepository,
+      Environment environment) {
+    return new SelfServiceCompatibleSecurityContext(
+        configurationDomainService, appUserRepository, environment);
   }
 }

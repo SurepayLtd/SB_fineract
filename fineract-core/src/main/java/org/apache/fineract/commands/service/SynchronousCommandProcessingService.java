@@ -124,6 +124,7 @@ public class SynchronousCommandProcessingService implements CommandProcessingSer
         setIdempotencyKeyStoreFlag(true);
 
         final CommandProcessingResult result;
+        ThreadLocalContextUtil.enterCommandHandler();
         try {
             result = commandSourceService.processCommand(findCommandHandler(wrapper), command, commandSource, user, isApprovedByChecker,
                     isMakerChecker);
@@ -143,6 +144,8 @@ public class SynchronousCommandProcessingService implements CommandProcessingSer
             // marked as rollback
             publishHookErrorEvent(wrapper, command, errorInfo);
             throw mappable;
+        } finally {
+            ThreadLocalContextUtil.exitCommandHandler();
         }
 
         commandSource.setResultStatusCode(SC_OK);

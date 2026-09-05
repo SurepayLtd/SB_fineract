@@ -23,18 +23,23 @@ import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.organisation.office.domain.Office;
 import org.apache.fineract.selfservice.useradministration.domain.AppSelfServiceUser;
 import org.apache.fineract.useradministration.domain.AppUser;
+import org.apache.fineract.useradministration.domain.AppUserRepository;
 import org.apache.fineract.useradministration.exception.UnAuthenticatedUserException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class SelfServiceCompatibleSecurityContextTest {
 
   private ConfigurationDomainService config;
+  private AppUserRepository appUserRepository;
+  private Environment environment;
   private SelfServiceCompatibleSecurityContext ctx;
   private Office office;
+  private AppUser auditUser;
 
   @BeforeEach
   void setUp() {
@@ -47,10 +52,16 @@ class SelfServiceCompatibleSecurityContextTest {
     ThreadLocalContextUtil.setBusinessDates(businessDates);
 
     config = mock(ConfigurationDomainService.class);
-    ctx = new SelfServiceCompatibleSecurityContext(config);
+    appUserRepository = mock(AppUserRepository.class);
+    environment = mock(Environment.class);
+    when(environment.getProperty("fineract.selfservice.audit-user", "mifos")).thenReturn("mifos");
+    ctx = new SelfServiceCompatibleSecurityContext(config, appUserRepository, environment);
 
     office = mock(Office.class);
     when(office.getId()).thenReturn(1L);
+
+    auditUser = mock(AppUser.class);
+    when(appUserRepository.findAppUserByName("mifos")).thenReturn(auditUser);
   }
 
   @AfterEach
@@ -117,20 +128,19 @@ class SelfServiceCompatibleSecurityContextTest {
 
   // ── authenticatedUser(CommandWrapper) ────────────────────────────────────
 
-  /** Tests context resolution with a command wrapper for self-service users. */
+  /**
+   * A self-service principal must resolve to the real, configured audit AppUser (not the stub):
+   * this value is persisted as CommandSource.maker, a real FK into m_appuser, which a self-service
+   * stub id can never satisfy.
+   */
   @Test
-  void authenticatedUserWithCommandWrapper_selfServicePrincipal_returnsStubWithCorrectFields() {
+  void authenticatedUserWithCommandWrapper_selfServicePrincipal_returnsConfiguredAuditUser() {
     AppSelfServiceUser principal = mockSelfServiceUser(99L, "ssuser3");
     setSecurityPrincipal(principal);
 
-    AppUser stub = ctx.authenticatedUser(beneficiaryCommandWrapper());
+    AppUser resolved = ctx.authenticatedUser(beneficiaryCommandWrapper());
 
-    assertThat(stub.getId()).isEqualTo(99L);
-    assertThat(stub.getUsername()).isEqualTo("ssuser3");
-    assertThat(stub.getOffice()).isSameAs(office);
-    assertThat(stub.getEmail()).isEqualTo("ssuser3@test.com");
-    assertThat(stub.getFirstname()).isEqualTo("First");
-    assertThat(stub.getLastname()).isEqualTo("Last");
+    assertThat(resolved).isSameAs(auditUser);
   }
 
   /** Tests command wrapper resolution throws when no principal is found. */
@@ -140,20 +150,29 @@ class SelfServiceCompatibleSecurityContextTest {
         .isInstanceOf(UnAuthenticatedUserException.class);
   }
 
-  /**
-   * Tests that password-expired self-service users are returned without throwing
-   * ResetPasswordException.
-   */
+  /** Tests that password-expired self-service users still resolve to the audit user. */
   @Test
   void
-      authenticatedUserWithCommandWrapper_passwordExpiredSelfServiceUser_returnsStubWithoutThrowingResetPasswordException() {
+      authenticatedUserWithCommandWrapper_passwordExpiredSelfServiceUser_returnsConfiguredAuditUser() {
     AppSelfServiceUser principal = mockSelfServiceUser(55L, "expireduser");
     when(principal.isPasswordResetRequired()).thenReturn(true);
     setSecurityPrincipal(principal);
 
-    AppUser stub = ctx.authenticatedUser(beneficiaryCommandWrapper());
+    AppUser resolved = ctx.authenticatedUser(beneficiaryCommandWrapper());
 
-    assertThat(stub.getId()).isEqualTo(55L);
+    assertThat(resolved).isSameAs(auditUser);
+  }
+
+  /** Tests that a missing configured audit user surfaces a clear configuration error. */
+  @Test
+  void authenticatedUserWithCommandWrapper_missingConfiguredAuditUser_throwsIllegalStateException() {
+    when(appUserRepository.findAppUserByName("mifos")).thenReturn(null);
+    AppSelfServiceUser principal = mockSelfServiceUser(99L, "ssuser3");
+    setSecurityPrincipal(principal);
+
+    assertThatThrownBy(() -> ctx.authenticatedUser(beneficiaryCommandWrapper()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("mifos");
   }
 
   // ── getAuthenticatedUserIfPresent() ──────────────────────────────────────

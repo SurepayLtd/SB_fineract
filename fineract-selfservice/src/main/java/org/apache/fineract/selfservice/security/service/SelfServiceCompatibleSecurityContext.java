@@ -20,6 +20,8 @@ import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDoma
 import org.apache.fineract.infrastructure.security.service.SpringSecurityPlatformSecurityContext;
 import org.apache.fineract.selfservice.useradministration.domain.AppSelfServiceUser;
 import org.apache.fineract.useradministration.domain.AppUser;
+import org.apache.fineract.useradministration.domain.AppUserRepository;
+import org.springframework.core.env.Environment;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,12 +34,28 @@ import org.springframework.security.core.userdetails.User;
  * <p>Overrides {@code authenticatedUser()} and {@code getAuthenticatedUserIfPresent()} so that when
  * the principal is an {@link AppSelfServiceUser}, a minimal {@link AppUser} stub is returned,
  * allowing core read services to pass their guard checks.
+ *
+ * <p>{@code authenticatedUser(CommandWrapper)} is handled differently: it is the value that command
+ * processing persists as {@code m_portfolio_command_source.maker_id}, a real foreign key into
+ * {@code m_appuser}. {@link AppSelfServiceUser} rows live in a wholly separate table with an
+ * unrelated id sequence, so the stub can never satisfy that constraint - it is resolved to a real,
+ * configured {@link AppUser} instead (see {@link #resolveAuditUser()}).
  */
 public class SelfServiceCompatibleSecurityContext extends SpringSecurityPlatformSecurityContext {
 
+  private static final String AUDIT_USER_PROPERTY = "fineract.selfservice.audit-user";
+  private static final String DEFAULT_AUDIT_USERNAME = "mifos";
+
+  private final AppUserRepository appUserRepository;
+  private final Environment environment;
+
   public SelfServiceCompatibleSecurityContext(
-      ConfigurationDomainService configurationDomainService) {
+      ConfigurationDomainService configurationDomainService,
+      AppUserRepository appUserRepository,
+      Environment environment) {
     super(configurationDomainService);
+    this.appUserRepository = appUserRepository;
+    this.environment = environment;
   }
 
   /**
@@ -59,6 +77,10 @@ public class SelfServiceCompatibleSecurityContext extends SpringSecurityPlatform
   /**
    * Retrieves the authenticated user from the context for a specific command.
    *
+   * <p>For a self-service principal this deliberately does NOT return {@link #toAppUserStub}: the
+   * result here is persisted as {@code CommandSource.maker}, a real FK to {@code m_appuser}, which
+   * a self-service stub id can never satisfy. A real, configured {@link AppUser} is used instead.
+   *
    * @param commandWrapper the command wrapper contextualizing the request
    * @return the authenticated AppUser
    */
@@ -66,8 +88,8 @@ public class SelfServiceCompatibleSecurityContext extends SpringSecurityPlatform
   public AppUser authenticatedUser(final CommandWrapper commandWrapper) {
     final Object principal = extractPrincipal();
 
-    if (principal instanceof AppSelfServiceUser selfServiceUser) {
-      return toAppUserStub(selfServiceUser);
+    if (principal instanceof AppSelfServiceUser) {
+      return resolveAuditUser();
     }
 
     return super.authenticatedUser(commandWrapper);
@@ -126,6 +148,25 @@ public class SelfServiceCompatibleSecurityContext extends SpringSecurityPlatform
             false);
     setId(stub, selfServiceUser.getId());
     return stub;
+  }
+
+  /**
+   * Resolves the real, managed {@link AppUser} recorded as the maker of commands raised by
+   * self-service users, configurable via {@value #AUDIT_USER_PROPERTY} (defaults to {@value
+   * #DEFAULT_AUDIT_USERNAME}).
+   */
+  private AppUser resolveAuditUser() {
+    final String auditUsername = environment.getProperty(AUDIT_USER_PROPERTY, DEFAULT_AUDIT_USERNAME);
+    final AppUser auditUser = appUserRepository.findAppUserByName(auditUsername);
+    if (auditUser == null) {
+      throw new IllegalStateException(
+          "Configured self-service audit user '"
+              + auditUsername
+              + "' does not exist. Set "
+              + AUDIT_USER_PROPERTY
+              + " to a valid m_appuser username.");
+    }
+    return auditUser;
   }
 
   private void setId(AppUser stub, Long id) {

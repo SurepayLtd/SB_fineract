@@ -5,11 +5,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.UriInfo;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -27,12 +30,19 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuild
 import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
+import org.apache.fineract.portfolio.account.api.AccountTransfersApiResource;
+import org.apache.fineract.portfolio.account.PortfolioAccountType;
 import org.apache.fineract.portfolio.client.domain.Client;
+import org.apache.fineract.portfolio.loanaccount.exception.LoanNotFoundException;
+import org.apache.fineract.portfolio.savings.exception.SavingsAccountNotFoundException;
 import org.apache.fineract.selfservice.account.data.AccountTransferConfirmRequest;
 import org.apache.fineract.selfservice.account.data.AccountTransferPrepareRequest;
 import org.apache.fineract.selfservice.account.data.AccountTransferQuoteResponse;
+import org.apache.fineract.selfservice.account.data.SelfAccountTemplateData;
+import org.apache.fineract.selfservice.account.data.SelfAccountTransferDataValidator;
 import org.apache.fineract.selfservice.account.data.SinpeTransferRequest;
 import org.apache.fineract.selfservice.account.service.AccountTransferQuoteService;
+import org.apache.fineract.selfservice.account.service.SelfAccountTransferReadService;
 import org.apache.fineract.selfservice.account.service.SelfAccountTransferWritePlatformService;
 import org.apache.fineract.selfservice.account.service.SinpeExternalApiClient;
 import org.apache.fineract.selfservice.notification.SelfServiceNotificationEvent;
@@ -63,6 +73,84 @@ public class SelfAccountTransferApiResource {
   private final SelfServiceRegistrationRepository registrationRepository;
   private final ApplicationEventPublisher applicationEventPublisher;
   private final Environment env;
+  private final AccountTransfersApiResource accountTransfersApiResource;
+  private final SelfAccountTransferReadService selfAccountTransferReadService;
+  private final SelfAccountTransferDataValidator selfAccountTransferDataValidator;
+
+  @GET
+  @Path("template")
+  @Consumes({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_JSON})
+  @Operation(
+      summary = "Retrieve Self Account Transfer Template",
+      description =
+          "This is a convenience resource. It can be useful when building the account transfer /"
+              + " loan repayment screen of a self-service client application: it returns the"
+              + " office/client/account options and defaults needed to populate that form, scoped"
+              + " to the authenticated self-service user's own accounts.\n\n"
+              + "Example Requests:\n\n"
+              + "self/accounttransfers/template?fromAccountId=1&fromAccountType=2")
+  public String template(
+      @QueryParam("fromOfficeId") final Long fromOfficeId,
+      @QueryParam("fromClientId") final Long fromClientId,
+      @QueryParam("fromAccountId") final Long fromAccountId,
+      @QueryParam("fromAccountType") final Integer fromAccountType,
+      @QueryParam("toOfficeId") final Long toOfficeId,
+      @QueryParam("toClientId") final Long toClientId,
+      @QueryParam("toAccountId") final Long toAccountId,
+      @QueryParam("toAccountType") final Integer toAccountType,
+      @Context final UriInfo uriInfo) {
+
+    final AppSelfServiceUser user = context.authenticatedSelfServiceUser();
+    if (fromAccountId != null && fromAccountType != null) {
+      validateAccountOwnership(user, fromAccountId, fromAccountType);
+    }
+    if (toAccountId != null && toAccountType != null) {
+      validateAccountOwnership(user, toAccountId, toAccountType);
+    }
+
+    return accountTransfersApiResource.template(
+        fromOfficeId,
+        fromClientId,
+        fromAccountId,
+        fromAccountType,
+        toOfficeId,
+        toClientId,
+        toAccountId,
+        toAccountType,
+        uriInfo);
+  }
+
+  @POST
+  @Consumes({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_JSON})
+  @Operation(
+      summary = "Create new Transfer",
+      description =
+          "Ability to create a new transfer of monetary funds between the authenticated"
+              + " self-service user's own accounts (e.g. paying a loan from a linked savings"
+              + " account).")
+  public String create(final String apiRequestBodyAsJson) {
+    selfAccountTransferDataValidator.validateCreate("self", apiRequestBodyAsJson);
+    return accountTransfersApiResource.create(apiRequestBodyAsJson);
+  }
+
+  private void validateAccountOwnership(
+      final AppSelfServiceUser user, final Long accountId, final Integer accountType) {
+    final boolean owned =
+        selfAccountTransferReadService.retrieveSelfAccountTemplateData(user).stream()
+            .anyMatch(
+                account ->
+                    accountId.equals(account.getAccountId())
+                        && accountType.equals(account.getAccountType()));
+    if (owned) {
+      return;
+    }
+    if (PortfolioAccountType.LOAN.getValue().equals(accountType)) {
+      throw new LoanNotFoundException(accountId);
+    }
+    throw new SavingsAccountNotFoundException(accountId);
+  }
 
   @POST
   @Path("/prepare")

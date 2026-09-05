@@ -17,6 +17,7 @@ package org.apache.fineract.selfservice.security.service;
 import java.lang.reflect.Field;
 import org.apache.fineract.commands.domain.CommandWrapper;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
+import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.infrastructure.security.service.SpringSecurityPlatformSecurityContext;
 import org.apache.fineract.selfservice.useradministration.domain.AppSelfServiceUser;
 import org.apache.fineract.useradministration.domain.AppUser;
@@ -31,15 +32,19 @@ import org.springframework.security.core.userdetails.User;
  * Extends the core {@link SpringSecurityPlatformSecurityContext} to handle both {@link AppUser} and
  * {@link AppSelfServiceUser} principals.
  *
- * <p>Overrides {@code authenticatedUser()} and {@code getAuthenticatedUserIfPresent()} so that when
- * the principal is an {@link AppSelfServiceUser}, a minimal {@link AppUser} stub is returned,
- * allowing core read services to pass their guard checks.
+ * <p>For a self-service principal, what gets returned depends on why it's being asked for:
  *
- * <p>{@code authenticatedUser(CommandWrapper)} is handled differently: it is the value that command
- * processing persists as {@code m_portfolio_command_source.maker_id}, a real foreign key into
- * {@code m_appuser}. {@link AppSelfServiceUser} rows live in a wholly separate table with an
- * unrelated id sequence, so the stub can never satisfy that constraint - it is resolved to a real,
- * configured {@link AppUser} instead (see {@link #resolveAuditUser()}).
+ * <ul>
+ *   <li>Outside command-handler execution (e.g. resource-layer permission checks in template/list/retrieve
+ *       endpoints) - a minimal, never-persisted {@link AppUser} stub carrying the self-service user's own
+ *       roles/office, so {@code validateHasReadPermission}-style guard checks reflect that user's real grants.
+ *   <li>While a command handler's business logic is executing on this thread ({@link
+ *       ThreadLocalContextUtil#isExecutingCommandHandler()}) - core write-services routinely persist the
+ *       "current user" as a real {@code @ManyToOne AppUser} relationship (e.g. {@code CommandSource.maker},
+ *       {@code SavingsAccount.submittedBy}). {@link AppSelfServiceUser} rows live in a wholly separate table
+ *       with an unrelated id sequence, so the stub can never satisfy those foreign keys - a real, configured
+ *       {@link AppUser} is resolved instead (see {@link #resolveAuditUser()}).
+ * </ul>
  */
 public class SelfServiceCompatibleSecurityContext extends SpringSecurityPlatformSecurityContext {
 
@@ -59,7 +64,9 @@ public class SelfServiceCompatibleSecurityContext extends SpringSecurityPlatform
   }
 
   /**
-   * Retrieves the authenticated user, wrapping self-service users in a stub.
+   * Retrieves the authenticated user, wrapping self-service users in a stub - unless a command handler is
+   * currently executing on this thread, in which case a real, persisted audit {@link AppUser} is returned
+   * instead (see the class javadoc).
    *
    * @return the authenticated AppUser
    */
@@ -68,7 +75,9 @@ public class SelfServiceCompatibleSecurityContext extends SpringSecurityPlatform
     final Object principal = extractPrincipal();
 
     if (principal instanceof AppSelfServiceUser selfServiceUser) {
-      return toAppUserStub(selfServiceUser);
+      return ThreadLocalContextUtil.isExecutingCommandHandler()
+          ? resolveAuditUser()
+          : toAppUserStub(selfServiceUser);
     }
 
     return super.authenticatedUser();
@@ -96,7 +105,8 @@ public class SelfServiceCompatibleSecurityContext extends SpringSecurityPlatform
   }
 
   /**
-   * Retrieves the authenticated user if one is currently present in the security context.
+   * Retrieves the authenticated user if one is currently present in the security context. Subject to the
+   * same command-handler-execution override as {@link #authenticatedUser()}.
    *
    * @return the authenticated AppUser, or null if none
    */
@@ -105,7 +115,9 @@ public class SelfServiceCompatibleSecurityContext extends SpringSecurityPlatform
     final Object principal = extractPrincipal();
 
     if (principal instanceof AppSelfServiceUser selfServiceUser) {
-      return toAppUserStub(selfServiceUser);
+      return ThreadLocalContextUtil.isExecutingCommandHandler()
+          ? resolveAuditUser()
+          : toAppUserStub(selfServiceUser);
     }
 
     return super.getAuthenticatedUserIfPresent();

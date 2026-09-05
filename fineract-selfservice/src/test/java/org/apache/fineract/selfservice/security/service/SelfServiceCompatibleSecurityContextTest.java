@@ -67,7 +67,7 @@ class SelfServiceCompatibleSecurityContextTest {
   @AfterEach
   void tearDown() {
     SecurityContextHolder.clearContext();
-    ThreadLocalContextUtil.clearTenant();
+    ThreadLocalContextUtil.reset();
   }
 
   private AppSelfServiceUser mockSelfServiceUser(long id, String username) {
@@ -124,6 +124,58 @@ class SelfServiceCompatibleSecurityContextTest {
   void authenticatedUser_noPrincipal_throwsUnAuthenticatedUserException() {
     assertThatThrownBy(() -> ctx.authenticatedUser())
         .isInstanceOf(UnAuthenticatedUserException.class);
+  }
+
+  /**
+   * While a command handler is executing (e.g. a core write-service persisting the current user as a
+   * real AppUser relationship, such as SavingsAccount.submittedBy), authenticatedUser() must return the
+   * real, configured audit AppUser instead of the stub - the stub is a never-persisted object and would
+   * make Hibernate/EclipseLink fail the same way CommandSource.maker used to.
+   */
+  @Test
+  void authenticatedUser_selfServicePrincipal_duringCommandHandler_returnsConfiguredAuditUser() {
+    AppSelfServiceUser principal = mockSelfServiceUser(42L, "ssuser");
+    setSecurityPrincipal(principal);
+
+    ThreadLocalContextUtil.enterCommandHandler();
+    try {
+      AppUser resolved = ctx.authenticatedUser();
+      assertThat(resolved).isSameAs(auditUser);
+    } finally {
+      ThreadLocalContextUtil.exitCommandHandler();
+    }
+  }
+
+  /** Once the command handler scope exits, authenticatedUser() reverts to returning the stub. */
+  @Test
+  void authenticatedUser_selfServicePrincipal_afterCommandHandlerExits_returnsStubAgain() {
+    AppSelfServiceUser principal = mockSelfServiceUser(42L, "ssuser");
+    setSecurityPrincipal(principal);
+
+    ThreadLocalContextUtil.enterCommandHandler();
+    ThreadLocalContextUtil.exitCommandHandler();
+
+    AppUser stub = ctx.authenticatedUser();
+
+    assertThat(stub.getId()).isEqualTo(42L);
+    assertThat(stub.getUsername()).isEqualTo("ssuser");
+  }
+
+  /** Nested command handler execution (e.g. batch requests) must not exit the scope prematurely. */
+  @Test
+  void authenticatedUser_selfServicePrincipal_nestedCommandHandlers_staysInAuditScopeUntilOutermostExits() {
+    AppSelfServiceUser principal = mockSelfServiceUser(42L, "ssuser");
+    setSecurityPrincipal(principal);
+
+    ThreadLocalContextUtil.enterCommandHandler();
+    ThreadLocalContextUtil.enterCommandHandler();
+    ThreadLocalContextUtil.exitCommandHandler();
+
+    assertThat(ctx.authenticatedUser()).isSameAs(auditUser);
+
+    ThreadLocalContextUtil.exitCommandHandler();
+
+    assertThat(ctx.authenticatedUser().getId()).isEqualTo(42L);
   }
 
   // ── authenticatedUser(CommandWrapper) ────────────────────────────────────
@@ -196,5 +248,19 @@ class SelfServiceCompatibleSecurityContextTest {
     AppUser result = ctx.getAuthenticatedUserIfPresent();
 
     assertThat(result).isNull();
+  }
+
+  /** getAuthenticatedUserIfPresent is subject to the same command-handler-execution override. */
+  @Test
+  void getAuthenticatedUserIfPresent_selfServicePrincipal_duringCommandHandler_returnsConfiguredAuditUser() {
+    AppSelfServiceUser principal = mockSelfServiceUser(7L, "ssuser2");
+    setSecurityPrincipal(principal);
+
+    ThreadLocalContextUtil.enterCommandHandler();
+    try {
+      assertThat(ctx.getAuthenticatedUserIfPresent()).isSameAs(auditUser);
+    } finally {
+      ThreadLocalContextUtil.exitCommandHandler();
+    }
   }
 }

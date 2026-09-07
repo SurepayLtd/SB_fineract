@@ -73,7 +73,8 @@ public class SelfBeneficiariesTPTReadPlatformServiceImpl
       sqlBuilder.append(" s.account_no as accountNumber, ");
       sqlBuilder.append(" b.transfer_limit as transferLimit, ");
       sqlBuilder.append(
-          " null as customAccountNumber, null as holderName, null as holderId, CAST(null AS integer) as holderIdType, null as currencyCode, null as entityCode, null as entityName ");
+          " null as customAccountNumber, null as holderName, null as holderId, CAST(null AS integer) as holderIdType, null as currencyCode, null as entityCode, null as entityName, ");
+      sqlBuilder.append(" o.id as officeId, c.id as clientId, s.id as accountId ");
       sqlBuilder.append(" from m_selfservice_beneficiaries_tpt as b ");
       sqlBuilder.append(" inner join m_office as o on b.office_id = o.id ");
       sqlBuilder.append(" inner join m_client as c on b.client_id = c.id ");
@@ -90,7 +91,8 @@ public class SelfBeneficiariesTPTReadPlatformServiceImpl
       sqlBuilder.append(" l.account_no as accountNumber, ");
       sqlBuilder.append(" b.transfer_limit as transferLimit, ");
       sqlBuilder.append(
-          " null as customAccountNumber, null as holderName, null as holderId, CAST(null AS integer) as holderIdType, null as currencyCode, null as entityCode, null as entityName ");
+          " null as customAccountNumber, null as holderName, null as holderId, CAST(null AS integer) as holderIdType, null as currencyCode, null as entityCode, null as entityName, ");
+      sqlBuilder.append(" o.id as officeId, c.id as clientId, l.id as accountId ");
       sqlBuilder.append(" from m_selfservice_beneficiaries_tpt as b ");
       sqlBuilder.append(" inner join m_office as o on b.office_id = o.id ");
       sqlBuilder.append(" inner join m_client as c on b.client_id = c.id ");
@@ -112,7 +114,8 @@ public class SelfBeneficiariesTPTReadPlatformServiceImpl
       sqlBuilder.append(" b.holder_id_type as holderIdType, ");
       sqlBuilder.append(" b.currency_code as currencyCode, ");
       sqlBuilder.append(" b.entity_code as entityCode, ");
-      sqlBuilder.append(" b.entity_name as entityName ");
+      sqlBuilder.append(" b.entity_name as entityName, ");
+      sqlBuilder.append(" CAST(null AS signed) as officeId, CAST(null AS signed) as clientId, CAST(null AS signed) as accountId ");
       sqlBuilder.append(" from m_selfservice_beneficiaries_tpt as b ");
       sqlBuilder.append(" where b.is_active = true ");
       sqlBuilder.append(" and b.account_type in (3,4) ");
@@ -143,6 +146,9 @@ public class SelfBeneficiariesTPTReadPlatformServiceImpl
       final String currencyCode = rs.getString("currencyCode");
       final String entityCode = rs.getString("entityCode");
       final String entityName = rs.getString("entityName");
+      final Long officeId = (Long) rs.getObject("officeId");
+      final Long clientId = (Long) rs.getObject("clientId");
+      final Long accountId = (Long) rs.getObject("accountId");
 
       EnumOptionData accountType = null;
       if (customAccountNumber != null) {
@@ -175,7 +181,10 @@ public class SelfBeneficiariesTPTReadPlatformServiceImpl
           holderIdType,
           currencyCode,
           entityCode,
-          entityName);
+          entityName,
+          officeId,
+          clientId,
+          accountId);
     }
   }
 

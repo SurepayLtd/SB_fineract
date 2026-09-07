@@ -182,7 +182,7 @@ public class SelfBeneficiariesTPTWritePlatformServiceImpl
       log.error("SAVE AND FLUSH");
       return new CommandProcessingResultBuilder().withEntityId(beneficiary.getId()).build();
     } catch (DataAccessException dae) {
-      handleDataIntegrityIssues(command, dae);
+      handleDataIntegrityIssues(dae, name);
       dae.printStackTrace();
     }
 
@@ -220,7 +220,7 @@ public class SelfBeneficiariesTPTWritePlatformServiceImpl
               .with(changes)
               .build();
         } catch (DataAccessException dae) {
-          handleDataIntegrityIssues(command, dae);
+          handleDataIntegrityIssues(dae, name);
         }
       }
     }
@@ -250,20 +250,10 @@ public class SelfBeneficiariesTPTWritePlatformServiceImpl
     throw new InvalidBeneficiaryException(beneficiaryId);
   }
 
-  private void handleDataIntegrityIssues(final JsonCommand command, final DataAccessException dae) {
+  private void handleDataIntegrityIssues(final DataAccessException dae, final String name) {
     final Throwable realCause = dae.getMostSpecificCause();
     if (realCause.getMessage().contains("name")
         || realCause.getMessage().contains("uk_m_selfservice_beneficiaries_tpt_name")) {
-
-      String name = "unknown";
-      try {
-        if (command != null && command.json() != null) {
-          // Safe extraction
-          name = command.stringValueOfParameterNamed(NAME_PARAM_NAME);
-        }
-      } catch (Exception e) {
-        log.debug("Could not extract name from JSON command", e);
-      }
 
       throw new PlatformDataIntegrityException(
           "error.msg.beneficiary.duplicate.name",

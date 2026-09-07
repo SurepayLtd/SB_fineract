@@ -86,7 +86,7 @@ public class SelfAccountTransferDataValidator {
         .parameter(fromOfficeIdParamName)
         .value(fromOfficeId)
         .notNull()
-        .integerGreaterThanZero();
+        .longGreaterThanZero();
 
     final Long fromClientId =
         this.fromApiJsonHelper.extractLongNamed(fromClientIdParamName, element);
@@ -95,7 +95,7 @@ public class SelfAccountTransferDataValidator {
         .parameter(fromClientIdParamName)
         .value(fromClientId)
         .notNull()
-        .integerGreaterThanZero();
+        .longGreaterThanZero();
 
     final Long fromAccountId =
         this.fromApiJsonHelper.extractLongNamed(fromAccountIdParamName, element);
@@ -104,7 +104,7 @@ public class SelfAccountTransferDataValidator {
         .parameter(fromAccountIdParamName)
         .value(fromAccountId)
         .notNull()
-        .integerGreaterThanZero();
+        .longGreaterThanZero();
 
     final Integer fromAccountType =
         this.fromApiJsonHelper.extractIntegerSansLocaleNamed(fromAccountTypeParamName, element);
@@ -121,7 +121,7 @@ public class SelfAccountTransferDataValidator {
         .parameter(toOfficeIdParamName)
         .value(toOfficeId)
         .notNull()
-        .integerGreaterThanZero();
+        .longGreaterThanZero();
 
     final Long toClientId = this.fromApiJsonHelper.extractLongNamed(toClientIdParamName, element);
     baseDataValidator
@@ -129,7 +129,7 @@ public class SelfAccountTransferDataValidator {
         .parameter(toClientIdParamName)
         .value(toClientId)
         .notNull()
-        .integerGreaterThanZero();
+        .longGreaterThanZero();
 
     final Long toAccountId = this.fromApiJsonHelper.extractLongNamed(toAccountIdParamName, element);
     baseDataValidator
@@ -137,7 +137,7 @@ public class SelfAccountTransferDataValidator {
         .parameter(toAccountIdParamName)
         .value(toAccountId)
         .notNull()
-        .integerGreaterThanZero();
+        .longGreaterThanZero();
 
     final Integer toAccountType =
         this.fromApiJsonHelper.extractIntegerSansLocaleNamed(toAccountTypeParamName, element);

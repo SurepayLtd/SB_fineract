@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -130,8 +131,10 @@ public class SelfAccountTransferApiResource {
           "Ability to create a new transfer of monetary funds between the authenticated"
               + " self-service user's own accounts (e.g. paying a loan from a linked savings"
               + " account).")
-  public String create(final String apiRequestBodyAsJson) {
-    selfAccountTransferDataValidator.validateCreate("self", apiRequestBodyAsJson);
+  public String create(
+      @DefaultValue("self") @QueryParam("type") final String type,
+      final String apiRequestBodyAsJson) {
+    selfAccountTransferDataValidator.validateCreate(type, apiRequestBodyAsJson);
     return accountTransfersApiResource.create(apiRequestBodyAsJson);
   }
 

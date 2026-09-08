@@ -64,6 +64,19 @@ public class SelfBeneficiariesTPTData {
   @SuppressWarnings("unused")
   private final String entityName;
 
+  // Internal Fineract identifiers backing this beneficiary's office/client/account, needed by
+  // self-service client applications to actually submit a transfer to this beneficiary (the
+  // officeName/clientName/accountNumber fields above are display-only). Null for external
+  // (SINPE/PIN) beneficiaries, which have no corresponding internal Fineract office/client/account.
+  @SuppressWarnings("unused")
+  private final Long officeId;
+
+  @SuppressWarnings("unused")
+  private final Long clientId;
+
+  @SuppressWarnings("unused")
+  private final Long accountId;
+
   public SelfBeneficiariesTPTData(final Collection<EnumOptionData> accountTypeOptions) {
     this.accountTypeOptions = accountTypeOptions;
     this.id = null;
@@ -81,6 +94,10 @@ public class SelfBeneficiariesTPTData {
     this.currencyCode = null;
     this.entityCode = null;
     this.entityName = null;
+
+    this.officeId = null;
+    this.clientId = null;
+    this.accountId = null;
   }
 
   public SelfBeneficiariesTPTData(
@@ -107,6 +124,10 @@ public class SelfBeneficiariesTPTData {
     this.currencyCode = null;
     this.entityCode = null;
     this.entityName = null;
+
+    this.officeId = null;
+    this.clientId = null;
+    this.accountId = null;
   }
 
   public SelfBeneficiariesTPTData(
@@ -123,7 +144,10 @@ public class SelfBeneficiariesTPTData {
       final Integer holderIdType,
       final String currencyCode,
       final String entityCode,
-      final String entityName) {
+      final String entityName,
+      final Long officeId,
+      final Long clientId,
+      final Long accountId) {
     this.accountTypeOptions = null;
     this.id = id;
     this.name = name;
@@ -141,5 +165,9 @@ public class SelfBeneficiariesTPTData {
     this.currencyCode = currencyCode;
     this.entityCode = entityCode;
     this.entityName = entityName;
+
+    this.officeId = officeId;
+    this.clientId = clientId;
+    this.accountId = accountId;
   }
 }

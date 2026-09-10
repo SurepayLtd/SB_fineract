@@ -21,6 +21,7 @@ package org.apache.fineract.portfolio.loanaccount.starter;
 import org.apache.fineract.accounting.journalentry.service.JournalEntryWritePlatformService;
 import org.apache.fineract.cob.service.LoanAccountLockService;
 import org.apache.fineract.infrastructure.accountnumberformat.domain.AccountNumberFormatRepositoryWrapper;
+import org.apache.fineract.infrastructure.campaigns.sms.domain.SmsTransactionRepository;
 import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrapper;
 import org.apache.fineract.infrastructure.codes.service.CodeValueReadPlatformService;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
@@ -41,6 +42,7 @@ import org.apache.fineract.infrastructure.security.utils.ColumnValidator;
 import org.apache.fineract.notification.domain.MamboSmsRepository;
 import org.apache.fineract.notification.domain.SMSNotificationRepository;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
+import org.apache.fineract.notification.service.SmsNotificationWritePlatformService;
 import org.apache.fineract.organisation.holiday.domain.HolidayRepository;
 import org.apache.fineract.organisation.holiday.domain.HolidayRepositoryWrapper;
 import org.apache.fineract.organisation.monetary.domain.ApplicationCurrencyRepositoryWrapper;
@@ -292,22 +294,22 @@ public class LoanAccountConfiguration {
     @Bean
     @ConditionalOnMissingBean(LoanChargeWritePlatformService.class)
     public LoanChargeWritePlatformService loanChargeWritePlatformService(LoanChargeApiJsonValidator loanChargeApiJsonValidator,
-            LoanAssembler loanAssembler, ChargeRepositoryWrapper chargeRepository,
-            BusinessEventNotifierService businessEventNotifierService, LoanTransactionRepository loanTransactionRepository,
-            AccountTransfersWritePlatformService accountTransfersWritePlatformService, LoanRepositoryWrapper loanRepositoryWrapper,
-            JournalEntryWritePlatformService journalEntryWritePlatformService, LoanAccountDomainService loanAccountDomainService,
-            LoanChargeRepository loanChargeRepository, LoanWritePlatformService loanWritePlatformService, LoanUtilService loanUtilService,
-            LoanChargeReadPlatformService loanChargeReadPlatformService, LoanLifecycleStateMachine defaultLoanLifecycleStateMachine,
-            AccountAssociationsReadPlatformService accountAssociationsReadPlatformService, FromJsonHelper fromApiJsonHelper,
-            ConfigurationDomainService configurationDomainService,
-            LoanRepaymentScheduleTransactionProcessorFactory loanRepaymentScheduleTransactionProcessorFactory,
-            ExternalIdFactory externalIdFactory, AccountTransferDetailRepository accountTransferDetailRepository,
-            LoanChargeAssembler loanChargeAssembler, ReplayedTransactionBusinessEventService replayedTransactionBusinessEventService,
-            PaymentDetailWritePlatformService paymentDetailWritePlatformService, NoteRepository noteRepository,
-            LoanAccrualTransactionBusinessEventService loanAccrualTransactionBusinessEventService,
-            LoanAccrualsProcessingService loanAccrualsProcessingService,
-            LoanDownPaymentTransactionValidator loanDownPaymentTransactionValidator, LoanChargeValidator loanChargeValidator,
-            LoanScheduleService loanScheduleService, MassWaiverRepository massWaiverRepository) {
+                                                                         LoanAssembler loanAssembler, ChargeRepositoryWrapper chargeRepository,
+                                                                         BusinessEventNotifierService businessEventNotifierService, LoanTransactionRepository loanTransactionRepository,
+                                                                         AccountTransfersWritePlatformService accountTransfersWritePlatformService, LoanRepositoryWrapper loanRepositoryWrapper,
+                                                                         JournalEntryWritePlatformService journalEntryWritePlatformService, LoanAccountDomainService loanAccountDomainService,
+                                                                         LoanChargeRepository loanChargeRepository, LoanWritePlatformService loanWritePlatformService, LoanUtilService loanUtilService,
+                                                                         LoanChargeReadPlatformService loanChargeReadPlatformService, LoanLifecycleStateMachine defaultLoanLifecycleStateMachine,
+                                                                         AccountAssociationsReadPlatformService accountAssociationsReadPlatformService, FromJsonHelper fromApiJsonHelper,
+                                                                         ConfigurationDomainService configurationDomainService,
+                                                                         LoanRepaymentScheduleTransactionProcessorFactory loanRepaymentScheduleTransactionProcessorFactory,
+                                                                         ExternalIdFactory externalIdFactory, AccountTransferDetailRepository accountTransferDetailRepository,
+                                                                         LoanChargeAssembler loanChargeAssembler, ReplayedTransactionBusinessEventService replayedTransactionBusinessEventService,
+                                                                         PaymentDetailWritePlatformService paymentDetailWritePlatformService, NoteRepository noteRepository,
+                                                                         LoanAccrualTransactionBusinessEventService loanAccrualTransactionBusinessEventService,
+                                                                         LoanAccrualsProcessingService loanAccrualsProcessingService,
+                                                                         LoanDownPaymentTransactionValidator loanDownPaymentTransactionValidator, LoanChargeValidator loanChargeValidator,
+                                                                         LoanScheduleService loanScheduleService, MassWaiverRepository massWaiverRepository, SmsNotificationWritePlatformService smsNotificationWritePlatformService) {
         return new LoanChargeWritePlatformServiceImpl(loanChargeApiJsonValidator, loanAssembler, chargeRepository,
                 businessEventNotifierService, loanTransactionRepository, accountTransfersWritePlatformService, loanRepositoryWrapper,
                 journalEntryWritePlatformService, loanAccountDomainService, loanChargeRepository, loanWritePlatformService, loanUtilService,
@@ -315,7 +317,7 @@ public class LoanAccountConfiguration {
                 configurationDomainService, loanRepaymentScheduleTransactionProcessorFactory, externalIdFactory,
                 accountTransferDetailRepository, loanChargeAssembler, replayedTransactionBusinessEventService,
                 paymentDetailWritePlatformService, noteRepository, loanAccrualTransactionBusinessEventService,
-                loanAccrualsProcessingService, loanDownPaymentTransactionValidator, loanChargeValidator, loanScheduleService, massWaiverRepository);
+                loanAccrualsProcessingService, loanDownPaymentTransactionValidator, loanChargeValidator, loanScheduleService, massWaiverRepository, smsNotificationWritePlatformService);
     }
 
     @Bean
@@ -496,8 +498,8 @@ public class LoanAccountConfiguration {
     @Bean
     @ConditionalOnMissingBean(SMSNotificationWritePlatformServiceImpl.class)
     public SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService(
-            GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper, SMSNotificationRepository smsNotificationRepository, MamboSmsRepository mamboSmsRepository) {
-        return new SMSNotificationWritePlatformServiceImpl(configurationRepositoryWrapper, smsNotificationRepository, mamboSmsRepository);
+            GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper, SMSNotificationRepository smsNotificationRepository, MamboSmsRepository mamboSmsRepository, SmsTransactionRepository smsTransactionRepository) {
+        return new SMSNotificationWritePlatformServiceImpl(configurationRepositoryWrapper, smsNotificationRepository, mamboSmsRepository, smsTransactionRepository);
     }
 
     @Bean

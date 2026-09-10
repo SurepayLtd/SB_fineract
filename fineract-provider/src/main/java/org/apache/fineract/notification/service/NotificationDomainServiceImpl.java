@@ -45,6 +45,7 @@ import org.apache.fineract.infrastructure.event.business.domain.share.ShareAccou
 import org.apache.fineract.infrastructure.event.business.domain.share.ShareProductDividentsCreateBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
@@ -63,6 +64,7 @@ public class NotificationDomainServiceImpl implements NotificationDomainService 
     private final BusinessEventNotifierService businessEventNotifierService;
     private final PlatformSecurityContext context;
     private final UserNotificationService userNotificationService;
+    private final SmsNotificationWritePlatformService smsNotificationWritePlatformService;
 
     @PostConstruct
     public void addListeners() {
@@ -103,6 +105,7 @@ public class NotificationDomainServiceImpl implements NotificationDomainService 
             Client client = event.get();
             buildNotification("ACTIVATE_CLIENT", "client", client.getId(), "New client created", "created",
                     context.authenticatedUser().getId(), client.getOffice().getId());
+            smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.CLIENT_CREATION, null, null);
         }
     }
 
@@ -154,6 +157,7 @@ public class NotificationDomainServiceImpl implements NotificationDomainService 
             FixedDepositAccount fixedDepositAccount = event.get();
             buildNotification("APPROVE_FIXEDDEPOSITACCOUNT", "fixedDeposit", fixedDepositAccount.getId(),
                     "New fixed deposit account created", "created", context.authenticatedUser().getId(), fixedDepositAccount.officeId());
+            smsNotificationWritePlatformService.processFixedDepositSmsNotification(fixedDepositAccount, SmsTypeEnum.FIXED_DEPOSIT_CREATION);
         }
     }
 
@@ -300,6 +304,7 @@ public class NotificationDomainServiceImpl implements NotificationDomainService 
             ShareAccount shareAccount = event.get();
             buildNotification("APPROVE_SHAREACCOUNT", "shareAccount", shareAccount.getId(), "New share account created", "created",
                     context.authenticatedUser().getId(), shareAccount.getOfficeId());
+            smsNotificationWritePlatformService.processShareSmsNotification(shareAccount, SmsTypeEnum.SHARE_ACCOUNT_CREATION);
         }
     }
 

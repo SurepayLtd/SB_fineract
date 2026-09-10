@@ -41,6 +41,8 @@ import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidati
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.core.service.ExternalIdFactory;
+import org.apache.fineract.notification.data.SmsTypeEnum;
+import org.apache.fineract.notification.service.SmsNotificationWritePlatformService;
 import org.apache.fineract.organisation.holiday.domain.HolidayRepositoryWrapper;
 import org.apache.fineract.organisation.monetary.domain.Money;
 import org.apache.fineract.organisation.workingdays.domain.WorkingDaysRepositoryWrapper;
@@ -78,6 +80,7 @@ public class ClientChargeWritePlatformServiceImpl implements ClientChargeWritePl
     private final ClientTransactionRepository clientTransactionRepository;
     private final PaymentDetailWritePlatformService paymentDetailWritePlatformService;
     private final JournalEntryWritePlatformService journalEntryWritePlatformService;
+    private final SmsNotificationWritePlatformService smsNotificationWritePlatformService;
 
     @Override
     public CommandProcessingResult addCharge(Long clientId, JsonCommand command) {
@@ -113,6 +116,7 @@ public class ClientChargeWritePlatformServiceImpl implements ClientChargeWritePl
 
             validateDueDateOnWorkingDay(clientCharge, fmt);
             this.clientChargeRepository.saveAndFlush(clientCharge);
+            smsNotificationWritePlatformService.processChargeSmsNotification(client, SmsTypeEnum.CLIENT_CHARGE_APPLIED, null, null, clientCharge);
 
             return new CommandProcessingResultBuilder() //
                     .withEntityId(clientCharge.getId()) //
@@ -204,6 +208,8 @@ public class ClientChargeWritePlatformServiceImpl implements ClientChargeWritePl
             // update charge paid by associations
             final ClientChargePaidBy chargePaidBy = ClientChargePaidBy.instance(clientTransaction, clientCharge, waivedAmount.getAmount());
             clientTransaction.getClientChargePaidByCollection().add(chargePaidBy);
+
+            smsNotificationWritePlatformService.processChargeSmsNotification(client, SmsTypeEnum.CLIENT_CHARGE_WAIVED, null, null, clientCharge);
 
             return new CommandProcessingResultBuilder().withTransactionId(clientTransaction.getId().toString())//
                     .withEntityId(clientCharge.getId()) //

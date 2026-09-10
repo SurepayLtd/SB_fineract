@@ -36,6 +36,7 @@ import org.apache.fineract.notification.service.NotificationWritePlatformService
 import org.apache.fineract.notification.service.NotificationWritePlatformServiceImpl;
 import org.apache.fineract.notification.service.UserNotificationService;
 import org.apache.fineract.notification.service.UserNotificationServiceImpl;
+import org.apache.fineract.notification.service.SmsNotificationWritePlatformService;
 import org.apache.fineract.useradministration.domain.AppUserRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -48,8 +49,8 @@ public class NotificationConfiguration {
     @Bean
     @ConditionalOnMissingBean(NotificationDomainService.class)
     public NotificationDomainService notificationDomainService(BusinessEventNotifierService businessEventNotifierService,
-            PlatformSecurityContext context, UserNotificationService userNotificationService) {
-        return new NotificationDomainServiceImpl(businessEventNotifierService, context, userNotificationService);
+                                                               PlatformSecurityContext context, UserNotificationService userNotificationService, SmsNotificationWritePlatformService smsNotificationWritePlatformService) {
+        return new NotificationDomainServiceImpl(businessEventNotifierService, context, userNotificationService, smsNotificationWritePlatformService);
     }
 
     @Bean

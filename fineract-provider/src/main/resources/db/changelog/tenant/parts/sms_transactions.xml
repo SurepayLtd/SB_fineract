@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements. See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership. The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied. See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!-- Create SMS Transactions Table -->
+    <changeSet author="victor" id="create-sms-transactions">
+
+        <createTable tableName="sms_transactions">
+
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="sms_event" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="mobile_number" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="sms_id" type="VARCHAR(200)"/>
+
+            <column name="message_requirement" type="VARCHAR(100)"/>
+
+            <column name="sms_status" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="error_message" type="TEXT"/>
+
+            <column name="message_length" type="INT"/>
+
+            <column name="sms_parts" type="INT"/>
+
+            <column name="sms_provider" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="sent_at" type="DATETIME"/>
+
+            <column name="failed_at" type="DATETIME"/>
+
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+
+        </createTable>
+
+    </changeSet>
+
+    <!-- Indexes -->
+    <changeSet author="victor" id="index-sms-transactions">
+
+        <createIndex tableName="sms_transactions" indexName="idx_sms_txn_mobile_number">
+            <column name="mobile_number"/>
+        </createIndex>
+
+        <createIndex tableName="sms_transactions" indexName="idx_sms_txn_sms_status">
+            <column name="sms_status"/>
+        </createIndex>
+
+        <createIndex tableName="sms_transactions" indexName="idx_sms_txn_sms_event">
+            <column name="sms_event"/>
+        </createIndex>
+
+        <createIndex tableName="sms_transactions" indexName="idx_sms_txn_sms_provider">
+            <column name="sms_provider"/>
+        </createIndex>
+
+        <createIndex tableName="sms_transactions" indexName="idx_sms_txn_created_at">
+            <column name="created_at"/>
+        </createIndex>
+
+        <createIndex tableName="sms_transactions" indexName="idx_sms_txn_sent_at">
+            <column name="sent_at"/>
+        </createIndex>
+
+
+    </changeSet>
+
+    <changeSet id="sms_consumption_reports" author="victor">
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Sms Consumption Report"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_category" value="Client"/>
+            <column name="report_sql" value=" SELECT
+                '${startDate}' AS StartDate,
+                '${endDate}' AS EndDate,
+                Y.*
+            FROM (
+                SELECT
+                    DATE(s.sent_at) AS `SMS Date`,
+                    s.sms_event AS `SMS Event`,
+                    s.message_requirement AS Requirement,
+                    COUNT(*) AS `SMS Sent`,
+                    s.sms_provider AS Provider
+                FROM sms_transactions s
+                WHERE s.sms_status = 'Sent'
+                  AND s.sent_at IS NOT NULL
+                  AND s.sent_at >= '${startDate}'
+                  AND s.sent_at &lt; DATE_ADD('${endDate}', INTERVAL 1 DAY)
+                GROUP BY
+                    DATE(s.sent_at),
+                    s.sms_event,
+                    s.message_requirement,
+                    s.sms_provider
+            ) Y
+            ORDER BY Y.`SMS Date`, Y.`SMS Event`
+            "/>
+            <column name="description" value="Successful SMS Transactions Report"/>
+            <column name="core_report" valueBoolean="false"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Sms Consumption Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'startDate')"/>
+            <column name="report_parameter_name" value="startDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Sms Consumption Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'endDate')"/>
+            <column name="report_parameter_name" value="endDate"/>
+        </insert>
+
+        <insert tableName="stretchy_report">
+            <column name="report_name" value="Failed Sms Report"/>
+            <column name="report_type" value="Table"/>
+            <column name="report_subtype"/>
+            <column name="report_category" value="Client"/>
+            <column name="report_sql" value=" SELECT
+                '${startDate}' AS StartDate,
+                '${endDate}' AS EndDate,
+                Y.*
+            FROM (
+                SELECT
+                    DATE(s.failed_at) AS `SMS Date`,
+                    s.mobile_number AS `Phone Number`,
+                    s.sms_event AS `SMS Event`,
+                    s.message_requirement AS Requirement,
+                    s.sms_provider AS Provider,
+                    s.error_message AS `Error Message`
+                FROM sms_transactions s
+                WHERE s.sms_status = 'Failed'
+                  AND s.failed_at IS NOT NULL
+                  AND s.failed_at >= '${startDate}'
+                  AND s.failed_at &lt; DATE_ADD('${endDate}', INTERVAL 1 DAY)
+            ) Y
+            ORDER BY
+                Y.`SMS Date`, Y.`SMS Event`
+            "/>
+            <column name="description" value="Failed SMS Transactions Report"/>
+            <column name="core_report" valueBoolean="false"/>
+            <column name="use_report" valueBoolean="true"/>
+            <column name="self_service_user_report" valueBoolean="false"/>
+        </insert>
+
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Failed Sms Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'startDate')"/>
+            <column name="report_parameter_name" value="startDate"/>
+        </insert>
+        <insert tableName="stretchy_report_parameter">
+            <column name="report_id" valueComputed="(select id from stretchy_report where report_name = 'Failed Sms Report')"/>
+            <column name="parameter_id" valueComputed="(select id from stretchy_parameter where parameter_variable  = 'endDate')"/>
+            <column name="report_parameter_name" value="endDate"/>
+        </insert>
+
+    </changeSet>
+
+    <changeSet author="victor" id="sms-business-events-configurations">
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-when-charge-waived"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description"/>
+        </insert>
+        <insert tableName="c_configuration">
+            <column name="name" value="send-sms-when-interest-credited"/>
+            <column name="value"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description"/>
+        </insert>
+    </changeSet>
+    <changeSet id="two-factor-default-sms/email" author="victor">
+        <sql>
+            UPDATE twofactor_configuration set value = '{{tenant}} Two-Factor Authentication Token'
+            where name = 'otp-delivery-email-subject';
+        </sql>
+        <sql>
+            UPDATE twofactor_configuration set value = 'Hello {{username}}.\n" + "Your OTP login token is {{token}}.'
+            where name = 'otp-delivery-email-body';
+        </sql>
+        <sql>
+            UPDATE twofactor_configuration set value = 'Your {{tenant}} verification code is {{token}}. Do not share this code with anyone.'
+            where name = 'otp-delivery-sms-text';
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

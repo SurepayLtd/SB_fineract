@@ -24,6 +24,8 @@ import lombok.RequiredArgsConstructor;
 import org.apache.fineract.accounting.journalentry.service.JournalEntryWritePlatformService;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
+import org.apache.fineract.notification.data.SmsTypeEnum;
+import org.apache.fineract.notification.service.SmsNotificationWritePlatformService;
 import org.apache.fineract.organisation.monetary.domain.OrganisationCurrencyRepositoryWrapper;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientCharge;
@@ -45,6 +47,7 @@ public class ClientTransactionWritePlatformServiceJpaRepositoryImpl implements C
     private final ClientRepositoryWrapper clientRepository;
     private final OrganisationCurrencyRepositoryWrapper organisationCurrencyRepository;
     private final JournalEntryWritePlatformService journalEntryWritePlatformService;
+    private final SmsNotificationWritePlatformService smsNotificationWritePlatformService;
 
     @Override
     public CommandProcessingResult undo(Long clientId, Long transactionId) {
@@ -92,6 +95,9 @@ public class ClientTransactionWritePlatformServiceJpaRepositoryImpl implements C
     public void saveFailedAttempt(Client client, Integer maxAttempts) {
         client.handlePinAttempts(maxAttempts);
         clientRepository.saveAndFlush(client);
+        if (client.isPinBlocked()) {
+            smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.FAILED_MAX_PIN_ATTEMPTS, null, null);
+        }
     }
 
     private void generateAccountingEntries(ClientTransaction clientTransaction) {

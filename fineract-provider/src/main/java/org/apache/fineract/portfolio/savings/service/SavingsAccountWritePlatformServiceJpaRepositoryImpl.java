@@ -319,7 +319,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         final String routingCode = command.stringValueOfParameterNamed("routingCode");
         final Integer paymentTypeId = command.integerValueOfParameterNamed("paymentTypeId");
 
-        validateMomoIntegration(routingCode, paymentTypeId);
+        validateMomoIntegration(routingCode, paymentTypeId, account, transactionAmount);
 
         this.savingsAccountTransactionDataValidator.validateTransactionWithPivotDate(transactionDate, account);
 
@@ -392,7 +392,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
 
         final Map<String, Object> changes = new LinkedHashMap<>();
 
-        validateMomoIntegration(routingCode, paymentTypeId);
+        validateMomoIntegration(routingCode, paymentTypeId, account, transactionAmount);
         validateMomoPin(paymentTypeId, account.getClient(), mobileNo, pinCode);
 
         final PaymentDetail paymentDetail = this.paymentDetailWritePlatformService.createAndPersistPaymentDetail(command, changes);
@@ -438,10 +438,11 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
                 .build();
     }
 
-    private void validateMomoIntegration(String routingCode, Integer paymentTypeId) {
+    private void validateMomoIntegration(String routingCode, Integer paymentTypeId, SavingsAccount account, BigDecimal transaction) {
         List<PaymentDetail> payments = this.paymentDetailRepository.findPaymentDetailByRoutingCode(routingCode);
 
         if (!org.apache.commons.collections4.CollectionUtils.isEmpty(payments) && paymentTypeId == 100) {
+            smsNotificationWritePlatformService.processFailedUssdSmsNotification(account.getClient(),  SmsTypeEnum.DEPOSIT_FAILURE_VIA_USSD, account, null, transaction);
             throw new GeneralPlatformDomainRuleException("error.mgs.transaction.already.exist",
                     "Duplicate Transaction detected. Ref :-" + routingCode);
         }
@@ -552,6 +553,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
                 if (DateUtils.isBefore(transactionDate, savingTransaction.getDateOf())) {
                     throw new PostInterestAsOnDateException(PostInterestAsOnExceptionType.LAST_TRANSACTION_DATE);
                 }
+                smsNotificationWritePlatformService.processSavingsAccountSmsNotification(account, SmsTypeEnum.SAVINGS_INTEREST_POSTED, savingTransaction);
             }
 
             if (DateUtils.isDateInTheFuture(transactionDate)) {
@@ -702,6 +704,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
                     backdatedTxnsAllowedTill);
         }
         reversalId = reversal.getId();
+        smsNotificationWritePlatformService.processTransactionReversals(account.getClient(), SmsTypeEnum.SAVINGS_REVERSAL, account, null, savingsAccountTransaction, null);
         return new CommandProcessingResultBuilder() //
                 .withEntityId(reversalId) //
                 .withOfficeId(account.officeId()) //
@@ -787,6 +790,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         account.activateAccountBasedOnBalance();
         this.savingAccountRepositoryWrapper.saveAndFlush(account);
         postJournalEntries(account, existingTransactionIds, existingReversedTransactionIds, false);
+        smsNotificationWritePlatformService.processTransactionReversals(account.getClient(), SmsTypeEnum.SAVINGS_REVERSAL, account, null, savingsAccountTransaction, null);
         return new CommandProcessingResultBuilder() //
                 .withEntityId(savingsId) //
                 .withOfficeId(account.officeId()) //
@@ -1199,6 +1203,8 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         savingsAccount.addCharge(fmt, savingsAccountCharge, chargeDefinition);
         this.savingsAccountChargeRepository.save(savingsAccountCharge);
         this.savingAccountRepositoryWrapper.saveAndFlush(savingsAccount);
+        smsNotificationWritePlatformService.processChargeSmsNotification(savingsAccount.getClient(), SmsTypeEnum.SAVINGS_CHARGE_APPLIED, savingsAccountCharge, null, null);
+
         return new CommandProcessingResultBuilder() //
                 .withEntityId(savingsAccountCharge.getId()) //
                 .withOfficeId(savingsAccount.officeId()) //
@@ -1326,6 +1332,9 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         this.savingAccountRepositoryWrapper.saveAndFlush(account);
 
         postJournalEntries(account, existingTransactionIds, existingReversedTransactionIds, backdatedTxnsAllowedTill);
+
+        smsNotificationWritePlatformService.processChargeSmsNotification(account.getClient(), SmsTypeEnum.SAVINGS_CHARGE_WAIVED, savingsAccountCharge, null, null);
+
         return new CommandProcessingResultBuilder() //
                 .withEntityId(savingsAccountChargeId) //
                 .withOfficeId(account.officeId()) //

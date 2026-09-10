@@ -1600,6 +1600,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
 
         postJournalEntries(loan, existingTransactionIds, existingReversedTransactionIds);
         loanAccrualTransactionBusinessEventService.raiseBusinessEventForAccrualTransactions(loan, existingTransactionIds);
+        smsNotificationWritePlatformService.processTransactionReversals(loan.getClient(), SmsTypeEnum.LOAN_REVERSAL, null, loan, null, transactionToAdjust);
 
         return new CommandProcessingResultBuilder() //
                 .withCommandId(command.commandId()) //

@@ -36,10 +36,15 @@ public class SmsNotificationData implements Serializable {
     private String sender;
     private String service;
     private String password;
+    private String smsEvent;
+    private String requirement;
 
-    public SmsNotificationData(String phoneNumber, String message, String messageId) {
+
+    public SmsNotificationData(String phoneNumber, String message, String messageId, String smsEvent, String requirement) {
         this.phoneNumber = phoneNumber;
         this.message = message;
         this.messageId = messageId;
+        this.smsEvent = smsEvent;
+        this.requirement = requirement;
     }
 }

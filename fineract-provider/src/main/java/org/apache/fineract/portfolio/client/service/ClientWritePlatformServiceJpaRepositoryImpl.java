@@ -63,6 +63,7 @@ import org.apache.fineract.infrastructure.event.business.service.BusinessEventNo
 import org.apache.fineract.infrastructure.security.service.HashingPasswordEncoder;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.notification.data.SmsNotificationData;
+import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
 import org.apache.fineract.organisation.office.domain.Office;
 import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
@@ -102,7 +103,6 @@ import org.apache.fineract.useradministration.domain.AppUser;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @AllArgsConstructor
@@ -1124,7 +1124,6 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     @Override
     public CommandProcessingResult activateMomoPayment(final Long clientId, final JsonCommand command) {
         this.context.authenticatedUser();
-        String messageId = null;
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
 
@@ -1140,19 +1139,12 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                         "Client Pin has been blocked due to many attempts. Unblock the Client Pin instead of Momo Payment"
                 );
             }
-
-            messageId = String.format("ACTIVATED-PIN-%s", UUID.randomUUID());
-            if (client.getMobileNo() != null && messageId != null) {
-                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),
-                        "Hello " + client.getDisplayName() + ", Here is the OTP to Activate you're account on Surebanker " + otp,
-                        messageId));
-            }
-
             client.setOtpCode(otp);
             client.setOtpUsed(false);
             final Integer otpExpiryMinutes = this.configurationDomainService.retrieveMomoPaymentOtpExpiryMinutes();
             client.setMomoPaymentOtpExpiry(DateUtils.getLocalDateTimeOfTenant().plusMinutes(otpExpiryMinutes));
             this.clientRepository.saveAndFlush(client);
+            smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.ACTIVATE_MOMO_PAYMENT_OTP, otp, null);
 
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //
@@ -1173,7 +1165,6 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
     public CommandProcessingResult deActivateMomoPayment(final Long clientId) {
         this.context.authenticatedUser();
-        String messageId = null;
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
 
@@ -1187,11 +1178,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             client.setPinCode(null);
             this.clientRepository.saveAndFlush(client);
 
-            messageId = String.format("DEACTIVATED-PIN-%s", UUID.randomUUID());
-            if (client.getMobileNo() != null && messageId != null) {
-                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),
-                        "Hello " + client.getDisplayName() + ",  Momo Payment has been de-activated from you're account !", messageId));
-            }
+            smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.DEACTIVATE_MOMO_PAYMENT, null, null);
 
             return new CommandProcessingResultBuilder() //
                     .withEntityExternalId(client.getExternalId()) //
@@ -1250,7 +1237,6 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     public CommandProcessingResult createClientPin(final Long clientId, final JsonCommand command) {
         this.context.authenticatedUser();
         this.fromApiJsonDeserializer.validatCreateClientPin(command);
-        String messageId = null;
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
             final Integer pinCode = command.integerValueOfParameterNamed(ClientApiConstants.pinCodeParamName);
@@ -1278,11 +1264,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             client.setPinExpiryDate(DateUtils.getBusinessLocalDate().plusMonths(pinExpiryMonths));
             this.clientRepository.saveAndFlush(client);
 
-            messageId = String.format("CREATE-PIN-%s", UUID.randomUUID());
-            if (mobileNo != null && messageId != null) {
-                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),
-                        "Hello " + client.getDisplayName() + ",  Momo Payment PIN has been setup successfully on Surebanker !", messageId));
-            }
+            smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.CLIENT_PIN, null, null);
 
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //
@@ -1373,7 +1355,6 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     @Override
     public CommandProcessingResult unblockClientPin(Long clientId) {
         this.context.authenticatedUser();
-        String messageId = null;
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
 
@@ -1397,20 +1378,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             client.setMomoPaymentOtpExpiry(DateUtils.getLocalDateTimeOfTenant().plusMinutes(otpExpiryMinutes));
             this.clientRepository.saveAndFlush(client);
 
-            messageId = String.format("UNBLOCK-PIN-%s", UUID.randomUUID());
-            if (client.getMobileNo() != null ) {
-                smsNotificationWritePlatformService.sendSms(new SmsNotificationData(client.getMobileNo(),
-                        String.format(
-                                "Hello %s, your Mobile Banking PIN has been unblocked. "
-                                        + "Use OTP %s to set a new PIN. Expires in %s minutes. "
-                                        + "Do not share.",
-                                client.getDisplayName(),
-                                otp,
-                                otpExpiryMinutes
-                        ),
-                        messageId
-                ));
-            }
+            smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.UNBLOCK_CLIENT_PIN, otp, otpExpiryMinutes);
 
             return new CommandProcessingResultBuilder() //
                     .withEntityExternalId(client.getExternalId()) //
@@ -1428,7 +1396,6 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     public CommandProcessingResult resetClientPin(Long clientId, JsonCommand command) {
         this.context.authenticatedUser();
         this.fromApiJsonDeserializer.validatePinResetClientPin(command);
-        String messageId = null;
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
             final Integer pinCode = command.integerValueOfParameterNamed(ClientApiConstants.pinCodeParamName);
@@ -1473,12 +1440,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             client.setPinExpiryDate(DateUtils.getBusinessLocalDate().plusMonths(pinExpiryMonths));
             this.clientRepository.saveAndFlush(client);
 
-            messageId = String.format("CREATE-PIN-%s", UUID.randomUUID());
-
-            smsNotificationWritePlatformService.sendSms(
-                    new SmsNotificationData(client.getMobileNo(),
-                            String.format("Hello %s, your Mobile Banking PIN has been updated successfully.", client.getDisplayName()), messageId)
-            );
+            smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.RESET_CLIENT_PIN, null, null);
 
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //
@@ -1502,7 +1464,6 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     public CommandProcessingResult selfServiceChangePin(Long clientId, JsonCommand command) {
         this.context.authenticatedUser();
         this.fromApiJsonDeserializer.validateSelfServiceUpdateClientPin(command);
-        String messageId = null;
         try {
             final Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
             final Integer newPinCode = command.integerValueOfParameterNamed(ClientApiConstants.newPinCodeParamName);
@@ -1549,12 +1510,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             client.setPinExpiryDate(DateUtils.getBusinessLocalDate().plusMonths(pinExpiryMonths));
             this.clientRepository.saveAndFlush(client);
 
-            messageId = String.format("CREATE-PIN-%s", UUID.randomUUID());
-
-            smsNotificationWritePlatformService.sendSms(
-                    new SmsNotificationData(client.getMobileNo(),
-                            String.format("Hello %s, your Mobile Banking PIN has been updated successfully.", client.getDisplayName()), messageId)
-            );
+            smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.SELF_SERVICE_PIN_CHANGE, null, null);
 
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //

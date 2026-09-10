@@ -176,7 +176,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             // Trigger business event
             businessEventNotifierService.notifyPostBusinessEvent(new LoanCreatedBusinessEvent(loan));
             // Send SMS
-            smsNotificationWritePlatformService.processLoanSmsNotification(loan, SmsTypeEnum.LOAN_SUBMISSION, null);
+            smsNotificationWritePlatformService.processLoanSmsNotification(loan, SmsTypeEnum.LOAN_CREATION, null);
             // Building response
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //

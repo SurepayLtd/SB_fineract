@@ -200,4 +200,5 @@
     <include file="parts/share_enums.xml" relativeToChangelogFile="true"/>
     <include file="parts/Share_Reports.xml" relativeToChangelogFile="true"/>
     <include file="parts/mambo_sms_implementation.xml" relativeToChangelogFile="true"/>
+    <include file="parts/sms_transactions.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

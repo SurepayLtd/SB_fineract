@@ -678,6 +678,8 @@ public class SavingsApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
         // post journal entries for activation charges
         this.savingsAccountDomainService.postJournalEntries(account, existingTransactionIds, existingReversedTransactionIds, false);
 
+        smsNotificationWritePlatformService.processSavingsAccountSmsNotification(account, SmsTypeEnum.SAVINGS_CREATION, null);
+
         return new CommandProcessingResultBuilder() //
                 .withSavingsId(account.getId()) //
                 .setRollbackTransaction(rollbackTransaction)//

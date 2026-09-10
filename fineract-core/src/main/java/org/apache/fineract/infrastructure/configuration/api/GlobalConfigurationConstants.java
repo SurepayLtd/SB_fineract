@@ -91,6 +91,8 @@ public final class GlobalConfigurationConstants {
     public static final String SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_ACTIVATED = "send-sms-when-savings-account-activated-is-made";
     public static final String SEND_SMS_NOTIFICATION_ON_USSD_LOAN_APPLICATION = "send-sms-on-ussd-loan-application";
     public static final String ENABLE_SUREPAY_SELF_SERVICE = "enable-surepay-self-service";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_CHARGE_WAIVED = "send-sms-when-charge-waived";
+    public static final String SEND_SMS_NOTIFICATION_WHEN_INTEREST_CREDITED = "send-sms-when-interest-credited";
 
 
     private GlobalConfigurationConstants() {}

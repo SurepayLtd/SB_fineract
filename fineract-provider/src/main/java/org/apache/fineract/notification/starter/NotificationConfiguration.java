@@ -25,17 +25,7 @@ import org.apache.fineract.infrastructure.event.business.service.BusinessEventNo
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.infrastructure.security.utils.ColumnValidator;
 import org.apache.fineract.notification.eventandlistener.NotificationEventPublisher;
-import org.apache.fineract.notification.service.NotificationDomainService;
-import org.apache.fineract.notification.service.NotificationDomainServiceImpl;
-import org.apache.fineract.notification.service.NotificationGeneratorReadRepositoryWrapper;
-import org.apache.fineract.notification.service.NotificationGeneratorWritePlatformService;
-import org.apache.fineract.notification.service.NotificationMapperWritePlatformService;
-import org.apache.fineract.notification.service.NotificationReadPlatformService;
-import org.apache.fineract.notification.service.NotificationReadPlatformServiceImpl;
-import org.apache.fineract.notification.service.NotificationWritePlatformService;
-import org.apache.fineract.notification.service.NotificationWritePlatformServiceImpl;
-import org.apache.fineract.notification.service.UserNotificationService;
-import org.apache.fineract.notification.service.UserNotificationServiceImpl;
+import org.apache.fineract.notification.service.*;
 import org.apache.fineract.useradministration.domain.AppUserRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -48,8 +38,8 @@ public class NotificationConfiguration {
     @Bean
     @ConditionalOnMissingBean(NotificationDomainService.class)
     public NotificationDomainService notificationDomainService(BusinessEventNotifierService businessEventNotifierService,
-            PlatformSecurityContext context, UserNotificationService userNotificationService) {
-        return new NotificationDomainServiceImpl(businessEventNotifierService, context, userNotificationService);
+                                                               PlatformSecurityContext context, UserNotificationService userNotificationService, SmsNotificationWritePlatformService smsNotificationWritePlatformService) {
+        return new NotificationDomainServiceImpl(businessEventNotifierService, context, userNotificationService, smsNotificationWritePlatformService);
     }
 
     @Bean

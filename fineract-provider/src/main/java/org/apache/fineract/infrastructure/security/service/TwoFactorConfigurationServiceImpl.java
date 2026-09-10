@@ -31,6 +31,7 @@ import java.util.Map;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
+import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.infrastructure.security.constants.TwoFactorConfigurationConstants;
 import org.apache.fineract.infrastructure.security.constants.TwoFactorConstants;
 import org.apache.fineract.infrastructure.security.data.OTPRequest;
@@ -47,9 +48,9 @@ import org.springframework.stereotype.Service;
 @ConditionalOnProperty("fineract.security.2fa.enabled")
 public class TwoFactorConfigurationServiceImpl implements TwoFactorConfigurationService {
 
-    private static final String DEFAULT_EMAIL_SUBJECT = "Fineract Two-Factor Authentication Token";
+    private static final String DEFAULT_EMAIL_SUBJECT = "{tenant} Two-Factor Authentication Token";
     private static final String DEFAULT_EMAIL_BODY = "Hello {username}.\n" + "Your OTP login token is {token}.";
-    private static final String DEFAULT_SMS_TEXT = "Your authentication token for Fineract is " + "{token}.";
+    private static final String DEFAULT_SMS_TEXT = "Your {tenant} verification code is {token}. Do not share this code with anyone.";
 
     private final TwoFactorConfigurationRepository configurationRepository;
 
@@ -255,6 +256,7 @@ public class TwoFactorConfigurationServiceImpl implements TwoFactorConfiguration
         templateData.put("email", user.getEmail());
         templateData.put("firstname", user.getFirstname());
         templateData.put("lastname", user.getLastname());
+        templateData.put("tenant", ThreadLocalContextUtil.getTenant().getName());
         if (user.getStaff() != null && user.getStaff().mobileNo() != null) {
             templateData.put("mobileno", user.getStaff().mobileNo());
         }

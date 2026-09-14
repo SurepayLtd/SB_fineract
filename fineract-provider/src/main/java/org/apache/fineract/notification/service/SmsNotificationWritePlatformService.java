@@ -63,5 +63,7 @@ public interface SmsNotificationWritePlatformService {
 
     void processTransactionReversals(Client client, SmsTypeEnum smsTypeEnum, SavingsAccount savingsAccount, Loan loan, SavingsAccountTransaction savingsAccountTransaction, LoanTransaction loanTransaction);
 
+    void processAppUserSms(AppUser appUser, SmsTypeEnum smsTypeEnum);
+
 
 }

@@ -227,4 +227,38 @@
         </sql>
     </changeSet>
 
+    <changeSet id="appuser_max_attempts_blocking" author="victor">
+        <addColumn tableName="m_appuser">
+            <column name="user_blocked_at" type="DATETIME"/>
+        </addColumn>
+
+        <insert tableName="c_configuration">
+            <column name="name" value="maximum-login-attempts"/>
+            <column name="value" valueNumeric="5"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="true"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Maximum number of failed login attempts before a user account is blocked."/>
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="authorisation" />
+            <column name="code" value="UNBLOCK_USER" />
+            <column name="entity_name" value="USER" />
+            <column name="action_name" value="UNBLOCK" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+    </changeSet>
+    <changeSet id="appuser_max_attempts_blocking_1" author="victor">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="m_appuser" columnName="login_attempts"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="m_appuser">
+            <column name="login_attempts" type="INT" defaultValueNumeric="0"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

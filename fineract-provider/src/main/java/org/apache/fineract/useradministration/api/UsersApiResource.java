@@ -208,6 +208,24 @@ public class UsersApiResource {
         return this.toApiJsonSerializer.serialize(result);
     }
 
+    @PUT
+    @Path("{userId}/unblock")
+    @Operation(summary = "Unblock a User", description = "Unblocks a user who has been blocked after maximum login attempts.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = UsersApiResourceSwagger.UnblockUsersUserIdResponse.class))) })
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    public String unblock(@PathParam("userId") @Parameter(description = "userId") final Long userId) {
+
+        final CommandWrapper commandRequest = new CommandWrapperBuilder() //
+                .unblockUser(userId) //
+                .build();
+
+        final CommandProcessingResult result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
+
+        return this.toApiJsonSerializer.serialize(result);
+    }
+
     @GET
     @Path("downloadtemplate")
     @Produces("application/vnd.ms-excel")

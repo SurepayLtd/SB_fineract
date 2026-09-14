@@ -28,4 +28,6 @@ public interface AppUserWritePlatformService {
     CommandProcessingResult updateUser(Long userId, JsonCommand command);
 
     CommandProcessingResult deleteUser(Long userId);
+
+    CommandProcessingResult unBlockUser(Long userId);
 }

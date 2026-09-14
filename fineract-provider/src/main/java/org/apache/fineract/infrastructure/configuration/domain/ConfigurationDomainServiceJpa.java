@@ -562,4 +562,19 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
     public boolean isSelfServiceEnabled() {
         return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_SELF_SERVICE).isEnabled();
     }
+
+    @Override
+    public Integer retrieveMaxLoginAttempts() {
+        String name = "maximum-login-attempts";
+        GlobalConfigurationPropertyData property = getGlobalConfigurationPropertyData(name);
+        int defaultValue = 5;
+        if (property.isEnabled()){
+            int value = property.getValue().intValue();
+            if (value <1){
+                return defaultValue;
+            }
+            return value;
+        }
+        return defaultValue;
+    }
 }

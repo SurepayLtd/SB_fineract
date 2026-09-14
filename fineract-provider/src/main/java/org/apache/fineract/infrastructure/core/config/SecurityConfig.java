@@ -46,10 +46,8 @@ import org.apache.fineract.infrastructure.security.filter.InsecureTwoFactorAuthe
 import org.apache.fineract.infrastructure.security.filter.JwtAuthenticationFilter;
 import org.apache.fineract.infrastructure.security.filter.TenantAwareBasicAuthenticationFilter;
 import org.apache.fineract.infrastructure.security.filter.TwoFactorAuthenticationFilter;
-import org.apache.fineract.infrastructure.security.service.BasicAuthTenantDetailsService;
-import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
-import org.apache.fineract.infrastructure.security.service.TenantAwareJpaPlatformUserDetailsService;
-import org.apache.fineract.infrastructure.security.service.TwoFactorService;
+import org.apache.fineract.infrastructure.security.service.*;
+import org.apache.fineract.notification.service.SmsNotificationWritePlatformService;
 import org.apache.fineract.notification.service.UserNotificationService;
 import org.apache.fineract.useradministration.domain.AppUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -97,6 +95,8 @@ public class SecurityConfig {
     private ToApiJsonSerializer<PlatformRequestLog> toApiJsonSerializer;
     @Autowired
     private ConfigurationDomainService configurationDomainService;
+    @Autowired
+    private SmsNotificationWritePlatformService smsNotificationWritePlatformService;
     @Autowired
     private CacheWritePlatformService cacheWritePlatformService;
     @Autowired
@@ -218,10 +218,7 @@ public class SecurityConfig {
 
     @Bean(name = "customAuthenticationProvider")
     public DaoAuthenticationProvider authProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
+        return new FineractDaoAuthenticationProvider(appUserRepository, configurationDomainService,smsNotificationWritePlatformService, userDetailsService, passwordEncoder());
     }
 
     @Bean

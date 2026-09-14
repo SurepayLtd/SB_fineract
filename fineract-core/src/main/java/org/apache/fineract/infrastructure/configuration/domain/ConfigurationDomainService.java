@@ -150,4 +150,6 @@ public interface ConfigurationDomainService {
 
     boolean isSelfServiceEnabled();
 
+    Integer retrieveMaxLoginAttempts();
+
 }

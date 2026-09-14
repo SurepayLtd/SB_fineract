@@ -888,6 +888,47 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         }
     }
 
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processAppUserSms(AppUser appUser, SmsTypeEnum smsTypeEnum) {
+        smsPropertyEnabled();
+
+        String mobileNo = appUser != null ?
+                (appUser.getStaff() != null ? appUser.getStaff().getMobileNo(): null)
+                : null;
+        String username = appUser != null ? appUser.getDisplayName().replace("," , "") : null;
+        Long userId = appUser != null ? appUser.getId() : null;
+
+        String message = null;
+        String messageId = null;
+
+        switch (smsTypeEnum){
+            case USER_BLOCKED:
+                message = String.format("Dear %s, Alert: Account Locked after multiple unsuccessful login attempts on your account. Please contact %s if this was not you.",
+                        username, ThreadLocalContextUtil.getTenant().getName());
+                messageId = String.format("USER-BLOCKED-%s", userId);
+            break;
+            case PASSWORD_RESET:
+                message = String.format("Dear %s, your password has been reset successfully. If you did not request this, contact %s immediately.",
+                        username, ThreadLocalContextUtil.getTenant().getName());
+                messageId = String.format("PASSWORD-RESET-%s", userId);
+            break;
+            case USER_UN_BLOCKED:
+                message = String.format("Dear %s, Your account has been unblocked. You can now log in again. If you did not request this, please contact %s immediately.",
+                        username, ThreadLocalContextUtil.getTenant().getName());
+                messageId = String.format("USER-UNBLOCKED-%s", userId);
+            break;
+
+            default:
+                log.info("No sms type found to process a notification");
+                return;
+        }
+        if (mobileNo != null && messageId != null) {
+
+            sendSms(new SmsNotificationData(mobileNo, message, messageId, smsTypeEnum.getDescription(), smsTypeEnum.getStatus()));
+        }
+    }
+
     private MamboSmsResponse handleResponse(ResponseEntity<MamboSmsResponse> responseEntity) {
 
         MamboSmsResponse response = responseEntity.getBody();

@@ -590,7 +590,19 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                         clientName, ThreadLocalContextUtil.getTenant().getName()
                 );
                 messageId = String.format("USSD_PIN_BLOCKED-%s", clientId);
-                break;
+            break;
+            case HAPPY_BIRTHDAY:
+                message = String.format("Happy Birthday, %s! Thank you for banking with %s. We wish you a joyful year filled with financial success. Have a wonderful day!",
+                        clientName, ThreadLocalContextUtil.getTenant().getName()
+                );
+                messageId = String.format("HAPPY-BIRTHDAY-%s", clientId);
+            break;
+            case PROFILE_CHANGE:
+                message = String.format("Dear %s, your profile information has been updated successfully. If you did not request this change, contact %s.",
+                        clientName, ThreadLocalContextUtil.getTenant().getName()
+                );
+                messageId = String.format("PROFILE-CHANGE-%s", clientId);
+            break;
             default:
                 log.info("No sms type found to process a notification");
                 return;

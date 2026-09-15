@@ -65,7 +65,9 @@ public enum SmsTypeEnum {
     LOAN_REVERSAL(35, "SmsTypeEnum.loanReversal", "Loan Transaction Reversed", "Mandatory"),
     USER_BLOCKED(36, "SmsTypeEnum.userBlocked", "User Blocked", "Mandatory"),
     PASSWORD_RESET(37, "SmsTypeEnum.passwordReset", "Password Reset", "Mandatory"),
-    USER_UN_BLOCKED(38, "SmsTypeEnum.userUnBlocked", "User Un Blocked", "Mandatory")
+    USER_UN_BLOCKED(38, "SmsTypeEnum.userUnBlocked", "User Un Blocked", "Mandatory"),
+    HAPPY_BIRTHDAY(39, "SmsTypeEnum.birthday", "Happy Birthday", "Mandatory"),
+    PROFILE_CHANGE(40, "SmsTypeEnum.profileChange", "Profile Change", "Mandatory")
     ;
 
     private final Integer value;

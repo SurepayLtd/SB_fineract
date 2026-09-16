@@ -402,6 +402,12 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 messageId = String.format("LOAN-CREATED-%s", loan.getId());
 
             break;
+            case LOAN_RESCHEDULE:
+                message = String.format("Dear %s, your loan %s has been successfully rescheduled. Please contact %s for your updated repayment schedule.", clientName,
+                        loan.getAccountNumber(), ThreadLocalContextUtil.getTenant().getName());
+                messageId = String.format("LOAN-RESCHEDULE-%s", loan.getId());
+
+                break;
             default:
                 log.info("No sms type found to process a notification");
                 return;
@@ -493,6 +499,21 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                     messageId = String.format("SAVINGS-INTEREST-%s", transaction.getId());
                 }
                 break;
+            case SAVINGS_INACTIVE_30_DAYS:
+                message = String.format("Dear %s, your savings account %s has been inactive for 30 days. Please make a transaction to keep your account active.", clientName
+                        , savingsAccount.getAccountNumber());
+                messageId = String.format("SAVINGS-INACTIVITY-30-%s", savingsAccount.getId());
+            break;
+            case SAVINGS_INACTIVE_60_DAYS:
+                message = String.format("Dear %s, your savings account %s has been inactive for 60 days. Please make a transaction to keep your account active.", clientName
+                        , savingsAccount.getAccountNumber());
+                messageId = String.format("SAVINGS-INACTIVITY-60-%s", savingsAccount.getId());
+            break;
+            case SAVINGS_INACTIVE_90_DAYS:
+                message = String.format("Dear %s, your savings account %s has been inactive for 90 days. Please make a transaction to keep your account active.", clientName
+                        , savingsAccount.getAccountNumber());
+                messageId = String.format("SAVINGS-INACTIVITY-90-%s", savingsAccount.getId());
+            break;
             default:
                 log.info("No sms type found to process a notification");
                 return;

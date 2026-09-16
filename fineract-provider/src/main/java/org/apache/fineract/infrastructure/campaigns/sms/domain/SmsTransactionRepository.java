@@ -16,7 +16,10 @@ public interface SmsTransactionRepository extends JpaRepository<SmsTransaction, 
           AND s.sentAt >= :startDate
           AND s.sentAt < :endDate
         """)
-    Long existsBirthdaySms(@Param("mobileNumber") String mobileNumber, @Param("smsEvent") String smsEvent,
+    Long existsBySms(@Param("mobileNumber") String mobileNumber, @Param("smsEvent") String smsEvent,
                               @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate
     );
+
+    @Query(" SELECT COUNT(s) FROM SmsTransaction s WHERE s.mobileNumber = :mobileNumber AND s.smsEvent = :smsEvent")
+    Long countSms(@Param("mobileNumber") String mobileNumber, @Param("smsEvent") String smsEvent);
 }

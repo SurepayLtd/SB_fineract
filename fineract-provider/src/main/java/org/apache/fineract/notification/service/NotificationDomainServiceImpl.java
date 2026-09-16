@@ -28,11 +28,7 @@ import org.apache.fineract.infrastructure.event.business.domain.deposit.FixedDep
 import org.apache.fineract.infrastructure.event.business.domain.deposit.RecurringDepositAccountCreateBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.group.CentersCreateBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.group.GroupsCreateBusinessEvent;
-import org.apache.fineract.infrastructure.event.business.domain.loan.LoanApprovedBusinessEvent;
-import org.apache.fineract.infrastructure.event.business.domain.loan.LoanChargebackTransactionBusinessEvent;
-import org.apache.fineract.infrastructure.event.business.domain.loan.LoanCloseAsRescheduleBusinessEvent;
-import org.apache.fineract.infrastructure.event.business.domain.loan.LoanCloseBusinessEvent;
-import org.apache.fineract.infrastructure.event.business.domain.loan.LoanCreatedBusinessEvent;
+import org.apache.fineract.infrastructure.event.business.domain.loan.*;
 import org.apache.fineract.infrastructure.event.business.domain.loan.product.LoanProductCreateBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.loan.transaction.LoanTransactionMakeRepaymentPostBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.savings.SavingsApproveBusinessEvent;
@@ -96,6 +92,8 @@ public class NotificationDomainServiceImpl implements NotificationDomainService 
         businessEventNotifierService.addPostBusinessEventListener(ShareAccountCreateBusinessEvent.class, new ShareAccountCreatedListener());
         businessEventNotifierService.addPostBusinessEventListener(ShareAccountApproveBusinessEvent.class,
                 new ShareAccountApprovedListener());
+        businessEventNotifierService.addPostBusinessEventListener(LoanRescheduledDueAdjustScheduleBusinessEvent.class,
+                new LoanRescheduledApprovedListener());
     }
 
     private final class ClientCreatedListener implements BusinessEventListener<ClientCreateBusinessEvent> {
@@ -315,6 +313,14 @@ public class NotificationDomainServiceImpl implements NotificationDomainService 
             ShareAccount shareAccount = event.get();
             buildNotification("ACTIVATE_SHAREACCOUNT", "shareAccount", shareAccount.getId(), "Share account approved", "approved",
                     context.authenticatedUser().getId(), shareAccount.getOfficeId());
+        }
+    }
+
+    private final class LoanRescheduledApprovedListener implements BusinessEventListener<LoanRescheduledDueAdjustScheduleBusinessEvent>{
+        @Override
+        public void onBusinessEvent(LoanRescheduledDueAdjustScheduleBusinessEvent event) {
+            Loan loan = event.get();
+            smsNotificationWritePlatformService.processLoanSmsNotification(loan, SmsTypeEnum.LOAN_RESCHEDULE, null);
         }
     }
 

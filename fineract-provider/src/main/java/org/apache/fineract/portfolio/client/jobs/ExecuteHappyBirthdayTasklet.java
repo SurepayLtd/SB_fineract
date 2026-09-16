@@ -69,7 +69,7 @@ public class ExecuteHappyBirthdayTasklet implements Tasklet {
 
             try {
 
-                Long birthdaySmsCount = smsTransactionRepository.existsBirthdaySms(client.getMobileNo(), SmsTypeEnum.HAPPY_BIRTHDAY.getDescription(),
+                Long birthdaySmsCount = smsTransactionRepository.existsBySms(client.getMobileNo(), SmsTypeEnum.HAPPY_BIRTHDAY.getDescription(),
                         startOfDay, startOfTomorrow
                 );
 

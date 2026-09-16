@@ -67,7 +67,11 @@ public enum SmsTypeEnum {
     PASSWORD_RESET(37, "SmsTypeEnum.passwordReset", "Password Reset", "Mandatory"),
     USER_UN_BLOCKED(38, "SmsTypeEnum.userUnBlocked", "User Un Blocked", "Mandatory"),
     HAPPY_BIRTHDAY(39, "SmsTypeEnum.birthday", "Happy Birthday", "Mandatory"),
-    PROFILE_CHANGE(40, "SmsTypeEnum.profileChange", "Profile Change", "Mandatory")
+    PROFILE_CHANGE(40, "SmsTypeEnum.profileChange", "Profile Change", "Mandatory"),
+    LOAN_RESCHEDULE(41, "SmsTypeEnum.loanReschedule", "Loan Reschedule", "Mandatory"),
+    SAVINGS_INACTIVE_30_DAYS(42, "SmsTypeEnum.30days","Savings Account Inactive - 30 Days", "Mandatory"),
+    SAVINGS_INACTIVE_60_DAYS(43,"SmsTypeEnum.30days","Savings Account Inactive - 60 Days", "Mandatory"),
+    SAVINGS_INACTIVE_90_DAYS(44,"SmsTypeEnum.30days","Savings Account Inactive - 90 Days","Mandatory"),
     ;
 
     private final Integer value;

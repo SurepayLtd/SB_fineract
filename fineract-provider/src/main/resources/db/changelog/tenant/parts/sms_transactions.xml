@@ -283,4 +283,26 @@
         </insert>
     </changeSet>
 
+    <changeSet id="add_dormant_savings_sms_job" author="victor">
+        <insert tableName="job">
+            <column name="name" value="Execute Dormant Savings Account Reminder"/>
+            <column name="display_name" value="Execute Dormant Savings Account Reminder"/>
+            <column name="cron_expression" value="0 0 10 ? * TUE *"/>
+            <column name="create_time" valueDate="${current_datetime}"/>
+            <column name="task_priority" valueNumeric="5"/>
+            <column name="group_name"/>
+            <column name="previous_run_start_time"/>
+            <column name="job_key" value="Execute Dormant Savings Account ReminderDetail2_DEFAULT"/>
+            <column name="initializing_errorlog"/>
+            <column name="is_active" valueBoolean="false"/>
+            <column name="currently_running" valueBoolean="false"/>
+            <column name="updates_allowed" valueBoolean="true"/>
+            <column name="scheduler_group" valueNumeric="0"/>
+            <column name="is_misfired" valueBoolean="false"/>
+            <column name="node_id" valueNumeric="1"/>
+            <column name="is_mismatched_job" valueBoolean="true"/>
+            <column name="short_name" value="SAVDOR"/>
+        </insert>
+    </changeSet>
+
 </databaseChangeLog>

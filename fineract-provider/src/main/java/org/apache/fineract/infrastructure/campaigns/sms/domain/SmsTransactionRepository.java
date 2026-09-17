@@ -22,4 +22,8 @@ public interface SmsTransactionRepository extends JpaRepository<SmsTransaction, 
 
     @Query(" SELECT COUNT(s) FROM SmsTransaction s WHERE s.mobileNumber = :mobileNumber AND s.smsEvent = :smsEvent")
     Long countSms(@Param("mobileNumber") String mobileNumber, @Param("smsEvent") String smsEvent);
+
+
+    @Query("SELECT COUNT(s) FROM SmsTransaction s WHERE s.smsId = :smsId")
+    Long countBySmsId(@Param("smsId") String smsId);
 }

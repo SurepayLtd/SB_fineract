@@ -18,6 +18,7 @@
  */
 package org.apache.fineract.portfolio.loanaccount.loanschedule.service;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Map;
 import org.apache.fineract.portfolio.loanaccount.data.DisbursementData;

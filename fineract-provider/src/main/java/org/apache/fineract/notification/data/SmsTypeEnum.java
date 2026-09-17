@@ -72,6 +72,10 @@ public enum SmsTypeEnum {
     SAVINGS_INACTIVE_30_DAYS(42, "SmsTypeEnum.30days","Savings Account Inactive - 30 Days", "Mandatory"),
     SAVINGS_INACTIVE_60_DAYS(43,"SmsTypeEnum.30days","Savings Account Inactive - 60 Days", "Mandatory"),
     SAVINGS_INACTIVE_90_DAYS(44,"SmsTypeEnum.30days","Savings Account Inactive - 90 Days","Mandatory"),
+    LOAN_INSTALLMENT_DUE_T7(45,"", "Loan Installment Due Reminder - T-7", "Mandatory"),
+    LOAN_INSTALLMENT_DUE_T3(46, "", "Loan Installment Due Reminder - T-3", "Mandatory"),
+    LOAN_INSTALLMENT_DUE_T1(47,"", "Loan Installment Due Reminder - T-1", "Mandatory"),
+    LOAN_INSTALLMENT_DUE_T0(48,"", "Loan Installment Due Reminder - Due Today", "Mandatory"),
     ;
 
     private final Integer value;

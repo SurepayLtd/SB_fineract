@@ -61,6 +61,7 @@ public enum JobName {
     PROCESS_LOAN_TRANSACTIONS_ON_MOMO_PAYMENT("Process Loan Transactions On Momo Payment"),//
     EXECUTE_STAFF_CLIENT_BIRTHDAYS("Execute Happy Birthday Message"),
     EXECUTE_DORMANT_ACCOUNTS_SMS("Execute Dormant Savings Account Reminder"),
+    EXECUTE_LOAN_INSTALLMENT_PAYMENT_REMINDER("Execute Loan Installment Payment Reminder"),
     ;
 
     private final String name;

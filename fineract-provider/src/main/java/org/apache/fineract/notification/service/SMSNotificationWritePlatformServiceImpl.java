@@ -62,6 +62,7 @@ import org.apache.fineract.portfolio.account.domain.AccountTransferDetails;
 import org.apache.fineract.portfolio.account.domain.AccountTransferTransaction;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientCharge;
+import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentOverdueReminderData;
 import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentReminderData;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanCharge;
@@ -713,7 +714,6 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         String mobileNo = item.mobileNo();
         String message = null;
         String messageId = null;
-        String clientName = item.clientName();
         final String amount = item.totalDue().setScale(2, RoundingMode.HALF_UP).toPlainString();
 
         boolean isMandatory = smsTypeEnum.getStatus().equalsIgnoreCase("Mandatory");
@@ -722,29 +722,29 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         switch (smsTypeEnum){
             case LOAN_INSTALLMENT_DUE_T7:
                 if (isMandatory) {
-                    message = String.format("Dear %s, your loan installment of UGX %s is due on %s. Please make payment on time. Thank you.",
-                                            clientName, amount, item.dueDate());
+                    message = String.format("Reminder: Your loan instalment of UGX %s is due on %s. Outstanding balance: UGX %s....",
+                                            amount, item.dueDate(), item.loanBalance());
                     messageId = String.format("LOAN-INSTALLMENT-DUE-T7-%s", item.installmentId());
                 }
             break;
             case LOAN_INSTALLMENT_DUE_T3:
                 if (isMandatory) {
-                    message = String.format("Dear %s, your loan installment of UGX %s is due in 3 days on %s. Please make payment on time. Thank you.",
-                                            clientName, amount, item.dueDate());
+                    message = String.format("Reminder: Your loan instalment of UGX %s is due on %s. Outstanding balance: UGX %s..",
+                                            amount, item.dueDate(), item.loanBalance());
                     messageId = String.format("LOAN-INSTALLMENT-DUE-T3-%s", item.installmentId());
                 }
                 break;
             case LOAN_INSTALLMENT_DUE_T1:
                 if (isMandatory) {
-                    message = String.format("Dear %s, your loan installment of UGX %s is due tomorrow, %s. Please make payment on time. Thank you.",
-                                            clientName, amount, item.dueDate());
+                    message = String.format("Reminder: Your loan instalment of UGX %s is due on %s. Outstanding balance: UGX %s. Thank you.",
+                                            amount, item.dueDate(), item.loanBalance());
                     messageId = String.format("LOAN-INSTALLMENT-DUE-T1-%s", item.installmentId());
                 }
                 break;
             case LOAN_INSTALLMENT_DUE_T0:
                 if (isMandatory) {
-                    message = String.format("Dear %s, your loan installment of UGX %s is due today, %s. Please make payment on time. Thank you.",
-                                            clientName, amount, item.dueDate());
+                    message = String.format("Reminder: Your loan instalment of UGX %s is due on %s. Outstanding balance: UGX %s.",
+                                            amount, item.dueDate(), item.loanBalance());
                     messageId = String.format("LOAN-INSTALLMENT-DUE-T0-%s", item.installmentId());
                 }
                 break;
@@ -757,6 +757,78 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
 
             sendSms(new SmsNotificationData(mobileNo, message, messageId, smsTypeEnum.getDescription(), smsTypeEnum.getStatus()));
         }
+    }
+
+    @Override
+    public void processLoanOverdueNotification(LoanInstallmentOverdueReminderData item, SmsTypeEnum smsTypeEnum) {
+
+        smsPropertyEnabled();
+
+        String mobileNo = item.mobileNo();
+        String clientName = item.clientName();
+        String amount = item.totalDue().setScale(2, RoundingMode.HALF_UP).toPlainString();
+
+        if (mobileNo == null || mobileNo.isBlank()) {
+            return;
+        }
+
+        String message = null;
+        String messageId = null;
+
+
+        boolean isMandatory = smsTypeEnum.getStatus().equalsIgnoreCase("Mandatory");
+
+        if (!isMandatory){
+            return;
+        }
+
+        switch (smsTypeEnum) {
+
+            case LOAN_INSTALLMENT_OVERDUE_D1:
+                message = String.format(
+                        "Dear %s, your loan instalment of UGX %s is overdue by %s days. Please make payment as soon as possible.....",
+                        clientName, amount, item.overdueDays());
+                messageId = String.format("LOAN-INSTALLMENT-OVERDUE-D1-%s", item.installmentId());
+
+                break;
+
+            case LOAN_INSTALLMENT_OVERDUE_D7:
+                message = String.format(
+                        "Dear %s, your loan instalment of UGX %s is overdue by %s days. Please make payment as soon as possible...",
+                        clientName, amount, item.overdueDays());
+                messageId = String.format("LOAN-INSTALLMENT-OVERDUE-D7-%s", item.installmentId());
+
+                break;
+
+            case LOAN_INSTALLMENT_OVERDUE_D30:
+                message = String.format(
+                        "Dear %s, your loan instalment of UGX %s is overdue by %s days. Please make payment as soon as possible.",
+                        clientName, amount, item.overdueDays());
+                messageId = String.format("LOAN-INSTALLMENT-OVERDUE-D30-%s", item.installmentId());
+
+                break;
+
+            case LOAN_INSTALLMENT_OVERDUE_D60:
+                message = String.format(
+                        "Dear %s, your loan installment of UGX %s is overdue by %s days. Please make payment as soon as possible..",
+                        clientName, amount, item.overdueDays());
+                messageId = String.format("LOAN-INSTALLMENT-OVERDUE-D60-%s", item.installmentId());
+
+                break;
+
+            case LOAN_INSTALLMENT_OVERDUE_D90:
+                message = String.format(
+                        "Dear %s, your loan instalment of UGX %s is overdue by %s days. Please make payment as soon as possible..",
+                        clientName, amount, item.overdueDays());
+                messageId = String.format("LOAN-INSTALLMENT-OVERDUE-D90-%s", item.installmentId());
+
+                break;
+
+            default:
+                return;
+        }
+
+        sendSms(new SmsNotificationData(mobileNo, message, messageId, smsTypeEnum.getDescription(), smsTypeEnum.getStatus()));
     }
 
     @Override

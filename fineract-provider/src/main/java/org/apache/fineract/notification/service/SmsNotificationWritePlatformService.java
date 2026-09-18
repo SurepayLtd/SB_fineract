@@ -27,6 +27,7 @@ import org.apache.fineract.portfolio.account.domain.AccountTransferDetails;
 import org.apache.fineract.portfolio.account.domain.AccountTransferTransaction;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientCharge;
+import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentOverdueReminderData;
 import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentReminderData;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanCharge;
@@ -67,6 +68,8 @@ public interface SmsNotificationWritePlatformService {
     void processAppUserSms(AppUser appUser, SmsTypeEnum smsTypeEnum);
 
     void processLoanInstallmentNotification(LoanInstallmentReminderData item, SmsTypeEnum smsTypeEnum);
+
+    void processLoanOverdueNotification(LoanInstallmentOverdueReminderData item, SmsTypeEnum smsTypeEnum);
 
 
 }

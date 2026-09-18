@@ -1,8 +1,7 @@
-package org.apache.fineract.portfolio.loanaccount.jobs.paymentoverdueremider;
+package org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.fineract.infrastructure.campaigns.sms.domain.SmsTransactionRepository;
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.notification.service.SmsNotificationWritePlatformService;
 import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentReminderData;

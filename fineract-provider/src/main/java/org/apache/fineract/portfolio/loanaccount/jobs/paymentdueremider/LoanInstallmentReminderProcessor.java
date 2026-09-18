@@ -1,4 +1,4 @@
-package org.apache.fineract.portfolio.loanaccount.jobs.paymentoverdueremider;
+package org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,10 +62,10 @@ public class LoanInstallmentReminderProcessor implements ItemProcessor<LoanInsta
     public static SmsTypeEnum smsType(final Integer reminderDays) {
 
         return switch (reminderDays) {
-            case ExecuteInstallmentReminderConstant.T_7 -> SmsTypeEnum.LOAN_INSTALLMENT_DUE_T7;
-            case ExecuteInstallmentReminderConstant.T_3 -> SmsTypeEnum.LOAN_INSTALLMENT_DUE_T3;
-            case ExecuteInstallmentReminderConstant.T_1 -> SmsTypeEnum.LOAN_INSTALLMENT_DUE_T1;
-            case ExecuteInstallmentReminderConstant.T_0 -> SmsTypeEnum.LOAN_INSTALLMENT_DUE_T0;
+            case ExecuteBatchJobConstant.T_7 -> SmsTypeEnum.LOAN_INSTALLMENT_DUE_T7;
+            case ExecuteBatchJobConstant.T_3 -> SmsTypeEnum.LOAN_INSTALLMENT_DUE_T3;
+            case ExecuteBatchJobConstant.T_1 -> SmsTypeEnum.LOAN_INSTALLMENT_DUE_T1;
+            case ExecuteBatchJobConstant.T_0 -> SmsTypeEnum.LOAN_INSTALLMENT_DUE_T0;
 
             default -> throw new IllegalArgumentException("Unsupported installment reminder offset: " + reminderDays
             );
@@ -76,13 +76,13 @@ public class LoanInstallmentReminderProcessor implements ItemProcessor<LoanInsta
 
         return switch (item.reminderDays()) {
 
-            case ExecuteInstallmentReminderConstant.T_7 -> "LOAN-INSTALLMENT-DUE-T7-" + item.installmentId();
+            case ExecuteBatchJobConstant.T_7 -> "LOAN-INSTALLMENT-DUE-T7-" + item.installmentId();
 
-            case ExecuteInstallmentReminderConstant.T_3  -> "LOAN-INSTALLMENT-DUE-T3-" + item.installmentId();
+            case ExecuteBatchJobConstant.T_3  -> "LOAN-INSTALLMENT-DUE-T3-" + item.installmentId();
 
-            case ExecuteInstallmentReminderConstant.T_1 -> "LOAN-INSTALLMENT-DUE-T1-" + item.installmentId();
+            case ExecuteBatchJobConstant.T_1 -> "LOAN-INSTALLMENT-DUE-T1-" + item.installmentId();
 
-            case ExecuteInstallmentReminderConstant.T_0 -> "LOAN-INSTALLMENT-DUE-T0-" + item.installmentId();
+            case ExecuteBatchJobConstant.T_0 -> "LOAN-INSTALLMENT-DUE-T0-" + item.installmentId();
 
             default -> throw new IllegalArgumentException("Unsupported installment reminder offset: " + item.reminderDays()
             );

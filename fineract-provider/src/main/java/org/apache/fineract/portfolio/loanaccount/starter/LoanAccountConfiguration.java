@@ -136,7 +136,7 @@ import org.apache.fineract.portfolio.loanaccount.service.ReplayedTransactionBusi
 import org.apache.fineract.portfolio.loanaccount.guarantor.service.GuarantorDomainService;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleGeneratorFactory;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanScheduleAssembler;
-import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanInstallmentReminderReadServiceImpl;
+import org.apache.fineract.portfolio.loanaccount.loanschedule.service.BatchSmSReadServiceImpl;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanScheduleCalculationPlatformService;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanScheduleHistoryWritePlatformService;
 import org.apache.fineract.portfolio.loanaccount.mapper.LoanChargeMapper;
@@ -522,8 +522,8 @@ public class LoanAccountConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(LoanInstallmentReminderReadServiceImpl.class)
-    public LoanInstallmentReminderReadServiceImpl installmentReminderReadService(JdbcTemplate jdbcTemplate){
-        return new LoanInstallmentReminderReadServiceImpl(jdbcTemplate);
+    @ConditionalOnMissingBean(BatchSmSReadServiceImpl.class)
+    public BatchSmSReadServiceImpl installmentReminderReadService(JdbcTemplate jdbcTemplate, DatabaseSpecificSQLGenerator sqlGenerator){
+        return new BatchSmSReadServiceImpl(jdbcTemplate, sqlGenerator);
     }
 }

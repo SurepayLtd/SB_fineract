@@ -1,9 +1,9 @@
-package org.apache.fineract.portfolio.loanaccount.jobs.paymentoverdueremider;
+package org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider;
 
 import org.apache.fineract.cob.conditions.BatchManagerCondition;
 import org.apache.fineract.infrastructure.jobs.service.JobName;
 import org.apache.fineract.infrastructure.springbatch.PropertyService;
-import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanInstallmentReminderReadService;
+import org.apache.fineract.portfolio.loanaccount.loanschedule.service.BatchSmSReadService;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -34,7 +34,7 @@ public class ExecuteLoanInstallmentManagerConfig {
     @Autowired
     private DirectChannel outboundRequests;
     @Autowired
-    private LoanInstallmentReminderReadService loanInstallmentReminderReadService;
+    private BatchSmSReadService loanInstallmentReminderReadService;
 
     @Bean
     public LoanInstallmentReminderPartitioner loanInstallmentReminderPartitioner() {
@@ -43,15 +43,18 @@ public class ExecuteLoanInstallmentManagerConfig {
 
     @Bean
     public Step executeLoanInstallmentReminderPartitionerStep() {
-        return stepBuilderFactory.get(ExecuteInstallmentReminderConstant.PARTITIONER_STEP)
-                .partitioner(ExecuteInstallmentReminderConstant.WORKER_STEP, loanInstallmentReminderPartitioner())
-                .pollInterval(propertyService.getPollInterval(ExecuteInstallmentReminderConstant.JOB_NAME)).outputChannel(outboundRequests)
+        return stepBuilderFactory.get(ExecuteBatchJobConstant.LOAN_INSTALLMENT_PARTITIONER_STEP)
+                .partitioner(ExecuteBatchJobConstant.LOAN_INSTALLMENT_WORKER_STEP, loanInstallmentReminderPartitioner())
+                .pollInterval(propertyService.getPollInterval(ExecuteBatchJobConstant.LOAN_INSTALLMENT_JOB_NAME))
+                .outputChannel(outboundRequests)
                 .build();
     }
 
     @Bean
     public Job executeLoanInstallmentReminderJob() {
         return new JobBuilder(JobName.EXECUTE_LOAN_INSTALLMENT_PAYMENT_REMINDER.name(), jobRepository)
-                .start(executeLoanInstallmentReminderPartitionerStep()).incrementer(new RunIdIncrementer()).build();
+                .start(executeLoanInstallmentReminderPartitionerStep())
+                .incrementer(new RunIdIncrementer())
+                .build();
     }
 }

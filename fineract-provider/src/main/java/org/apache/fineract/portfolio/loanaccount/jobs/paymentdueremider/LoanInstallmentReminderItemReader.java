@@ -1,9 +1,9 @@
-package org.apache.fineract.portfolio.loanaccount.jobs.paymentoverdueremider;
+package org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentReminderData;
-import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanInstallmentReminderReadService;
+import org.apache.fineract.portfolio.loanaccount.loanschedule.service.BatchSmSReadService;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.annotation.BeforeStep;
 import org.springframework.batch.item.ItemReader;
@@ -30,7 +30,7 @@ import java.util.List;
 public class LoanInstallmentReminderItemReader implements ItemReader<LoanInstallmentReminderData> {
 
     private final Deque<LoanInstallmentReminderData> page = new ArrayDeque<>();
-    private final LoanInstallmentReminderReadService readService;
+    private final BatchSmSReadService readService;
 
     private final int pageSize;
 
@@ -43,9 +43,11 @@ public class LoanInstallmentReminderItemReader implements ItemReader<LoanInstall
 
     @BeforeStep
     public void beforeStep(final StepExecution stepExecution) {
-        this.minAccountKey = stepExecution.getExecutionContext().getLong(ExecuteInstallmentReminderConstant.MIN_ACCOUNT_KEY);
-        this.maxAccountKey = stepExecution.getExecutionContext().getLong(ExecuteInstallmentReminderConstant.MAX_ACCOUNT_KEY);
+        this.minAccountKey = stepExecution.getExecutionContext().getLong(ExecuteBatchJobConstant.MIN_ACCOUNT_KEY);
+        this.maxAccountKey = stepExecution.getExecutionContext().getLong(ExecuteBatchJobConstant.MAX_ACCOUNT_KEY);
         this.exhausted = minAccountKey == 0L && maxAccountKey == 0L;
+        log.info("Worker {} processing account range [{} - {}]",
+                stepExecution.getExecutionContext().getString(ExecuteBatchJobConstant.PARTITION_KEY), minAccountKey, maxAccountKey);
     }
 
     @Override
@@ -58,7 +60,7 @@ public class LoanInstallmentReminderItemReader implements ItemReader<LoanInstall
 
     private void fetchNextPage() {
 
-        final List<LoanInstallmentReminderData> results = readService.retrieveDuePage(minAccountKey, maxAccountKey, afterDueDate, afterId, pageSize);
+        final List<LoanInstallmentReminderData> results = readService.retrieveLoanDuePage(minAccountKey, maxAccountKey, afterDueDate, afterId, pageSize);
 
         log.info("Result Installments: {}", results);
 

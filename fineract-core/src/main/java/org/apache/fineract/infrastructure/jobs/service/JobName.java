@@ -62,6 +62,7 @@ public enum JobName {
     EXECUTE_STAFF_CLIENT_BIRTHDAYS("Execute Happy Birthday Message"),
     EXECUTE_DORMANT_ACCOUNTS_SMS("Execute Dormant Savings Account Reminder"),
     EXECUTE_LOAN_INSTALLMENT_PAYMENT_REMINDER("Execute Loan Installment Payment Reminder"),
+    EXECUTE_LOAN_INSTALLMENT_OVERDUE_REMINDER("Execute Loan Installment Overdue Reminder"),
     ;
 
     private final String name;

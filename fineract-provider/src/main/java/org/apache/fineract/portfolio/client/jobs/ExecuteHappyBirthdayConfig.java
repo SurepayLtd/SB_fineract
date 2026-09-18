@@ -36,12 +36,16 @@ public class ExecuteHappyBirthdayConfig {
 
     @Bean
     protected Step executeHappyBirthdayStep() {
-        return new StepBuilder(JobName.EXECUTE_STAFF_CLIENT_BIRTHDAYS.name(), jobRepository).tasklet(executeHappyBirthdayTasklet(), transactionManager).build();
+        return new StepBuilder(JobName.EXECUTE_STAFF_CLIENT_BIRTHDAYS.name(), jobRepository)
+                .tasklet(executeHappyBirthdayTasklet(), transactionManager)
+                .build();
     }
 
     @Bean
     public Job executeHappyBirthdayJob() {
-        return new JobBuilder(JobName.EXECUTE_STAFF_CLIENT_BIRTHDAYS.name(), jobRepository).start(executeHappyBirthdayStep()).incrementer(new RunIdIncrementer())
+        return new JobBuilder(JobName.EXECUTE_STAFF_CLIENT_BIRTHDAYS.name(), jobRepository)
+                .start(executeHappyBirthdayStep())
+                .incrementer(new RunIdIncrementer())
                 .build();
     }
 

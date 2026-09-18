@@ -1,4 +1,4 @@
-package org.apache.fineract.portfolio.loanaccount.jobs.paymentoverdueremider;
+package org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider;
 
 import org.springframework.batch.core.step.skip.SkipPolicy;
 

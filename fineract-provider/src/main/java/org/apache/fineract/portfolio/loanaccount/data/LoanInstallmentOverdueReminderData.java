@@ -3,19 +3,18 @@ package org.apache.fineract.portfolio.loanaccount.data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public record LoanInstallmentReminderData(
+public record LoanInstallmentOverdueReminderData(
         Long loanId,
         Long clientId,
         Long installmentId,
         Integer installmentNumber,
         LocalDate dueDate,
-        Integer reminderDays,
+        Integer overdueDays,
         BigDecimal principal,
         BigDecimal interest,
         BigDecimal fee,
         BigDecimal penalty,
         BigDecimal totalDue,
-        BigDecimal loanBalance,
         String mobileNo,
         String clientName
 ) {

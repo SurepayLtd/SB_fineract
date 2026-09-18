@@ -23,10 +23,8 @@ import org.springframework.transaction.PlatformTransactionManager;
  * Worker half of the loan reminder Installment job: it executes the installments of one partition.
  *
  * <p>
- * The step is chunk oriented, so a chunk of instructions is attempted in a single transaction and, if any of them
- * fails, replayed one instruction per transaction — the fallback is Spring Batch's own, not hand written. Only
- * transient failures are retried; an instruction that cannot be paid is skipped and recorded against its mandate,
- * because a mandate that fails is an outcome of that mandate and not a failure of the run.
+ * The step is chunk oriented, so a chunk of loan installments is attempted in a single transaction and, if any of them
+ * fails, replayed one installment per loan — the fallback is Spring Batch's own, not hand written.
  * </p>
  */
 @Configuration

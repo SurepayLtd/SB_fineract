@@ -71,7 +71,7 @@ public class LoanInstallmentReminderItemReader implements ItemReader<LoanInstall
 
         page.addAll(results);
 
-        final LoanInstallmentReminderData last = results.getLast(); //get(results.size() - 1);
+        final LoanInstallmentReminderData last = results.get(results.size() - 1);
 
         afterDueDate = last.dueDate();
         afterId = last.installmentId();

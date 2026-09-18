@@ -64,7 +64,7 @@ public class SavingsDormancyItemReader implements ItemReader<SavingsDormancyRemi
 
         page.addAll(results);
 
-        SavingsDormancyReminderData last = results.getLast();
+        SavingsDormancyReminderData last = results.get(results.size() - 1);
         afterReminderDays = last.reminderDays();
         afterSavingsId = last.savingsId();
 

@@ -65,7 +65,7 @@ public class LoanOverDueItemReader implements ItemReader<LoanInstallmentOverdueR
 
         page.addAll(results);
 
-        final LoanInstallmentOverdueReminderData last = results.getLast(); //get(results.size() - 1);
+        final LoanInstallmentOverdueReminderData last = results.get(results.size() - 1); //getlast();
 
         afterDueDate = last.dueDate();
         afterId = last.installmentId();

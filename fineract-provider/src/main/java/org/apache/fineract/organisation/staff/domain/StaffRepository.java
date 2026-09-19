@@ -23,6 +23,8 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface StaffRepository extends JpaRepository<Staff, Long>, JpaSpecificationExecutor<Staff> {
 
     String FIND_BY_OFFICE_QUERY = "select s from Staff s where s.id = :id AND s.office.id = :officeId";

@@ -37,7 +37,6 @@ import org.apache.fineract.infrastructure.momo.domain.MomoCredentialDetailReposi
 import org.apache.fineract.infrastructure.momo.domain.MomoLoanPaymentTransactionRepository;
 import org.apache.fineract.infrastructure.momo.service.SurePayMomoPaymentIntegrationWritePlatformServiceImpl;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
-import org.apache.fineract.infrastructure.security.service.TwoFactorConfigurationService;
 import org.apache.fineract.infrastructure.security.utils.ColumnValidator;
 import org.apache.fineract.notification.domain.MamboSmsRepository;
 import org.apache.fineract.notification.domain.SMSNotificationRepository;
@@ -137,6 +136,7 @@ import org.apache.fineract.portfolio.loanaccount.service.ReplayedTransactionBusi
 import org.apache.fineract.portfolio.loanaccount.guarantor.service.GuarantorDomainService;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleGeneratorFactory;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanScheduleAssembler;
+import org.apache.fineract.portfolio.loanaccount.loanschedule.service.BatchSmSReadServiceImpl;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanScheduleCalculationPlatformService;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanScheduleHistoryWritePlatformService;
 import org.apache.fineract.portfolio.loanaccount.mapper.LoanChargeMapper;
@@ -169,6 +169,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+
 
 @Configuration
 public class LoanAccountConfiguration {
@@ -518,5 +519,11 @@ public class LoanAccountConfiguration {
                                                                                      NoteRepository noteRepository, LoanTransactionRepository loanTransactionRepository, JournalEntryWritePlatformService journalEntryWritePlatformService, PaymentDetailWritePlatformService paymentDetailWritePlatformService, BusinessEventNotifierService businessEventNotifierService, LoanUtilService loanUtilService,
                                                                                      LoanRepaymentScheduleInstallmentRepository loanRepaymentScheduleInstallmentRepository, LoanLifecycleStateMachine loanLifecycleStateMachine, ExternalIdFactory externalIdFactory, LoanAccrualTransactionBusinessEventService loanAccrualTransactionBusinessEventService, LoanDownPaymentHandlerService loanDownPaymentHandlerService, LoanAccrualsProcessingService loanAccrualsProcessingService, LoanChargeValidator loanChargeValidator, LoanAssembler loanAssembler){
         return new LoanAccountTransferReversalServiceImpl(loanTransactionValidator, loanRepositoryWrapper, loanAccountDomainService, noteRepository, loanTransactionRepository, journalEntryWritePlatformService, paymentDetailWritePlatformService, businessEventNotifierService, loanUtilService, loanRepaymentScheduleInstallmentRepository, loanLifecycleStateMachine, externalIdFactory, loanAccrualTransactionBusinessEventService, loanDownPaymentHandlerService, loanAccrualsProcessingService, loanChargeValidator, loanAssembler);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(BatchSmSReadServiceImpl.class)
+    public BatchSmSReadServiceImpl installmentReminderReadService(JdbcTemplate jdbcTemplate, DatabaseSpecificSQLGenerator sqlGenerator){
+        return new BatchSmSReadServiceImpl(jdbcTemplate, sqlGenerator);
     }
 }

@@ -237,4 +237,18 @@ final class UsersApiResourceSwagger {
         public DeleteUsersUserIdResponseChanges changes;
     }
 
+    @Schema(description = "UnblockUsersUserIdResponse")
+    public static final class UnblockUsersUserIdResponse {
+
+        private UnblockUsersUserIdResponse() {
+
+        }
+
+
+        @Schema(example = "1")
+        public Long officeId;
+        @Schema(example = "11")
+        public Long resourceId;
+    }
+
 }

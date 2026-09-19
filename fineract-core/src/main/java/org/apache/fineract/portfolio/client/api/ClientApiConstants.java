@@ -200,6 +200,11 @@ public class ClientApiConstants {
     public static final Set<String> CLIENT_ACCOUNTS_DATA_PARAMETERS = new HashSet<>(
             Arrays.asList("loanAccounts", "savingsAccounts", "shareAccounts"));
 
+    public static final Set<String> SMS_TRIGGER_FIELDS = new HashSet<>(Arrays.asList(
+            firstnameParamName, lastnameParamName, emailAddressParamName,
+            mobileNoParamName, externalIdParamName, address, familyMembers)
+    );
+
     /**
      * These parameters will match the class level parameters of ClientData. Where possible, we try to get response
      * parameters to match those of request parameters.

@@ -3752,6 +3752,10 @@ public class SavingsAccount extends AbstractAuditableWithUTCDateTimeCustom<Long>
         this.savingsOnHoldAmount = getSavingsHoldAmount().subtract(amount);
     }
 
+    public SavingsProduct getProduct() {
+        return product;
+    }
+
     public AccountType getAccountType() {
         return AccountType.fromInt(accountType);
     }
@@ -3845,5 +3849,9 @@ public class SavingsAccount extends AbstractAuditableWithUTCDateTimeCustom<Long>
 
     public Group getGroup() {
         return group;
+    }
+
+    public LocalDate getActivatedOnDate() {
+        return activatedOnDate;
     }
 }

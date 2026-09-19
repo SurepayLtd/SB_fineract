@@ -633,6 +633,9 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             if (!changes.isEmpty()) {
                 this.clientRepository.saveAndFlush(clientForUpdate);
+                if (changes.keySet().stream().anyMatch(ClientApiConstants.SMS_TRIGGER_FIELDS::contains)){
+                    smsNotificationWritePlatformService.processClientSmsNotification(clientForUpdate, SmsTypeEnum.PROFILE_CHANGE, null, null);
+                }
             }
 
             if (changes.containsKey(ClientApiConstants.legalFormIdParamName)) {

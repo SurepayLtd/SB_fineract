@@ -25,9 +25,13 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface ClientRepository extends JpaRepository<Client, Long>, JpaSpecificationExecutor<Client>, SearchingClientRepository {
 
     String FIND_CLIENT_BY_ACCOUNT_NUMBER = "select client from Client client where client.accountNumber = :accountNumber";
+
+    String HAPPY_BIRTHDAY = "SELECT c FROM Client c WHERE c.status = :status AND c.isStaff = :staff AND c.mobileNo IS NOT NULL AND c.dateOfBirth IS NOT NULL AND FUNCTION('DAY', c.dateOfBirth) = FUNCTION('DAY', CURRENT_DATE) AND FUNCTION('MONTH', c.dateOfBirth) = FUNCTION('MONTH', CURRENT_DATE)";
 
     @Query(FIND_CLIENT_BY_ACCOUNT_NUMBER)
     Client getClientByAccountNumber(@Param("accountNumber") String accountNumber);
@@ -48,5 +52,8 @@ public interface ClientRepository extends JpaRepository<Client, Long>, JpaSpecif
 
     @Query("select client from Client client where client.otpCode = :otpCode")
     Client findByOtpCode(@Param("otpCode") Integer otpCode);
+
+    @Query(HAPPY_BIRTHDAY)
+    List<Client> findBirthdays(@Param("status") Integer status, @Param("staff") boolean staff);
 
 }

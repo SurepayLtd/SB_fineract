@@ -21,6 +21,7 @@ package org.apache.fineract.useradministration.starter;
 import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.infrastructure.security.service.PlatformPasswordEncoder;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.notification.service.SmsNotificationWritePlatformService;
 import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
 import org.apache.fineract.organisation.office.service.OfficeReadPlatformService;
 import org.apache.fineract.organisation.staff.domain.StaffRepositoryWrapper;
@@ -72,13 +73,13 @@ public class UserAdministrationConfiguration {
     @Bean
     @ConditionalOnMissingBean(AppUserWritePlatformService.class)
     public AppUserWritePlatformService appUserWritePlatformService(PlatformSecurityContext context, UserDomainService userDomainService,
-            PlatformPasswordEncoder platformPasswordEncoder, AppUserRepository appUserRepository,
-            OfficeRepositoryWrapper officeRepositoryWrapper, RoleRepository roleRepository, UserDataValidator fromApiJsonDeserializer,
-            AppUserPreviousPasswordRepository appUserPreviewPasswordRepository, StaffRepositoryWrapper staffRepositoryWrapper,
-            ClientRepositoryWrapper clientRepositoryWrapper) {
+                                                                   PlatformPasswordEncoder platformPasswordEncoder, AppUserRepository appUserRepository,
+                                                                   OfficeRepositoryWrapper officeRepositoryWrapper, RoleRepository roleRepository, UserDataValidator fromApiJsonDeserializer,
+                                                                   AppUserPreviousPasswordRepository appUserPreviewPasswordRepository, StaffRepositoryWrapper staffRepositoryWrapper,
+                                                                   ClientRepositoryWrapper clientRepositoryWrapper, SmsNotificationWritePlatformService smsNotificationWritePlatformService) {
         return new AppUserWritePlatformServiceJpaRepositoryImpl(context, userDomainService, platformPasswordEncoder, appUserRepository,
                 officeRepositoryWrapper, roleRepository, fromApiJsonDeserializer, appUserPreviewPasswordRepository, staffRepositoryWrapper,
-                clientRepositoryWrapper);
+                clientRepositoryWrapper, smsNotificationWritePlatformService);
     }
 
     @Bean

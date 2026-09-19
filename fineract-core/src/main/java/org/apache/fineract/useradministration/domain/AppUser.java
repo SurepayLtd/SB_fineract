@@ -30,6 +30,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -121,6 +122,12 @@ public class AppUser extends AbstractPersistableCustom<Long> implements Platform
 
     @Column(name = "bypass_two_factor", nullable = false)
     private boolean bypassTwoFactor;
+
+    @Column(name = "login_attempts")
+    private Integer loginAttempts;
+
+    @Column(name = "user_blocked_at")
+    private LocalDateTime userBlockedAt;
 
     public static AppUser fromJson(final Office userOffice, final Staff linkedStaff, final Set<Role> allRoles,
             final Collection<Client> clients, final JsonCommand command) {
@@ -353,6 +360,43 @@ public class AppUser extends AbstractPersistableCustom<Long> implements Platform
         return actualChanges;
     }
 
+    public void handleMaxLoginAttempts(Integer maxAttempts){
+
+        if (!this.accountNonLocked){
+            return;
+        }
+
+        if (maxAttempts == null || maxAttempts <= 0) {
+            throw new IllegalArgumentException("Maximum Login attempts must be greater than zero.");
+        }
+
+        this.loginAttempts ++;
+
+        if (this.loginAttempts >= maxAttempts){
+            this.loginAttempts = maxAttempts;
+            blockUser();
+        }
+
+
+    }
+
+    public void blockUser(){
+        this.accountNonLocked = false;
+        this.userBlockedAt = LocalDateTime.now();
+        this.enabled = false;
+    }
+
+    public void resetLoginAttempts(){
+        this.loginAttempts = 0;
+    }
+
+    public void unBlockUser(){
+        this.accountNonLocked = true;
+        this.userBlockedAt = null;
+        this.enabled = true;
+        this.loginAttempts = 0;
+    }
+
     private String[] getRolesAsIdStringArray() {
         final List<String> roleIds = new ArrayList<>();
 
@@ -477,6 +521,30 @@ public class AppUser extends AbstractPersistableCustom<Long> implements Platform
 
     public Staff getStaff() {
         return this.staff;
+    }
+
+    public LocalDateTime getUserBlockedAt() {
+        return userBlockedAt;
+    }
+
+    public void setUserBlockedAt(LocalDateTime userBlockedAt) {
+        this.userBlockedAt = userBlockedAt;
+    }
+
+    public Integer getLoginAttempts() {
+        return loginAttempts;
+    }
+
+    public void setLoginAttempts(Integer loginAttempts) {
+        this.loginAttempts = loginAttempts;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public void setAccountNonLocked(boolean accountNonLocked) {
+        this.accountNonLocked = accountNonLocked;
     }
 
     public boolean getPasswordNeverExpires() {

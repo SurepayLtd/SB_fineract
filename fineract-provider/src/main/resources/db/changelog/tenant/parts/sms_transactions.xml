@@ -227,4 +227,126 @@
         </sql>
     </changeSet>
 
+    <changeSet id="appuser_max_attempts_blocking" author="victor">
+        <addColumn tableName="m_appuser">
+            <column name="user_blocked_at" type="DATETIME"/>
+        </addColumn>
+
+        <insert tableName="c_configuration">
+            <column name="name" value="maximum-login-attempts"/>
+            <column name="value" valueNumeric="5"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="true"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Maximum number of failed login attempts before a user account is blocked."/>
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="authorisation" />
+            <column name="code" value="UNBLOCK_USER" />
+            <column name="entity_name" value="USER" />
+            <column name="action_name" value="UNBLOCK" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+    </changeSet>
+    <changeSet id="appuser_max_attempts_blocking_1" author="victor">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="m_appuser" columnName="login_attempts"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="m_appuser">
+            <column name="login_attempts" type="INT" defaultValueNumeric="0"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="add_happy_birthday_job" author="victor">
+        <insert tableName="job">
+            <column name="name" value="Execute Happy Birthday Message"/>
+            <column name="display_name" value="Execute Happy Birthday Message"/>
+            <column name="cron_expression" value="0 0 9 1/1 * ? *"/>
+            <column name="create_time" valueDate="${current_datetime}"/>
+            <column name="task_priority" valueNumeric="5"/>
+            <column name="group_name"/>
+            <column name="previous_run_start_time"/>
+            <column name="job_key" value="Execute HappyBirthdayJobDetail2 _ DEFAULT"/>
+            <column name="initializing_errorlog"/>
+            <column name="is_active" valueBoolean="true"/>
+            <column name="currently_running" valueBoolean="false"/>
+            <column name="updates_allowed" valueBoolean="true"/>
+            <column name="scheduler_group" valueNumeric="0"/>
+            <column name="is_misfired" valueBoolean="false"/>
+            <column name="node_id" valueNumeric="1"/>
+            <column name="is_mismatched_job" valueBoolean="true"/>
+            <column name="short_name" value="BIRTHDAY"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="add_dormant_savings_sms_job" author="victor">
+        <insert tableName="job">
+            <column name="name" value="Execute Dormant Savings Account Reminder"/>
+            <column name="display_name" value="Execute Dormant Savings Account Reminder"/>
+            <column name="cron_expression" value="0 0 10 ? * TUE *"/>
+            <column name="create_time" valueDate="${current_datetime}"/>
+            <column name="task_priority" valueNumeric="5"/>
+            <column name="group_name"/>
+            <column name="previous_run_start_time"/>
+            <column name="job_key" value="Execute Dormant Savings Account ReminderDetail2_DEFAULT"/>
+            <column name="initializing_errorlog"/>
+            <column name="is_active" valueBoolean="false"/>
+            <column name="currently_running" valueBoolean="false"/>
+            <column name="updates_allowed" valueBoolean="true"/>
+            <column name="scheduler_group" valueNumeric="0"/>
+            <column name="is_misfired" valueBoolean="false"/>
+            <column name="node_id" valueNumeric="1"/>
+            <column name="is_mismatched_job" valueBoolean="true"/>
+            <column name="short_name" value="SAVDOR"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="add_loan_installment_reminder_job" author="victor">
+        <insert tableName="job">
+            <column name="name" value="Execute Loan Installment Payment Reminder"/>
+            <column name="display_name" value="Execute Loan Installment Payment Reminder"/>
+            <column name="cron_expression" value="0 0 9 1/1 * ? *"/>
+            <column name="create_time" valueDate="${current_datetime}"/>
+            <column name="task_priority" valueNumeric="5"/>
+            <column name="group_name"/>
+            <column name="previous_run_start_time"/>
+            <column name="job_key" value="Execute Loan Installment Payment ReminderDetail2_DEFAULT"/>
+            <column name="initializing_errorlog"/>
+            <column name="is_active" valueBoolean="false"/>
+            <column name="currently_running" valueBoolean="false"/>
+            <column name="updates_allowed" valueBoolean="true"/>
+            <column name="scheduler_group" valueNumeric="0"/>
+            <column name="is_misfired" valueBoolean="false"/>
+            <column name="node_id" valueNumeric="1"/>
+            <column name="is_mismatched_job" valueBoolean="true"/>
+            <column name="short_name" value="REPDOR"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="add_loan_overdue_reminder_job" author="victor">
+        <insert tableName="job">
+            <column name="name" value="Execute Loan Installment Overdue Reminder"/>
+            <column name="display_name" value="Execute Loan Installment Overdue Reminder"/>
+            <column name="cron_expression" value="0 0 12 1/1 * ? *"/>
+            <column name="create_time" valueDate="${current_datetime}"/>
+            <column name="task_priority" valueNumeric="5"/>
+            <column name="group_name"/>
+            <column name="previous_run_start_time"/>
+            <column name="job_key" value="Execute Loan Installment Overdue ReminderDetail2_DEFAULT"/>
+            <column name="initializing_errorlog"/>
+            <column name="is_active" valueBoolean="false"/>
+            <column name="currently_running" valueBoolean="false"/>
+            <column name="updates_allowed" valueBoolean="true"/>
+            <column name="scheduler_group" valueNumeric="0"/>
+            <column name="is_misfired" valueBoolean="false"/>
+            <column name="node_id" valueNumeric="1"/>
+            <column name="is_mismatched_job" valueBoolean="true"/>
+            <column name="short_name" value="OVERD"/>
+        </insert>
+    </changeSet>
+
 </databaseChangeLog>

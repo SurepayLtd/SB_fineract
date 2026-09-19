@@ -62,6 +62,8 @@ import org.apache.fineract.portfolio.account.domain.AccountTransferDetails;
 import org.apache.fineract.portfolio.account.domain.AccountTransferTransaction;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientCharge;
+import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentOverdueReminderData;
+import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentReminderData;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanCharge;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
@@ -397,11 +399,21 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 }
             break;
             case LOAN_CREATION:
-                message = String.format("Dear %s, your loan account %s has been successfully created.", clientName,
-                        loan.getAccountNumber());
-                messageId = String.format("LOAN-CREATED-%s", loan.getId());
+                if (isMandatory) {
+                    message = String.format("Dear %s, your loan account %s has been successfully created.", clientName,
+                            loan.getAccountNumber());
+                    messageId = String.format("LOAN-CREATED-%s", loan.getId());
+                }
 
             break;
+            case LOAN_RESCHEDULE:
+                if (isMandatory) {
+                    message = String.format("Dear %s, your loan %s has been successfully rescheduled. Please contact %s for your updated repayment schedule.", clientName,
+                            loan.getAccountNumber(), ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("LOAN-RESCHEDULE-%s", loan.getId());
+
+                    break;
+                }
             default:
                 log.info("No sms type found to process a notification");
                 return;
@@ -493,6 +505,27 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                     messageId = String.format("SAVINGS-INTEREST-%s", transaction.getId());
                 }
                 break;
+            case SAVINGS_INACTIVE_30_DAYS:
+                if (isMandatory) {
+                    message = String.format("Dear %s, your savings account %s has been inactive for 30 days. Please make a transaction to keep your account active.", clientName
+                            , savingsAccount.getAccountNumber());
+                    messageId = String.format("SAVINGS-INACTIVITY-30-%s", savingsAccount.getId());
+                }
+            break;
+            case SAVINGS_INACTIVE_60_DAYS:
+                if (isMandatory) {
+                    message = String.format("Dear %s, your savings account %s has been inactive for 60 days. Please make a transaction to keep your account active.", clientName
+                            , savingsAccount.getAccountNumber());
+                    messageId = String.format("SAVINGS-INACTIVITY-60-%s", savingsAccount.getId());
+                }
+            break;
+            case SAVINGS_INACTIVE_90_DAYS:
+                if (isMandatory) {
+                    message = String.format("Dear %s, your savings account %s has been inactive for 90 days. Please make a transaction to keep your account active.", clientName
+                            , savingsAccount.getAccountNumber());
+                    messageId = String.format("SAVINGS-INACTIVITY-90-%s", savingsAccount.getId());
+                }
+            break;
             default:
                 log.info("No sms type found to process a notification");
                 return;
@@ -539,58 +572,93 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         Long clientId = client != null ? client.getId() : null;
         String clientName = client !=null ? client.getDisplayName() : null;
 
+        boolean isMandatory = smsTypeEnum.getStatus().equalsIgnoreCase("Mandatory");
+
+
         switch (smsTypeEnum){
             case CLIENT_CREATION:
-                message = String.format("Dear %s, your member profile has been successfully created with %s",
-                        clientName, ThreadLocalContextUtil.getTenant().getName());
-                messageId = String.format("CLIENT-CREATION-%s", clientId);
+                if (isMandatory) {
+                    message = String.format("Dear %s, your member profile has been successfully created with %s",
+                            clientName, ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("CLIENT-CREATION-%s", clientId);
+                }
             break;
 
             case CLIENT_PIN:
-                message = String.format("Dear %s, Momo Payment PIN has been setup successfully on Surebanker!",
-                        clientName);
-                messageId = String.format("CLIENT-PIN-%s", clientId);
+                if (isMandatory) {
+                    message = String.format("Dear %s, Momo Payment PIN has been setup successfully on Surebanker!",
+                            clientName);
+                    messageId = String.format("CLIENT-PIN-%s", clientId);
+                }
             break;
 
             case ACTIVATE_MOMO_PAYMENT_OTP:
-                message = String.format("Dear %s, Here is the OTP to Activate you're account on Surebanker %s!",
-                        clientName, otp);
-                messageId = String.format("CLIENT-MOMO-OTP-%s", clientId);
+                if (isMandatory) {
+                    message = String.format("Dear %s, Here is the OTP to Activate you're account on Surebanker %s!",
+                            clientName, otp);
+                    messageId = String.format("CLIENT-MOMO-OTP-%s", clientId);
+                }
             break;
 
             case DEACTIVATE_MOMO_PAYMENT:
-                message = String.format("Dear %s, Momo Payment has been de-activated from you're account !",
-                        clientName);
-                messageId = String.format("DEACTIVATED-MOMO-PIN-%s", clientId);
+                if (isMandatory) {
+                    message = String.format("Dear %s, Momo Payment has been de-activated from you're account !",
+                            clientName);
+                    messageId = String.format("DEACTIVATED-MOMO-PIN-%s", clientId);
+                }
             break;
 
             case UNBLOCK_CLIENT_PIN:
-                message = String.format("Hello %s, your Mobile Banking PIN has been unblocked."+
-                        "Use OTP %s to set a new PIN. Expires in %s minutes. Do not share.",
-                        clientName, otp, otpExpiryMinutes
-                );
-                messageId = String.format("UNBLOCK-CLIENT-PIN-%s", clientId);
+                if (isMandatory) {
+                    message = String.format("Hello %s, your Mobile Banking PIN has been unblocked." +
+                                    "Use OTP %s to set a new PIN. Expires in %s minutes. Do not share.",
+                            clientName, otp, otpExpiryMinutes
+                    );
+                    messageId = String.format("UNBLOCK-CLIENT-PIN-%s", clientId);
+                }
             break;
 
             case RESET_CLIENT_PIN:
-                message = String.format("Hello %s, your Mobile Banking PIN has been updated successfully.",
-                        clientName
-                );
-                messageId = String.format("RESET-CLIENT-PIN-%s", clientId);
+                if (isMandatory) {
+                    message = String.format("Hello %s, your Mobile Banking PIN has been updated successfully.",
+                            clientName
+                    );
+                    messageId = String.format("RESET-CLIENT-PIN-%s", clientId);
+                }
             break;
             case SELF_SERVICE_PIN_CHANGE:
-                message = String.format("Hello %s, your Mobile Banking PIN has been updated successfully.",
-                        clientName
-                );
-                messageId = String.format("SELF_SERVICE_PIN_CHANGE-%s", clientId);
+                if (isMandatory) {
+                    message = String.format("Hello %s, your Mobile Banking PIN has been updated successfully.",
+                            clientName
+                    );
+                    messageId = String.format("SELF_SERVICE_PIN_CHANGE-%s", clientId);
+                }
             break;
             case FAILED_MAX_PIN_ATTEMPTS:
-                message = String.format("Hello %s, Alert: Your USSD PIN has been blocked after multiple unsuccessful PIN attempts."
-                        + "Please contact %s for support",
-                        clientName, ThreadLocalContextUtil.getTenant().getName()
-                );
-                messageId = String.format("USSD_PIN_BLOCKED-%s", clientId);
-                break;
+                if (isMandatory) {
+                    message = String.format("Hello %s, Alert: Your USSD PIN has been blocked after multiple unsuccessful PIN attempts."
+                                    + "Please contact %s for support",
+                            clientName, ThreadLocalContextUtil.getTenant().getName()
+                    );
+                    messageId = String.format("USSD_PIN_BLOCKED-%s", clientId);
+                }
+            break;
+            case HAPPY_BIRTHDAY:
+                if (isMandatory) {
+                    message = String.format("Happy Birthday, %s! Thank you for banking with %s. We wish you a joyful year filled with financial success. Have a wonderful day!",
+                            clientName, ThreadLocalContextUtil.getTenant().getName()
+                    );
+                    messageId = String.format("HAPPY-BIRTHDAY-%s", clientId);
+                }
+            break;
+            case PROFILE_CHANGE:
+                if (isMandatory) {
+                    message = String.format("Dear %s, your profile information has been updated successfully. If you did not request this change, contact %s.",
+                            clientName, ThreadLocalContextUtil.getTenant().getName()
+                    );
+                    messageId = String.format("PROFILE-CHANGE-%s", clientId);
+                }
+            break;
             default:
                 log.info("No sms type found to process a notification");
                 return;
@@ -614,13 +682,19 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         Long shareId = shareAccount != null ? shareAccount.getId() : null;
         String clientName = shareAccount !=null ? shareAccount.getClient().getDisplayName() : null;
 
+        boolean isMandatory = smsTypeEnum.getStatus().equalsIgnoreCase("Mandatory");
+
+
         switch (smsTypeEnum){
             case SHARE_ACCOUNT_CREATION:
                 assert shareAccount != null;
-                message = String.format("Dear %s, your share account %s has been successfully created",
-                        clientName, shareAccount.getAccountNumber()
-                );
-                messageId = String.format("SHARE-ACCOUNT-%s", shareId);
+                if (isMandatory) {
+
+                    message = String.format("Dear %s, your share account %s has been successfully created",
+                            clientName, shareAccount.getAccountNumber()
+                    );
+                    messageId = String.format("SHARE-ACCOUNT-%s", shareId);
+                }
             break;
             default:
                 log.info("No sms type found to process a notification");
@@ -634,6 +708,130 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
     }
 
     @Override
+    public void processLoanInstallmentNotification(LoanInstallmentReminderData item, SmsTypeEnum smsTypeEnum) {
+        smsPropertyEnabled();
+
+        String mobileNo = item.mobileNo();
+        String message = null;
+        String messageId = null;
+        final String amount = item.totalDue().setScale(2, RoundingMode.HALF_UP).toPlainString();
+
+        boolean isMandatory = smsTypeEnum.getStatus().equalsIgnoreCase("Mandatory");
+
+
+        switch (smsTypeEnum){
+            case LOAN_INSTALLMENT_DUE_T7:
+                if (isMandatory) {
+                    message = String.format("Reminder: Your loan instalment of UGX %s is due on %s. Outstanding balance: UGX %s....",
+                                            amount, item.dueDate(), item.loanBalance());
+                    messageId = String.format("LOAN-INSTALLMENT-DUE-T7-%s", item.installmentId());
+                }
+            break;
+            case LOAN_INSTALLMENT_DUE_T3:
+                if (isMandatory) {
+                    message = String.format("Reminder: Your loan instalment of UGX %s is due on %s. Outstanding balance: UGX %s..",
+                                            amount, item.dueDate(), item.loanBalance());
+                    messageId = String.format("LOAN-INSTALLMENT-DUE-T3-%s", item.installmentId());
+                }
+                break;
+            case LOAN_INSTALLMENT_DUE_T1:
+                if (isMandatory) {
+                    message = String.format("Reminder: Your loan instalment of UGX %s is due on %s. Outstanding balance: UGX %s. Thank you.",
+                                            amount, item.dueDate(), item.loanBalance());
+                    messageId = String.format("LOAN-INSTALLMENT-DUE-T1-%s", item.installmentId());
+                }
+                break;
+            case LOAN_INSTALLMENT_DUE_T0:
+                if (isMandatory) {
+                    message = String.format("Reminder: Your loan instalment of UGX %s is due on %s. Outstanding balance: UGX %s.",
+                                            amount, item.dueDate(), item.loanBalance());
+                    messageId = String.format("LOAN-INSTALLMENT-DUE-T0-%s", item.installmentId());
+                }
+                break;
+            default:
+                log.info("No sms type found to process a notification");
+                return;
+
+        }
+        if (mobileNo != null && messageId != null) {
+
+            sendSms(new SmsNotificationData(mobileNo, message, messageId, smsTypeEnum.getDescription(), smsTypeEnum.getStatus()));
+        }
+    }
+
+    @Override
+    public void processLoanOverdueNotification(LoanInstallmentOverdueReminderData item, SmsTypeEnum smsTypeEnum) {
+
+        smsPropertyEnabled();
+
+        String mobileNo = item.mobileNo();
+        String clientName = item.clientName();
+        String amount = item.totalDue().setScale(2, RoundingMode.HALF_UP).toPlainString();
+
+        if (mobileNo == null || mobileNo.isBlank()) {
+            return;
+        }
+
+        String message = null;
+        String messageId = null;
+
+
+        boolean isMandatory = smsTypeEnum.getStatus().equalsIgnoreCase("Mandatory");
+
+        if (!isMandatory){
+            return;
+        }
+
+        switch (smsTypeEnum) {
+
+            case LOAN_INSTALLMENT_OVERDUE_D1:
+                message = String.format(
+                        "Dear %s, your loan instalment of UGX %s is overdue by %s days. Please make payment as soon as possible.....",
+                        clientName, amount, item.overdueDays());
+                messageId = String.format("LOAN-INSTALLMENT-OVERDUE-D1-%s", item.installmentId());
+
+                break;
+
+            case LOAN_INSTALLMENT_OVERDUE_D7:
+                message = String.format(
+                        "Dear %s, your loan instalment of UGX %s is overdue by %s days. Please make payment as soon as possible...",
+                        clientName, amount, item.overdueDays());
+                messageId = String.format("LOAN-INSTALLMENT-OVERDUE-D7-%s", item.installmentId());
+
+                break;
+
+            case LOAN_INSTALLMENT_OVERDUE_D30:
+                message = String.format(
+                        "Dear %s, your loan instalment of UGX %s is overdue by %s days. Please make payment as soon as possible.",
+                        clientName, amount, item.overdueDays());
+                messageId = String.format("LOAN-INSTALLMENT-OVERDUE-D30-%s", item.installmentId());
+
+                break;
+
+            case LOAN_INSTALLMENT_OVERDUE_D60:
+                message = String.format(
+                        "Dear %s, your loan installment of UGX %s is overdue by %s days. Please make payment as soon as possible..",
+                        clientName, amount, item.overdueDays());
+                messageId = String.format("LOAN-INSTALLMENT-OVERDUE-D60-%s", item.installmentId());
+
+                break;
+
+            case LOAN_INSTALLMENT_OVERDUE_D90:
+                message = String.format(
+                        "Dear %s, your loan instalment of UGX %s is overdue by %s days. Please make payment as soon as possible..",
+                        clientName, amount, item.overdueDays());
+                messageId = String.format("LOAN-INSTALLMENT-OVERDUE-D90-%s", item.installmentId());
+
+                break;
+
+            default:
+                return;
+        }
+
+        sendSms(new SmsNotificationData(mobileNo, message, messageId, smsTypeEnum.getDescription(), smsTypeEnum.getStatus()));
+    }
+
+    @Override
     public void processFixedDepositSmsNotification(FixedDepositAccount fixedDepositAccount, SmsTypeEnum smsTypeEnum) {
         smsPropertyEnabled();
 
@@ -643,13 +841,18 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         Long depositId = fixedDepositAccount != null ? fixedDepositAccount.getId() : null;
         String clientName = fixedDepositAccount !=null ? fixedDepositAccount.getClient().getDisplayName() : null;
 
+        boolean isMandatory = smsTypeEnum.getStatus().equalsIgnoreCase("Mandatory");
+
+
         switch (smsTypeEnum){
             case FIXED_DEPOSIT_CREATION:
-                assert fixedDepositAccount != null;
-                message = String.format("Dear %s, your fixed deposit account %s has been successfully activated. Amount: %s %s.",
-                        clientName, fixedDepositAccount.getAccountNumber(), fixedDepositAccount.getCurrency().getCode(), fixedDepositAccount.getDepositAmount().setScale(2, RoundingMode.HALF_UP)
-                );
-                messageId = String.format("FIXED-DEPOSIT-ACCOUNT-%s", depositId);
+                if (isMandatory) {
+                    assert fixedDepositAccount != null;
+                    message = String.format("Dear %s, your fixed deposit account %s has been successfully activated. Amount: %s %s.",
+                            clientName, fixedDepositAccount.getAccountNumber(), fixedDepositAccount.getCurrency().getCode(), fixedDepositAccount.getDepositAmount().setScale(2, RoundingMode.HALF_UP)
+                    );
+                    messageId = String.format("FIXED-DEPOSIT-ACCOUNT-%s", depositId);
+                }
             break;
             default:
                 log.info("No sms type found to process a notification");
@@ -674,55 +877,69 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         Long id = details !=null ? details.getId() : null;
         String senderClientName = details !=null ? details.fromClient().getDisplayName() : null;
         String receiverClientName = details !=null ? details.toClient().getDisplayName() : null;
+        boolean isMandatory = smsTypeEnum.getStatus().equalsIgnoreCase("Mandatory");
+
 
         switch (smsTypeEnum){
             case SAVINGS_TO_SAVINGS_ACCOUNT_TRANSFER:
-                assert details != null;
-                senderMessage = String.format("Dear %s, %s %s has been successfully debited from account %s. Ref: %s.",
-                        senderClientName, details.fromSavingsAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
-                        details.fromSavingsAccount().getAccountNumber(), txnId
-                );
-                receiveMessage = String.format("Dear %s, %s %s has been successfully credited to account %s. Ref: %s.",
-                        receiverClientName, details.toSavingsAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
-                        details.toSavingsAccount().getAccountNumber(), txnId
-                );
-                messageId = String.format("ACCOUNT-TRANSFER-ACCOUNT-%s", id);
+                if (isMandatory) {
+
+                    assert details != null;
+                    senderMessage = String.format("Dear %s, %s %s has been successfully debited from account %s. Ref: %s.",
+                            senderClientName, details.fromSavingsAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
+                            details.fromSavingsAccount().getAccountNumber(), txnId
+                    );
+                    receiveMessage = String.format("Dear %s, %s %s has been successfully credited to account %s. Ref: %s.",
+                            receiverClientName, details.toSavingsAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
+                            details.toSavingsAccount().getAccountNumber(), txnId
+                    );
+                    messageId = String.format("ACCOUNT-TRANSFER-ACCOUNT-%s", id);
+                }
             break;
             case SAVINGS_TO_LOAN_ACCOUNT_TRANSFER:
                 assert details != null;
-                senderMessage = String.format("Dear %s, %s %s has been successfully debited from account %s for repayment of loan %s. Ref: %s.",
-                        senderClientName, details.fromSavingsAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
-                        details.fromSavingsAccount().getAccountNumber(), details.toLoanAccount().getAccountNumber(), txnId
-                );
-                receiveMessage = String.format("Dear %s, %s %s has been successfully credited to loan account %s as a repayment from account %s. Ref: %s.",
-                        receiverClientName, details.toLoanAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
-                        details.toLoanAccount().getAccountNumber(), details.fromSavingsAccount().getAccountNumber(), txnId
-                );
-                messageId = String.format("ACCOUNT-TRANSFER-ACCOUNT-%s", id);
+                if (isMandatory) {
+
+                    senderMessage = String.format("Dear %s, %s %s has been successfully debited from account %s for repayment of loan %s. Ref: %s.",
+                            senderClientName, details.fromSavingsAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
+                            details.fromSavingsAccount().getAccountNumber(), details.toLoanAccount().getAccountNumber(), txnId
+                    );
+                    receiveMessage = String.format("Dear %s, %s %s has been successfully credited to loan account %s as a repayment from account %s. Ref: %s.",
+                            receiverClientName, details.toLoanAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
+                            details.toLoanAccount().getAccountNumber(), details.fromSavingsAccount().getAccountNumber(), txnId
+                    );
+                    messageId = String.format("ACCOUNT-TRANSFER-ACCOUNT-%s", id);
+                }
             break;
             case LOAN_TO_SAVINGS_ACCOUNT_TRANSFER:
                 assert details != null;
-                senderMessage = String.format("Dear %s, %s %s has been successfully debited from loan account %s. Ref: %s.",
-                        senderClientName, details.fromLoanAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
-                        details.fromLoanAccount().getAccountNumber(), txnId
-                );
-                receiveMessage = String.format("Dear %s, %s %s has been successfully credited to saving account %s . Ref: %s.",
-                        receiverClientName,details.toSavingsAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
-                        details.toSavingsAccount().getAccountNumber(), txnId
-                );
-                messageId = String.format("ACCOUNT-TRANSFER-ACCOUNT-%s", id);
+                if (isMandatory) {
+
+                    senderMessage = String.format("Dear %s, %s %s has been successfully debited from loan account %s. Ref: %s.",
+                            senderClientName, details.fromLoanAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
+                            details.fromLoanAccount().getAccountNumber(), txnId
+                    );
+                    receiveMessage = String.format("Dear %s, %s %s has been successfully credited to saving account %s . Ref: %s.",
+                            receiverClientName, details.toSavingsAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
+                            details.toSavingsAccount().getAccountNumber(), txnId
+                    );
+                    messageId = String.format("ACCOUNT-TRANSFER-ACCOUNT-%s", id);
+                }
             break;
             case LOAN_TO_LOAN_ACCOUNT_TRANSFER:
-                assert details != null;
-                senderMessage = String.format("Dear %s, %s %s has been successfully debited from loan account %s. Ref: %s.",
-                        senderClientName, details.fromLoanAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
-                        details.fromLoanAccount().getAccountNumber(), txnId
-                );
-                receiveMessage = String.format("Dear %s, %s %s has been successfully credited to loan account %s . Ref: %s.",
-                        receiverClientName, details.toLoanAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
-                        details.toLoanAccount().getAccountNumber(), txnId
-                );
-                messageId = String.format("ACCOUNT-TRANSFER-ACCOUNT-%s", id);
+                if (isMandatory) {
+
+                    assert details != null;
+                    senderMessage = String.format("Dear %s, %s %s has been successfully debited from loan account %s. Ref: %s.",
+                            senderClientName, details.fromLoanAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
+                            details.fromLoanAccount().getAccountNumber(), txnId
+                    );
+                    receiveMessage = String.format("Dear %s, %s %s has been successfully credited to loan account %s . Ref: %s.",
+                            receiverClientName, details.toLoanAccount().getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP),
+                            details.toLoanAccount().getAccountNumber(), txnId
+                    );
+                    messageId = String.format("ACCOUNT-TRANSFER-ACCOUNT-%s", id);
+                }
             break;
             default:
                 log.info("No sms type found to process a notification");
@@ -785,25 +1002,34 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 break;
 
             case CLIENT_CHARGE_APPLIED:
-                message = String.format("Dear %s, a charge of %s %s has been applied to your client account %s.", clientName,
-                        clientCharge.getCurrency().getCode(), clientCharge.getAmount(), clientCharge.getClient().getAccountNumber()
-                );
-                messageId = String.format("CLIENT-CHARGE-APPLIED-%s", clientCharge.getId());
+                if (isMandatory) {
+
+                    message = String.format("Dear %s, a charge of %s %s has been applied to your client account %s.", clientName,
+                            clientCharge.getCurrency().getCode(), clientCharge.getAmount(), clientCharge.getClient().getAccountNumber()
+                    );
+                    messageId = String.format("CLIENT-CHARGE-APPLIED-%s", clientCharge.getId());
+                }
 
             break;
 
             case SAVINGS_CHARGE_APPLIED:
-                message = String.format("Dear %s, a charge of %s %s has been applied to your savings account %s.", clientName,
-                        savingsAccountCharge.currencyCode(), savingsAccountCharge.getCharge().getAmount(), savingsAccountCharge.savingsAccount().getAccountNumber()
-                );
-                messageId = String.format("SAVINGS-CHARGE-APPLIED-%s", savingsAccountCharge.getId());
+                if (isMandatory) {
+
+                    message = String.format("Dear %s, a charge of %s %s has been applied to your savings account %s.", clientName,
+                            savingsAccountCharge.currencyCode(), savingsAccountCharge.getCharge().getAmount(), savingsAccountCharge.savingsAccount().getAccountNumber()
+                    );
+                    messageId = String.format("SAVINGS-CHARGE-APPLIED-%s", savingsAccountCharge.getId());
+                }
             break;
 
             case LOAN_CHARGE_APPLIED:
-                message = String.format("Dear %s, a charge of %s %s has been applied to your loan account %s.", clientName,
-                        loanCharge.currencyCode(), loanCharge.getAmount(), loanCharge.getLoan().getAccountNumber()
-                );
-                messageId = String.format("LOAN-CHARGE-APPLIED-%s", loanCharge.getId());
+                if (isMandatory) {
+
+                    message = String.format("Dear %s, a charge of %s %s has been applied to your loan account %s.", clientName,
+                            loanCharge.currencyCode(), loanCharge.getAmount(), loanCharge.getLoan().getAccountNumber()
+                    );
+                    messageId = String.format("LOAN-CHARGE-APPLIED-%s", loanCharge.getId());
+                }
 
             break;
 
@@ -828,18 +1054,28 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
 
         String message = null;
         String messageId = null;
+
+        boolean isMandatory = smsTypeEnum.getStatus().equalsIgnoreCase("Mandatory");
+
+
         switch (smsTypeEnum){
 
             case DEPOSIT_FAILURE_VIA_USSD:
-                message = String.format("Dear %s, your deposit transaction of %s %s was unsuccessful. Ref: %s.", clientName,
-                        savingsAccount.getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP), txnId);
-                messageId = String.format("SAVINGS-DEPOSIT-USSD-FAILURE-%s", savingsAccount.getId());
+                if (isMandatory) {
+
+                    message = String.format("Dear %s, your deposit transaction of %s %s was unsuccessful. Ref: %s.", clientName,
+                            savingsAccount.getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP), txnId);
+                    messageId = String.format("SAVINGS-DEPOSIT-USSD-FAILURE-%s", savingsAccount.getId());
+                }
 
             break;
             case LOAN_REPAYMENT_FAILURE_VIA_USSD:
-                message = String.format("Dear %s, your loan repayment of %s %s was unsuccessful. Please try again. Ref: %s.", clientName,
-                        loan.getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP), txnId);
-                messageId = String.format("LOAN-REPAYMENT-USSD-FAILURE-%s", loan.getId());
+                if (isMandatory) {
+
+                    message = String.format("Dear %s, your loan repayment of %s %s was unsuccessful. Please try again. Ref: %s.", clientName,
+                            loan.getCurrency().getCode(), amount.setScale(2, RoundingMode.HALF_UP), txnId);
+                    messageId = String.format("LOAN-REPAYMENT-USSD-FAILURE-%s", loan.getId());
+                }
 
                 break;
 
@@ -864,17 +1100,26 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
         String message = null;
         String messageId = null;
 
+        boolean isMandatory = smsTypeEnum.getStatus().equalsIgnoreCase("Mandatory");
+
+
         switch (smsTypeEnum){
+
             case SAVINGS_REVERSAL:
-                message = String.format("Dear %s, your transaction of %s %s on saving account %s has been reversed. Ref: %s.", clientName,
-                        savingsAccount.getCurrency().getCode(), savingsAccountTransaction.getAmount().setScale(2, RoundingMode.HALF_UP), savingsAccount.getAccountNumber(), txnId);
-                messageId = String.format("SAVING-REVERSAL-%s", savingsAccount.getId());
+                if (isMandatory) {
+                    message = String.format("Dear %s, your transaction of %s %s on saving account %s has been reversed. Ref: %s.", clientName,
+                            savingsAccount.getCurrency().getCode(), savingsAccountTransaction.getAmount().setScale(2, RoundingMode.HALF_UP), savingsAccount.getAccountNumber(), txnId);
+                    messageId = String.format("SAVING-REVERSAL-%s", savingsAccount.getId());
+                }
             break;
 
             case LOAN_REVERSAL:
-                message = String.format("Dear %s, your transaction of %s %s on loan account %s has been reversed. Ref: %s.", clientName,
-                        loan.getCurrency().getCode(), loanTransaction.getAmount().setScale(2, RoundingMode.HALF_UP), loan.getAccountNumber(), txnId);
-                messageId = String.format("LOAN-REVERSAL-%s", loan.getId());
+                if (isMandatory) {
+
+                    message = String.format("Dear %s, your transaction of %s %s on loan account %s has been reversed. Ref: %s.", clientName,
+                            loan.getCurrency().getCode(), loanTransaction.getAmount().setScale(2, RoundingMode.HALF_UP), loan.getAccountNumber(), txnId);
+                    messageId = String.format("LOAN-REVERSAL-%s", loan.getId());
+                }
             break;
 
             default:
@@ -882,6 +1127,59 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 return;
         }
 
+        if (mobileNo != null && messageId != null) {
+
+            sendSms(new SmsNotificationData(mobileNo, message, messageId, smsTypeEnum.getDescription(), smsTypeEnum.getStatus()));
+        }
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processAppUserSms(AppUser appUser, SmsTypeEnum smsTypeEnum) {
+        smsPropertyEnabled();
+
+        String mobileNo = appUser != null ?
+                (appUser.getStaff() != null ? appUser.getStaff().getMobileNo(): null)
+                : null;
+        String username = appUser != null ? appUser.getDisplayName().replace("," , "") : null;
+        Long userId = appUser != null ? appUser.getId() : null;
+
+        String message = null;
+        String messageId = null;
+
+        boolean isMandatory = smsTypeEnum.getStatus().equalsIgnoreCase("Mandatory");
+
+
+        switch (smsTypeEnum){
+            case USER_BLOCKED:
+                if (isMandatory) {
+
+                    message = String.format("Dear %s, Alert: Account Locked after multiple unsuccessful login attempts on your account. Please contact %s if this was not you.",
+                            username, ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("USER-BLOCKED-%s", userId);
+                }
+            break;
+            case PASSWORD_RESET:
+                if (isMandatory) {
+
+                    message = String.format("Dear %s, your password has been reset successfully. If you did not request this, contact %s immediately.",
+                            username, ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("PASSWORD-RESET-%s", userId);
+                }
+            break;
+            case USER_UN_BLOCKED:
+                if (isMandatory) {
+
+                    message = String.format("Dear %s, Your account has been unblocked. You can now log in again. If you did not request this, please contact %s immediately.",
+                            username, ThreadLocalContextUtil.getTenant().getName());
+                    messageId = String.format("USER-UNBLOCKED-%s", userId);
+                }
+            break;
+
+            default:
+                log.info("No sms type found to process a notification");
+                return;
+        }
         if (mobileNo != null && messageId != null) {
 
             sendSms(new SmsNotificationData(mobileNo, message, messageId, smsTypeEnum.getDescription(), smsTypeEnum.getStatus()));

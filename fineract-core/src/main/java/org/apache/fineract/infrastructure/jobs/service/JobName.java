@@ -58,7 +58,11 @@ public enum JobName {
     PURGE_EXTERNAL_EVENTS("Purge External Events"), //
     PURGE_PROCESSED_COMMANDS("Purge Processed Commands"), //
     ACCRUAL_ACTIVITY_POSTING("Accrual Activity Posting"), //
-    PROCESS_LOAN_TRANSACTIONS_ON_MOMO_PAYMENT("Process Loan Transactions On Momo Payment"), //
+    PROCESS_LOAN_TRANSACTIONS_ON_MOMO_PAYMENT("Process Loan Transactions On Momo Payment"),//
+    EXECUTE_STAFF_CLIENT_BIRTHDAYS("Execute Happy Birthday Message"),
+    EXECUTE_DORMANT_ACCOUNTS_SMS("Execute Dormant Savings Account Reminder"),
+    EXECUTE_LOAN_INSTALLMENT_PAYMENT_REMINDER("Execute Loan Installment Payment Reminder"),
+    EXECUTE_LOAN_INSTALLMENT_OVERDUE_REMINDER("Execute Loan Installment Overdue Reminder"),
     ;
 
     private final String name;

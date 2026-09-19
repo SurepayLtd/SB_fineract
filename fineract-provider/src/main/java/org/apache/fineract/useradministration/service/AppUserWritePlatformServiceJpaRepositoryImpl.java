@@ -42,6 +42,8 @@ import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityEx
 import org.apache.fineract.infrastructure.core.service.PlatformEmailSendException;
 import org.apache.fineract.infrastructure.security.service.PlatformPasswordEncoder;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.notification.data.SmsTypeEnum;
+import org.apache.fineract.notification.service.SmsNotificationWritePlatformService;
 import org.apache.fineract.organisation.office.domain.Office;
 import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
 import org.apache.fineract.organisation.staff.domain.Staff;
@@ -83,6 +85,7 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
     private final AppUserPreviousPasswordRepository appUserPreviewPasswordRepository;
     private final StaffRepositoryWrapper staffRepositoryWrapper;
     private final ClientRepositoryWrapper clientRepositoryWrapper;
+    private final SmsNotificationWritePlatformService smsNotificationWritePlatformService;
 
     @Override
     @Transactional
@@ -213,6 +216,10 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
                     this.appUserPreviewPasswordRepository.save(currentPasswordToSaveAsPreview);
                 }
 
+                if (changes.containsKey("passwordEncoded")){
+                    this.smsNotificationWritePlatformService.processAppUserSms(userToUpdate, SmsTypeEnum.PASSWORD_RESET);
+                }
+
             }
 
             return new CommandProcessingResultBuilder() //
@@ -279,6 +286,23 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
 
         user.delete();
         this.appUserRepository.save(user);
+
+        return new CommandProcessingResultBuilder().withEntityId(userId).withOfficeId(user.getOffice().getId()).build();
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = { @CacheEvict(value = "users", allEntries = true), @CacheEvict(value = "usersByUsername", allEntries = true) })
+    public CommandProcessingResult unBlockUser(Long userId) {
+        final AppUser user = this.appUserRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+        if (user.isDeleted()) {
+            throw new UserNotFoundException(userId);
+        }
+
+        user.unBlockUser();
+        this.appUserRepository.save(user);
+
+        this.smsNotificationWritePlatformService.processAppUserSms(user, SmsTypeEnum.USER_UN_BLOCKED);
 
         return new CommandProcessingResultBuilder().withEntityId(userId).withOfficeId(user.getOffice().getId()).build();
     }

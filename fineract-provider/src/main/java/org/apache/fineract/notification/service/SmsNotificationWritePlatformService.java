@@ -27,6 +27,8 @@ import org.apache.fineract.portfolio.account.domain.AccountTransferDetails;
 import org.apache.fineract.portfolio.account.domain.AccountTransferTransaction;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientCharge;
+import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentOverdueReminderData;
+import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentReminderData;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanCharge;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
@@ -62,6 +64,12 @@ public interface SmsNotificationWritePlatformService {
     void processFailedUssdSmsNotification(Client client, SmsTypeEnum smsTypeEnum, SavingsAccount savingsAccount, Loan loan, BigDecimal amount);
 
     void processTransactionReversals(Client client, SmsTypeEnum smsTypeEnum, SavingsAccount savingsAccount, Loan loan, SavingsAccountTransaction savingsAccountTransaction, LoanTransaction loanTransaction);
+
+    void processAppUserSms(AppUser appUser, SmsTypeEnum smsTypeEnum);
+
+    void processLoanInstallmentNotification(LoanInstallmentReminderData item, SmsTypeEnum smsTypeEnum);
+
+    void processLoanOverdueNotification(LoanInstallmentOverdueReminderData item, SmsTypeEnum smsTypeEnum);
 
 
 }

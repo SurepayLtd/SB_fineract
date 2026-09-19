@@ -283,6 +283,14 @@ public class CommandWrapperBuilder {
         return this;
     }
 
+    public CommandWrapperBuilder unblockUser(final Long userId) {
+        this.actionName = "UNBLOCK";
+        this.entityName = "USER";
+        this.entityId = userId;
+        this.href = "/users/" + userId;
+        return this;
+    }
+
     public CommandWrapperBuilder createOffice() {
         this.actionName = "CREATE";
         this.entityName = "OFFICE";

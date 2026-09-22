@@ -27,14 +27,7 @@ import org.apache.fineract.infrastructure.core.service.SearchParameters;
 import org.apache.fineract.organisation.staff.data.StaffData;
 import org.apache.fineract.portfolio.calendar.data.CalendarData;
 import org.apache.fineract.portfolio.floatingrates.data.InterestRatePeriodData;
-import org.apache.fineract.portfolio.loanaccount.data.DisbursementData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanAccountData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanApprovalData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanRepaymentScheduleInstallmentData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanTransactionData;
-import org.apache.fineract.portfolio.loanaccount.data.PaidInAdvanceData;
-import org.apache.fineract.portfolio.loanaccount.data.RepaymentScheduleRelatedLoanData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanPenaltiesData;
+import org.apache.fineract.portfolio.loanaccount.data.*;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionType;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.data.LoanScheduleData;
@@ -148,4 +141,10 @@ public interface LoanReadPlatformService {
     Long retrieveLoanIdByExternalId(ExternalId externalId);
 
     LoanPenaltiesData retrievePenaltiesByLoan(Long loanId);
+
+
+    List<JobPartition> retrieveOverdueLoanPartitions(int partitionSize, Long penaltyWaitPeriod, Boolean backdatePenalties);
+
+    List<OverdueLoanScheduleData> retrieveOverdueLoanPage(final Long minAccountKey, final Long maxAccountKey, final Long afterLoanId, final Integer afterInstallmentNumber, final int pageSize, final Long penaltyWaitPeriod,
+                                                          final Boolean backdatePenalties, final Long afterChargeId);
 }

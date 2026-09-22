@@ -45,4 +45,6 @@ public interface LoanAccrualsProcessingService {
 
     void processAccrualsOnLoanForeClosure(@NotNull Loan loan, @NotNull LocalDate foreClosureDate,
             @NotNull List<LoanTransaction> newAccrualTransactions);
+
+    void addPeriodicAccrual(final Long loanId, final LocalDate tillDate) throws MultiException;
 }

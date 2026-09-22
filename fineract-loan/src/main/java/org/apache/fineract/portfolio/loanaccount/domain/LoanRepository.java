@@ -26,6 +26,7 @@ import org.apache.fineract.cob.data.LoanIdAndExternalIdAndAccountNo;
 import org.apache.fineract.cob.data.LoanIdAndExternalIdAndStatus;
 import org.apache.fineract.cob.data.LoanIdAndLastClosedBusinessDate;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -116,6 +117,32 @@ public interface LoanRepository extends JpaRepository<Loan, Long>, JpaSpecificat
     String FIND_LOANS_FOR_ADD_ACCRUAL = LOANS_FOR_ACCRUAL + "and (:futureCharges = true or ls.dueDate <= :tillDate)))";
 
     String FIND_LOAN_BY_EXTERNAL_ID = "SELECT loan FROM Loan loan WHERE loan.externalId = :externalId";
+
+    String LOAN_IDS_FOR_ACCRUAL =
+            "select l.id from Loan l left join l.loanInterestRecalculationDetails recalcDetails "
+                    + "where l.loanStatus = 300 and l.isNpa = false and l.chargedOff = false "
+                    + "and l.loanProduct.accountingRule = :accountingType "
+                    + "and (recalcDetails.isCompoundingToBePostedAsTransaction is null or recalcDetails.isCompoundingToBePostedAsTransaction = false) "
+                    + "and (exists (select ls.id from LoanRepaymentScheduleInstallment ls where ls.loan.id = l.id and ls.isDownPayment = false "
+                    + "and ((coalesce(ls.interestCharged, 0) - coalesce(ls.interestWaived, 0)) <> coalesce(ls.interestAccrued, 0) "
+                    + "or (coalesce(ls.feeChargesCharged, 0) - coalesce(ls.feeChargesWaived, 0)) <> coalesce(ls.feeAccrued, 0) "
+                    + "or (coalesce(ls.penaltyCharges, 0) - coalesce(ls.penaltyChargesWaived, 0)) <> coalesce(ls.penaltyAccrued, 0)) ";
+
+    String FIND_LOAN_IDS_FOR_PERIODIC_ACCRUAL = LOAN_IDS_FOR_ACCRUAL
+                    + "and (:futureCharges = true or ls.fromDate < :tillDate or (ls.installmentNumber = "
+                    + "(select min(lsi.installmentNumber) "
+                    + "from LoanRepaymentScheduleInstallment lsi "
+                    + "where lsi.loan.id = l.id and lsi.isDownPayment = false) "
+                    + "and ls.fromDate = :tillDate))))";
+
+    String FIND_LOAN_IDS_FOR_PERIODIC_ACCRUAL_PARTITION = FIND_LOAN_IDS_FOR_PERIODIC_ACCRUAL
+                    + "and l.id > :afterLoanId "
+                    + "order by l.id";
+
+    String FIND_LOAN_IDS_FOR_PERIODIC_ACCRUAL_PAGE = FIND_LOAN_IDS_FOR_PERIODIC_ACCRUAL
+                    + "and l.id between :minAccountKey and :maxAccountKey "
+                    + "and l.id > :afterLoanId "
+                    + "order by l.id";
 
     @Query(FIND_GROUP_LOANS_DISBURSED_AFTER)
     List<Loan> getGroupLoansDisbursedAfter(@Param("disbursementDate") LocalDate disbursementDate, @Param("groupId") Long groupId,
@@ -257,4 +284,10 @@ public interface LoanRepository extends JpaRepository<Loan, Long>, JpaSpecificat
 
     @Query(FIND_USSD_LOANS_PENDING)
     Long countPendingUssdLoans(@Param("clientId") Long clientId, @Param("channel") Integer channel, @Param("statuses") Collection<Integer> statuses);
+
+    @Query(FIND_LOAN_IDS_FOR_PERIODIC_ACCRUAL_PARTITION)
+    List<Long> findLoanIdsForPeriodicAccrualPartition(@Param("accountingType") Integer accountingType, @Param("tillDate") LocalDate tillDate, @Param("futureCharges") boolean futureCharges, @Param("afterLoanId") Long afterLoanId, Pageable pageable);
+
+    @Query(FIND_LOAN_IDS_FOR_PERIODIC_ACCRUAL_PAGE)
+    List<Long> findLoanIdsForPeriodicAccrualPage(@Param("accountingType") Integer accountingType, @Param("tillDate") LocalDate tillDate, @Param("futureCharges") boolean futureCharges, @Param("minAccountKey") Long minAccountKey, @Param("maxAccountKey") Long maxAccountKey, @Param("afterLoanId") Long afterLoanId, Pageable pageable);
 }

@@ -33,35 +33,35 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
-@Configuration
-public class ApplyChargeToOverdueLoanInstallmentConfig {
-
-    @Autowired
-    private JobRepository jobRepository;
-    @Autowired
-    private PlatformTransactionManager transactionManager;
-    @Autowired
-    private ConfigurationDomainService configurationDomainService;
-    @Autowired
-    private LoanReadPlatformService loanReadPlatformService;
-    @Autowired
-    private LoanChargeWritePlatformService loanChargeWritePlatformService;
-
-    @Bean
-    protected Step applyChargeToOverdueLoanInstallmentStep() {
-        return new StepBuilder(JobName.APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT.name(), jobRepository)
-                .tasklet(applyChargeToOverdueLoanInstallmentTasklet(), transactionManager).build();
-    }
-
-    @Bean
-    public Job applyChargeToOverdueLoanInstallmentsJob() {
-        return new JobBuilder(JobName.APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT.name(), jobRepository)
-                .start(applyChargeToOverdueLoanInstallmentStep()).incrementer(new RunIdIncrementer()).build();
-    }
-
-    @Bean
-    public ApplyChargeToOverdueLoanInstallmentTasklet applyChargeToOverdueLoanInstallmentTasklet() {
-        return new ApplyChargeToOverdueLoanInstallmentTasklet(configurationDomainService, loanReadPlatformService,
-                loanChargeWritePlatformService);
-    }
-}
+//@Configuration
+//public class ApplyChargeToOverdueLoanInstallmentConfig {
+//
+//    @Autowired
+//    private JobRepository jobRepository;
+//    @Autowired
+//    private PlatformTransactionManager transactionManager;
+//    @Autowired
+//    private ConfigurationDomainService configurationDomainService;
+//    @Autowired
+//    private LoanReadPlatformService loanReadPlatformService;
+//    @Autowired
+//    private LoanChargeWritePlatformService loanChargeWritePlatformService;
+//
+//    @Bean
+//    protected Step applyChargeToOverdueLoanInstallmentStep() {
+//        return new StepBuilder(JobName.APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT.name(), jobRepository)
+//                .tasklet(applyChargeToOverdueLoanInstallmentTasklet(), transactionManager).build();
+//    }
+//
+//    @Bean
+//    public Job applyChargeToOverdueLoanInstallmentsJob() {
+//        return new JobBuilder(JobName.APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT.name(), jobRepository)
+//                .start(applyChargeToOverdueLoanInstallmentStep()).incrementer(new RunIdIncrementer()).build();
+//    }
+//
+//    @Bean
+//    public ApplyChargeToOverdueLoanInstallmentTasklet applyChargeToOverdueLoanInstallmentTasklet() {
+//        return new ApplyChargeToOverdueLoanInstallmentTasklet(configurationDomainService, loanReadPlatformService,
+//                loanChargeWritePlatformService);
+//    }
+//}

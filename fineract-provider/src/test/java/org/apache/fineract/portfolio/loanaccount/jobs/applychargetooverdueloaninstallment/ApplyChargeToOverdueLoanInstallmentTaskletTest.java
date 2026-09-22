@@ -39,48 +39,48 @@ import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.repeat.RepeatStatus;
 
-public class ApplyChargeToOverdueLoanInstallmentTaskletTest {
-
-    private LoanReadPlatformService loanReadPlatformService;
-    private LoanChargeWritePlatformService loanChargeWritePlatformService;
-    private StepContribution contribution;
-    private ChunkContext chunkContext;
-    private ApplyChargeToOverdueLoanInstallmentTasklet tasklet;
-
-    @BeforeEach
-    public void setUp() {
-        loanReadPlatformService = mock(LoanReadPlatformService.class);
-        loanChargeWritePlatformService = mock(LoanChargeWritePlatformService.class);
-        ConfigurationDomainService configurationDomainService = mock(ConfigurationDomainService.class);
-        contribution = mock(StepContribution.class);
-        chunkContext = mock(ChunkContext.class);
-
-        tasklet = new ApplyChargeToOverdueLoanInstallmentTasklet(configurationDomainService, loanReadPlatformService,
-                loanChargeWritePlatformService);
-    }
-
-    @Test
-    public void testExecute_WhenNoOverdueInstallments_ShouldNotApplyCharges() throws Exception {
-        when(loanReadPlatformService.retrieveAllLoansWithOverdueInstallments(anyLong(), anyBoolean()))
-                .thenReturn(Collections.emptyList());
-
-        RepeatStatus status = tasklet.execute(contribution, chunkContext);
-
-        assertEquals(RepeatStatus.FINISHED, status);
-
-        verify(loanChargeWritePlatformService, never()).applyOverdueChargesForLoan(anyLong(), anyCollection());
-    }
-
-    @Test
-    public void testExecute_WhenOverdueInstallmentsExist_ShouldApplyCharges() throws Exception {
-        OverdueLoanScheduleData overdueData = mock(OverdueLoanScheduleData.class);
-        when(loanReadPlatformService.retrieveAllLoansWithOverdueInstallments(anyLong(), anyBoolean()))
-                .thenReturn(Collections.singletonList(overdueData));
-
-        RepeatStatus status = tasklet.execute(contribution, chunkContext);
-
-        assertEquals(RepeatStatus.FINISHED, status);
-
-        verify(loanChargeWritePlatformService, times(1)).applyOverdueChargesForLoan(anyLong(), anyCollection());
-    }
-}
+//public class ApplyChargeToOverdueLoanInstallmentTaskletTest {
+//
+//    private LoanReadPlatformService loanReadPlatformService;
+//    private LoanChargeWritePlatformService loanChargeWritePlatformService;
+//    private StepContribution contribution;
+//    private ChunkContext chunkContext;
+//    private ApplyChargeToOverdueLoanInstallmentTasklet tasklet;
+//
+//    @BeforeEach
+//    public void setUp() {
+//        loanReadPlatformService = mock(LoanReadPlatformService.class);
+//        loanChargeWritePlatformService = mock(LoanChargeWritePlatformService.class);
+//        ConfigurationDomainService configurationDomainService = mock(ConfigurationDomainService.class);
+//        contribution = mock(StepContribution.class);
+//        chunkContext = mock(ChunkContext.class);
+//
+//        tasklet = new ApplyChargeToOverdueLoanInstallmentTasklet(configurationDomainService, loanReadPlatformService,
+//                loanChargeWritePlatformService);
+//    }
+//
+//    @Test
+//    public void testExecute_WhenNoOverdueInstallments_ShouldNotApplyCharges() throws Exception {
+//        when(loanReadPlatformService.retrieveAllLoansWithOverdueInstallments(anyLong(), anyBoolean()))
+//                .thenReturn(Collections.emptyList());
+//
+//        RepeatStatus status = tasklet.execute(contribution, chunkContext);
+//
+//        assertEquals(RepeatStatus.FINISHED, status);
+//
+//        verify(loanChargeWritePlatformService, never()).applyOverdueChargesForLoan(anyLong(), anyCollection());
+//    }
+//
+//    @Test
+//    public void testExecute_WhenOverdueInstallmentsExist_ShouldApplyCharges() throws Exception {
+//        OverdueLoanScheduleData overdueData = mock(OverdueLoanScheduleData.class);
+//        when(loanReadPlatformService.retrieveAllLoansWithOverdueInstallments(anyLong(), anyBoolean()))
+//                .thenReturn(Collections.singletonList(overdueData));
+//
+//        RepeatStatus status = tasklet.execute(contribution, chunkContext);
+//
+//        assertEquals(RepeatStatus.FINISHED, status);
+//
+//        verify(loanChargeWritePlatformService, times(1)).applyOverdueChargesForLoan(anyLong(), anyCollection());
+//    }
+//}

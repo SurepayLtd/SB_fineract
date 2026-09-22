@@ -86,23 +86,7 @@ import org.apache.fineract.portfolio.group.data.GroupGeneralData;
 import org.apache.fineract.portfolio.group.data.GroupRoleData;
 import org.apache.fineract.portfolio.group.service.GroupReadPlatformService;
 import org.apache.fineract.portfolio.loanaccount.api.LoanApiConstants;
-import org.apache.fineract.portfolio.loanaccount.data.DisbursementData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanAccountData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanApplicationTimelineData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanApprovalData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanChargePaidByData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanInterestRecalculationData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanRepaymentScheduleInstallmentData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanStatusEnumData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanSummaryData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanTransactionData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanTransactionEnumData;
-import org.apache.fineract.portfolio.loanaccount.data.LoanTransactionRelationData;
-import org.apache.fineract.portfolio.loanaccount.data.OutstandingAmountsDTO;
-import org.apache.fineract.portfolio.loanaccount.data.PaidInAdvanceData;
-import org.apache.fineract.portfolio.loanaccount.data.RepaymentScheduleRelatedLoanData;
-import org.apache.fineract.portfolio.loanaccount.data.ScheduleGeneratorDTO;
-import org.apache.fineract.portfolio.loanaccount.data.LoanPenaltiesData;
+import org.apache.fineract.portfolio.loanaccount.data.*;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanChargeOffBehaviour;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleInstallment;
@@ -2267,6 +2251,67 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
                 paymentTypeOptions, ExternalId.empty(), null, null, outstandingLoanBalance, isReversed, loanId, loan.getExternalId());
     }
 
+    @Override
+    public List<JobPartition> retrieveOverdueLoanPartitions(int partitionSize, Long penaltyWaitPeriod, Boolean backdatePenalties) {
+
+        final List<Long> loanIds = retrieveOverdueLoanIds(penaltyWaitPeriod, backdatePenalties);
+
+        final List<JobPartition> partitions = new ArrayList<>();
+
+        long pageNumber = 0;
+
+        for (int i = 0; i < loanIds.size(); i += partitionSize) {
+
+            final List<Long> batch = loanIds.subList(i, Math.min(i + partitionSize, loanIds.size()));
+
+            partitions.add(new JobPartition(batch.getFirst(), batch.getLast(), ++pageNumber, (long) batch.size()));
+        }
+
+        return partitions;
+    }
+
+    @Override
+    public List<OverdueLoanScheduleData> retrieveOverdueLoanPage(final Long minAccountKey, final Long maxAccountKey, final Long afterLoanId, final Integer afterInstallmentNumber, final int pageSize, final Long penaltyWaitPeriod,
+                                                                 final Boolean backdatePenalties, final Long afterChargeId) {
+
+        final MusoniOverdueLoanScheduleMapper rm = new MusoniOverdueLoanScheduleMapper();
+
+        final StringBuilder sql = new StringBuilder(600);
+
+        sql.append("select ")
+                .append(rm.schema())
+                .append(" where ")
+                .append(sqlGenerator.subDate(sqlGenerator.currentBusinessDate(), "?", "day"))
+                .append(" > ls.duedate ")
+                .append(" and ls.completed_derived <> true ")
+                .append(" and mc.charge_applies_to_enum = 1 ")
+                .append(" and ls.recalculated_interest_component <> true ")
+                .append(" and mc.charge_time_enum = 9 ")
+                .append(" and ml.loan_status_id = 300 ")
+                .append(" and ls.loan_id between ? and ? ");
+
+        sql.append(" and (")
+                .append("ls.loan_id > ? ")
+                .append("or (ls.loan_id = ? and ls.installment > ?) ")
+                .append("or (ls.loan_id = ? and ls.installment = ? and mc.id > ?)")
+                .append(") ");
+
+        if (!backdatePenalties) {
+            sql.append(" and ls.duedate >= ")
+                    .append(sqlGenerator.subDate(sqlGenerator.currentBusinessDate(), "(? + 1)", "day"));
+        }
+
+        sql.append(" order by ls.loan_id, ls.installment, mc.id limit ? ");
+
+        if (backdatePenalties) {
+            return jdbcTemplate.query(sql.toString(), rm, penaltyWaitPeriod, minAccountKey, maxAccountKey, afterLoanId, afterLoanId,
+                    afterInstallmentNumber, afterLoanId, afterInstallmentNumber, afterChargeId, pageSize);
+        }
+
+        return jdbcTemplate.query(sql.toString(), rm, penaltyWaitPeriod, minAccountKey, maxAccountKey, afterLoanId, afterLoanId, afterInstallmentNumber,
+                afterLoanId, afterInstallmentNumber, afterChargeId, penaltyWaitPeriod, pageSize);
+    }
+
     private static final class CurrencyMapper implements RowMapper<CurrencyData> {
 
         @Override
@@ -2425,5 +2470,38 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
                     "rc.name as currencyName, rc.display_symbol as currencyDisplaySymbol, rc.internationalized_name_code as currencyNameCode "+
                     " from m_loan l INNER JOIN m_currency rc on rc.code = l.currency_code ";
         }
+    }
+
+    private List<Long> retrieveOverdueLoanIds(final Long penaltyWaitPeriod, final Boolean backdatePenalties) {
+
+        final StringBuilder sqlBuilder = new StringBuilder(400);
+
+        sqlBuilder.append("SELECT DISTINCT ls.loan_id ")
+                .append("FROM m_loan_repayment_schedule ls ")
+                .append("INNER JOIN m_loan ml ON ml.id = ls.loan_id ")
+                .append("JOIN m_product_loan_charge plc ON plc.product_loan_id = ml.product_id ")
+                .append("JOIN m_charge mc ON mc.id = plc.charge_id ")
+                .append("WHERE ")
+                .append(sqlGenerator.subDate(sqlGenerator.currentBusinessDate(), "?", "day"))
+                .append(" > ls.duedate ")
+                .append("AND ls.completed_derived <> true ")
+                .append("AND mc.charge_applies_to_enum = 1 ")
+                .append("AND ls.recalculated_interest_component <> true ")
+                .append("AND mc.charge_time_enum = 9 ")
+                .append("AND ml.loan_status_id = 300 ");
+
+        if (!backdatePenalties) {
+            sqlBuilder.append("AND ls.duedate >= ")
+                    .append(sqlGenerator.subDate(sqlGenerator.currentBusinessDate(), "(? + 1)", "day"))
+                    .append(" ");
+        }
+
+        sqlBuilder.append("ORDER BY ls.loan_id");
+
+        if (backdatePenalties) {
+            return jdbcTemplate.queryForList(sqlBuilder.toString(), Long.class, penaltyWaitPeriod);
+        }
+
+        return jdbcTemplate.queryForList(sqlBuilder.toString(), Long.class, penaltyWaitPeriod, penaltyWaitPeriod);
     }
 }

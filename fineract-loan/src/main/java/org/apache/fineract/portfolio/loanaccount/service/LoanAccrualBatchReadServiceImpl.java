@@ -37,8 +37,8 @@ public class LoanAccrualBatchReadServiceImpl implements LoanAccrualBatchReadServ
                 break;
             }
 
-            final Long minAccountKey = loanIds.getFirst();
-            final Long maxAccountKey = loanIds.getLast();
+            final Long minAccountKey = loanIds.get(0);
+            final Long maxAccountKey = loanIds.get(loanIds.size()-1);
 
             partitionNumber++;
 

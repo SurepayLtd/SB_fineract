@@ -2281,7 +2281,7 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
 
             final List<Long> batch = loanIds.subList(i, Math.min(i + partitionSize, loanIds.size()));
 
-            partitions.add(new JobPartition(batch.getFirst(), batch.getLast(), ++pageNumber, (long) batch.size()));
+            partitions.add(new JobPartition(batch.get(0), batch.get(batch.size() -1), ++pageNumber, (long) batch.size()));
         }
 
         return partitions;

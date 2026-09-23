@@ -24,9 +24,22 @@ public class PeriodicAccrualItemWriter implements ItemWriter<LoanAccrualData> {
 
         final LocalDate tillDate = DateUtils.getBusinessLocalDate();
 
+        log.info("Periodic accrual writer received {} loans for processing. tillDate={}", items.size(), tillDate);
+
         for (final LoanAccrualData item : items) {
 
-            loanAccrualsProcessingService.addPeriodicAccrual(item.loanId(), tillDate);
+            log.info("Processing periodic accrual for loanId={}", item.loanId());
+            try {
+
+                loanAccrualsProcessingService.addPeriodicAccrual(item.loanId(), tillDate);
+
+                log.info("Successfully processed periodic accrual for loanId={}", item.loanId());
+            } catch (Exception e) {
+
+                log.error("Failed to process periodic accrual for loanId={}", item.loanId(), e);
+                throw e;
+            }
         }
+
     }
 }

@@ -78,7 +78,7 @@ public class LoanAccrualItemReaderTest {
         LoanAccrualData first = new LoanAccrualData(10L);
         LoanAccrualData second = new LoanAccrualData(50L);
 
-        when(readService.retrieveLoanAccrualPage(eq(1L), eq(100L), isNull(), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean()))
+        when(readService.retrieveLoanAccrualPage(eq(1L), eq(100L), eq(0L), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean()))
                 .thenReturn(List.of(first, second));
 
         assertEquals(first, reader.read());
@@ -101,7 +101,7 @@ public class LoanAccrualItemReaderTest {
         LoanAccrualData second = new LoanAccrualData(50L);
         LoanAccrualData third = new LoanAccrualData(75L);
 
-        when(readService.retrieveLoanAccrualPage(eq(1L), eq(100L), isNull(), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean()))
+        when(readService.retrieveLoanAccrualPage(eq(1L), eq(100L), eq(0L), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean()))
                 .thenReturn(List.of(first, second));
 
         when(readService.retrieveLoanAccrualPage(eq(1L), eq(100L), eq(50L), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean()))
@@ -112,7 +112,7 @@ public class LoanAccrualItemReaderTest {
         assertThat(reader.read()).isSameAs(third);
         assertThat(reader.read()).isNull();
 
-        verify(readService).retrieveLoanAccrualPage(eq(1L), eq(100L), isNull(), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean());
+        verify(readService).retrieveLoanAccrualPage(eq(1L), eq(100L), eq(0L), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean());
         verify(readService).retrieveLoanAccrualPage(eq(1L), eq(100L), eq(50L), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean());
     }
 
@@ -121,13 +121,13 @@ public class LoanAccrualItemReaderTest {
 
         LoanAccrualData only = new LoanAccrualData(20L);
 
-        when(readService.retrieveLoanAccrualPage(eq(1L), eq(100L), isNull(), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean()))
+        when(readService.retrieveLoanAccrualPage(eq(1L), eq(100L), eq(0L), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean()))
                 .thenReturn(List.of(only));
 
         assertEquals(only, reader.read());
         assertNull(reader.read());
         assertNull(reader.read());
 
-        verify(readService, times(1)).retrieveLoanAccrualPage(eq(1L), eq(100L), isNull(), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean());
+        verify(readService, times(1)).retrieveLoanAccrualPage(eq(1L), eq(100L), eq(0L), eq(PAGE_SIZE), eq(accountingType), eq(BUSINESS_DATE), anyBoolean());
     }
 }

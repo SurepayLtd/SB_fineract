@@ -50,6 +50,7 @@ public class PeriodicAccrualItemReader implements ItemReader<LoanAccrualData> {
         this.accountingType = AccountingRuleType.ACCRUAL_PERIODIC.getValue();
         this.tillDate = DateUtils.getBusinessLocalDate();
         this.futureCharges = !isChargeOnDueDate();
+        this.afterLoanId = 0L;
         this.exhausted = minAccountKey == 0L && maxAccountKey == 0L;
         log.info("Worker {} processing account range [{} - {}]", stepExecution.getExecutionContext().getString(ExecuteBatchJobConstant.PARTITION_KEY), minAccountKey, maxAccountKey);
     }
@@ -65,9 +66,12 @@ public class PeriodicAccrualItemReader implements ItemReader<LoanAccrualData> {
 
 
     private void fetchNextPage() {
-
+        log.info("Fetching periodic accrual page: minAccountKey={}, maxAccountKey={}, afterLoanId={}, pageSize={}, accountingType={}, tillDate={}, futureCharges={}", minAccountKey, maxAccountKey, afterLoanId,
+                pageSize, accountingType, tillDate, futureCharges);
 
         final List<LoanAccrualData> results = readService.retrieveLoanAccrualPage(minAccountKey, maxAccountKey, afterLoanId, pageSize, accountingType, tillDate, futureCharges);
+
+        log.info("Periodic accrual page returned {} records for account range [{} - {}]", results.size(), minAccountKey, maxAccountKey);
 
         if (results.isEmpty()) {
             exhausted = true;
@@ -79,6 +83,8 @@ public class PeriodicAccrualItemReader implements ItemReader<LoanAccrualData> {
         final LoanAccrualData last = results.get(results.size() - 1);
 
         afterLoanId = last.loanId();
+
+        log.info("Periodic accrual reader next cursor: afterLoanId={}", afterLoanId);
 
         if (results.size() < pageSize) {
             exhausted = true;

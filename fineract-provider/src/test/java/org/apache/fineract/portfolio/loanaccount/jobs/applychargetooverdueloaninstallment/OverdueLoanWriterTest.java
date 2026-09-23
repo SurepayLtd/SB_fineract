@@ -1,8 +1,6 @@
 package org.apache.fineract.portfolio.loanaccount.jobs.applychargetooverdueloaninstallment;
 
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -13,6 +11,16 @@ import org.apache.fineract.portfolio.loanaccount.service.LoanChargeWritePlatform
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.item.Chunk;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.anyCollection;
+import static org.mockito.Mockito.argThat;
+
 
 public class OverdueLoanWriterTest {
 

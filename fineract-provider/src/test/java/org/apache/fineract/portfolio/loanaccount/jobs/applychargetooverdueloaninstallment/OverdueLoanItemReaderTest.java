@@ -1,24 +1,24 @@
 package org.apache.fineract.portfolio.loanaccount.jobs.applychargetooverdueloaninstallment;
 
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.isNull;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
-import org.apache.fineract.infrastructure.businessdate.domain.BusinessDateType;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
-import org.apache.fineract.infrastructure.core.domain.ActionContext;
-import org.apache.fineract.infrastructure.core.domain.FineractPlatformTenant;
-import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.ExecuteBatchJobConstant;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.data.OverdueLoanScheduleData;
 import org.apache.fineract.portfolio.loanaccount.service.LoanReadPlatformService;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,20 +35,10 @@ public class OverdueLoanItemReaderTest {
 
     private OverdueLoanItemReader reader;
 
-    private static final LocalDate BUSINESS_DATE = LocalDate.of(2026, 9, 22);
     private static final int PAGE_SIZE = 2;
 
     @BeforeEach
     void setUp() {
-
-        ThreadLocalContextUtil.setTenant(new FineractPlatformTenant(1L, "default", "Default", "Asia/Kolkata", null));
-
-        ThreadLocalContextUtil.setActionContext(ActionContext.DEFAULT);
-
-        ThreadLocalContextUtil.setBusinessDates(new HashMap<>(
-                Map.of(BusinessDateType.BUSINESS_DATE, BUSINESS_DATE, BusinessDateType.COB_DATE, BUSINESS_DATE.minusDays(1))));
-
-
         readService = mock(LoanReadPlatformService.class);
         configurationDomainService = mock(ConfigurationDomainService.class);
 
@@ -63,11 +53,6 @@ public class OverdueLoanItemReaderTest {
         reader.beforeStep(stepExecution);
     }
 
-    @AfterEach
-    void tearDown() {
-        ThreadLocalContextUtil.reset();
-    }
-
     @Test
     void shouldReadItemsFromFirstPage() throws Exception {
 
@@ -78,11 +63,15 @@ public class OverdueLoanItemReaderTest {
 
         OverdueLoanScheduleData item2 = overdueData(51L, 1, 22L);
 
-        when(readService.retrieveOverdueLoanPage(eq(1L), eq(100L), isNull(), isNull(), eq(PAGE_SIZE), eq(1L), eq(false), isNull()))
+
+        when(readService.retrieveOverdueLoanPage(eq(1L), eq(100L), eq(0L), eq(0), eq(PAGE_SIZE), eq(1L), eq(false), eq(0L)))
                 .thenReturn(List.of(item1, item2));
+
 
         assertEquals(item1, reader.read());
         assertEquals(item2, reader.read());
+
+        verify(readService).retrieveOverdueLoanPage(eq(1L), eq(100L), eq(0L), eq(0), eq(PAGE_SIZE), eq(1L), eq(false), eq(0L));
     }
 
     @Test
@@ -108,8 +97,7 @@ public class OverdueLoanItemReaderTest {
         final OverdueLoanScheduleData second = overdueData(100L, 1, 22L);
         final OverdueLoanScheduleData third = overdueData(101L, 2, 23L);
 
-        when(readService.retrieveOverdueLoanPage(eq(1L), eq(100L), isNull(), isNull(), eq(PAGE_SIZE),
-                eq(1L), eq(false), isNull()))
+        when(readService.retrieveOverdueLoanPage(eq(1L), eq(100L), eq(0L), eq(0), eq(PAGE_SIZE), eq(1L), eq(false), eq(0L)))
                 .thenReturn(List.of(first, second));
 
         when(readService.retrieveOverdueLoanPage(eq(1L), eq(100L), eq(100L), eq(1),
@@ -121,8 +109,7 @@ public class OverdueLoanItemReaderTest {
         assertThat(reader.read()).isSameAs(third);
         assertThat(reader.read()).isNull();
 
-        verify(readService).retrieveOverdueLoanPage(eq(1L), eq(100L), isNull(), isNull(),
-                eq(PAGE_SIZE), eq(1L), eq(false), isNull());
+        verify(readService).retrieveOverdueLoanPage(eq(1L), eq(100L), eq(0L), eq(0), eq(PAGE_SIZE), eq(1L), eq(false), eq(0L));
 
         verify(readService).retrieveOverdueLoanPage(eq(1L), eq(100L), eq(100L), eq(1), eq(PAGE_SIZE), eq(1L), eq(false), eq(22L));
     }
@@ -135,16 +122,15 @@ public class OverdueLoanItemReaderTest {
 
         final OverdueLoanScheduleData only = overdueData(100L, 1, 21L);
 
-        when(readService.retrieveOverdueLoanPage(eq(1L), eq(100L), isNull(), isNull(), eq(PAGE_SIZE),
-                eq(1L), eq(false), isNull()))
+        when(readService.retrieveOverdueLoanPage(eq(1L), eq(100L), eq(0L), eq(0), eq(PAGE_SIZE), eq(1L), eq(false), eq(0L)))
                 .thenReturn(List.of(only));
 
         assertEquals(only, reader.read());
         assertNull(reader.read());
         assertNull(reader.read());
 
-        verify(readService, times(1)).retrieveOverdueLoanPage(eq(1L), eq(100L), isNull(), isNull(),
-                eq(PAGE_SIZE), eq(1L), eq(false), isNull());
+        verify(readService, times(1)).retrieveOverdueLoanPage(eq(1L), eq(100L), eq(0L), eq(0),
+                eq(PAGE_SIZE), eq(1L), eq(false), eq(0L));
     }
 
     private OverdueLoanScheduleData overdueData(Long loanId, Integer period, Long chargeId) {

@@ -23,7 +23,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 @Conditional(BatchWorkerCondition.class)
-public class ExecutePeriodicAccrualWorkerConfig {
+public class ExecuteOverduePenaltyWorkerConfig {
 
     @Autowired
     private PlatformTransactionManager transactionManager;

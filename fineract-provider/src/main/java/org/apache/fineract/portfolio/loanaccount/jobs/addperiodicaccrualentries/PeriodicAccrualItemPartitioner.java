@@ -1,11 +1,10 @@
-package org.apache.fineract.portfolio.loanaccount.jobs.accrualperiodicposting;
+package org.apache.fineract.portfolio.loanaccount.jobs.addperiodicaccrualentries;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.accounting.common.AccountingRuleType;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
-import org.apache.fineract.portfolio.loanaccount.data.JobPartition;
 import org.apache.fineract.portfolio.loanaccount.data.LoanAccrualPartition;
 import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.ExecuteBatchJobConstant;
 import org.apache.fineract.portfolio.loanaccount.service.LoanAccrualBatchReadService;

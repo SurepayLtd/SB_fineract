@@ -40,6 +40,10 @@ public class OverdueLoanItemReader implements ItemReader<OverdueLoanScheduleData
 
         this.maxAccountKey = stepExecution.getExecutionContext().getLong(ExecuteBatchJobConstant.MAX_ACCOUNT_KEY);
 
+        this.afterLoanId = 0L;
+        this.afterInstallmentNumber = 0;
+        this.afterChargeId = 0L;
+
         this.exhausted = minAccountKey == 0L && maxAccountKey == 0L;
 
         log.info("Worker {} processing account range [{} - {}]",

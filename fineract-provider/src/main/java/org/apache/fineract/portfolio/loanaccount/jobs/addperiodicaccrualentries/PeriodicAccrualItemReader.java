@@ -1,4 +1,4 @@
-package org.apache.fineract.portfolio.loanaccount.jobs.accrualperiodicposting;
+package org.apache.fineract.portfolio.loanaccount.jobs.addperiodicaccrualentries;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

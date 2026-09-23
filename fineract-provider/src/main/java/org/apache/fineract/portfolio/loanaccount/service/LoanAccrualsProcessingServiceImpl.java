@@ -138,12 +138,20 @@ public class LoanAccrualsProcessingServiceImpl implements LoanAccrualsProcessing
      */
     @Override
     @Transactional
-    public void addPeriodicAccrual(Long loanId, LocalDate tillDate) throws MultiException {
+    public void addPeriodicAccrual(@NotNull final Long loanId, @NotNull final LocalDate tillDate) throws MultiException {
+
         final Loan loan = loanRepositoryWrapper.findOneWithNotFoundDetection(loanId);
-
-        setSetHelpers(loan);
-
-        addPeriodicAccruals(tillDate, loan);
+        List<Throwable> errors = new ArrayList<>();
+        try {
+            setSetHelpers(loan);
+            addPeriodicAccruals(tillDate, loan);
+        } catch (Exception e) {
+            log.error("Failed to add accrual for loan {}", loan.getId(), e);
+            errors.add(e);
+        }
+        if (!errors.isEmpty()) {
+            throw new JobExecutionException(errors);
+        }
     }
 
     /**

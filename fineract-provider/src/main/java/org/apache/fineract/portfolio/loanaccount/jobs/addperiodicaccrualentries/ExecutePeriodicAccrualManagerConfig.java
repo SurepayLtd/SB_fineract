@@ -1,9 +1,11 @@
-package org.apache.fineract.portfolio.loanaccount.jobs.applychargetooverdueloaninstallment;
+package org.apache.fineract.portfolio.loanaccount.jobs.addperiodicaccrualentries;
+
 
 import org.apache.fineract.cob.conditions.BatchManagerCondition;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
+import org.apache.fineract.infrastructure.jobs.service.JobName;
 import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.ExecuteBatchJobConstant;
-import org.apache.fineract.portfolio.loanaccount.service.LoanReadPlatformService;
+import org.apache.fineract.portfolio.loanaccount.service.LoanAccrualBatchReadService;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -32,30 +34,30 @@ public class ExecutePeriodicAccrualManagerConfig {
     @Autowired
     private DirectChannel outboundRequests;
     @Autowired
-    private LoanReadPlatformService loanReadPlatformService;
+    private LoanAccrualBatchReadService loanAccrualBatchReadService;
     @Autowired
     private ConfigurationDomainService configurationDomainService;
 
 
 
     @Bean
-    public OverdueLoanPartitioner overdueLoanPartitioner() {
-        return new OverdueLoanPartitioner(loanReadPlatformService, configurationDomainService);
+    public PeriodicAccrualItemPartitioner periodicAccrualItemPartitioner() {
+        return new PeriodicAccrualItemPartitioner(loanAccrualBatchReadService, configurationDomainService);
     }
 
     @Bean
-    public Step executeApplyChargeToOverdueLoanInstallmentPartitionerStep() {
-        return stepBuilderFactory.get(ExecuteBatchJobConstant.APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT_PARTITIONER_STEP)
-                .partitioner(ExecuteBatchJobConstant.APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT_WORKER_STEP, overdueLoanPartitioner())
+    public Step executeAddPeriodicAccrualPartitionerStep() {
+        return stepBuilderFactory.get(ExecuteBatchJobConstant.PERIODIC_ACCRUAL_PARTITIONER_STEP)
+                .partitioner(ExecuteBatchJobConstant.PERIODIC_ACCRUAL_WORKER_STEP, periodicAccrualItemPartitioner())
                 .pollInterval(POLL_SIZE)
                 .outputChannel(outboundRequests)
                 .build();
     }
 
     @Bean
-    public Job executeApplyChargeToOverdueLoanInstallmentJob() {
-        return new JobBuilder(ExecuteBatchJobConstant.APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT_JOB_NAME, jobRepository)
-                .start(executeApplyChargeToOverdueLoanInstallmentPartitionerStep())
+    public Job executeAddPeriodicAccrualJob() {
+        return new JobBuilder(JobName.ADD_PERIODIC_ACCRUAL_ENTRIES.name(), jobRepository)
+                .start(executeAddPeriodicAccrualPartitionerStep())
                 .incrementer(new RunIdIncrementer())
                 .build();
     }

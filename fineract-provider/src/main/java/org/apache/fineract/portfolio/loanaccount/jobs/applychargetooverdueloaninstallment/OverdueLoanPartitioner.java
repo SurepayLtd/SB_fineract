@@ -31,7 +31,7 @@ public class OverdueLoanPartitioner implements Partitioner {
 
 
         final List<JobPartition> partitions = new ArrayList<>(
-                readService.retrieveOverdueLoanPartitions(PARTITION_SIZE,penaltyWaitPeriodValue, backdatePenalties));
+                readService.retrieveOverdueLoanPartitions(PARTITION_SIZE, penaltyWaitPeriodValue, backdatePenalties));
 
         if (partitions.isEmpty()){
             log.info("No accrual periodic today");

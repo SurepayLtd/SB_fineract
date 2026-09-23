@@ -25,6 +25,18 @@ public final class ExecuteBatchJobConstant {
 
     public static final String SAVINGS_DORMANCY_WORKER_STEP = "executeDormantSavingsAccountReminderWorkerStep";
 
+    public static final String PERIODIC_ACCRUAL_JOB_NAME = JobName.ADD_PERIODIC_ACCRUAL_ENTRIES.name();
+
+    public static final String PERIODIC_ACCRUAL_PARTITIONER_STEP = "executeAddPeriodicAccrualPartitionerStep";
+
+    public static final String PERIODIC_ACCRUAL_WORKER_STEP = "executeAddPeriodicAccrualWorkerStep";
+
+    public static final String APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT_JOB_NAME = JobName.APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT.name();
+
+    public static final String APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT_PARTITIONER_STEP = "executeApplyChargeToOverdueLoanInstallmentPartitionerStep";
+
+    public static final String APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT_WORKER_STEP = "executeApplyChargeToOverdueLoanInstallmentWorkerStep";
+
     public static final String PARTITION_PREFIX = "partition_";
 
     public static final String MIN_ACCOUNT_KEY = "minAccountKey";

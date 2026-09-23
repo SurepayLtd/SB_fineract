@@ -45,6 +45,7 @@ import org.apache.fineract.accounting.journalentry.service.JournalEntryWritePlat
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
+import org.apache.fineract.infrastructure.core.exception.MultiException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.core.service.ExternalIdFactory;
 import org.apache.fineract.infrastructure.core.service.MathUtil;
@@ -130,6 +131,27 @@ public class LoanAccrualsProcessingServiceImpl implements LoanAccrualsProcessing
     @Transactional
     public void addPeriodicAccruals(@NotNull LocalDate tillDate, @NotNull Loan loan) {
         addAccruals(loan, tillDate, true, false, true);
+    }
+
+    /**
+     * method adds accrual for Periodic Accrual Batch business step
+     */
+    @Override
+    @Transactional
+    public void addPeriodicAccrual(@NotNull final Long loanId, @NotNull final LocalDate tillDate) throws MultiException {
+
+        final Loan loan = loanRepositoryWrapper.findOneWithNotFoundDetection(loanId);
+        List<Throwable> errors = new ArrayList<>();
+        try {
+            setSetHelpers(loan);
+            addPeriodicAccruals(tillDate, loan);
+        } catch (Exception e) {
+            log.error("Failed to add accrual for loan {}", loan.getId(), e);
+            errors.add(e);
+        }
+        if (!errors.isEmpty()) {
+            throw new JobExecutionException(errors);
+        }
     }
 
     /**

@@ -173,13 +173,15 @@ public class ClientPersonWorkbookPopulator extends AbstractWorkbookPopulator {
         worksheet.setColumnWidth(ClientPersonConstants.LOOKUP_ADDRESS_TYPE_COL, TemplatePopulateImportConstants.SMALL_COL_SIZE);
         worksheet.setColumnWidth(ClientPersonConstants.LOOKUP_STATE_PROVINCE_COL, TemplatePopulateImportConstants.SMALL_COL_SIZE);
         worksheet.setColumnWidth(ClientPersonConstants.LOOKUP_COUNTRY_COL, TemplatePopulateImportConstants.SMALL_COL_SIZE);
+        worksheet.setColumnWidth(ClientPersonConstants.NIN_NUMBER_COL, TemplatePopulateImportConstants.MEDIUM_COL_SIZE);
+        worksheet.setColumnWidth(ClientPersonConstants.CARD_NUMBER_COL, TemplatePopulateImportConstants.MEDIUM_COL_SIZE);
         writeString(ClientPersonConstants.OFFICE_NAME_COL, rowHeader, "Office Name*");
         writeString(ClientPersonConstants.STAFF_NAME_COL, rowHeader, "Staff Name");
         writeString(ClientPersonConstants.EXTERNAL_ID_COL, rowHeader, "External ID ");
         writeString(ClientPersonConstants.SUBMITTED_ON_COL, rowHeader, "Submitted On Date");
         writeString(ClientPersonConstants.ACTIVATION_DATE_COL, rowHeader, "Activation date");
         writeString(ClientPersonConstants.ACTIVE_COL, rowHeader, "Active*");
-        writeString(ClientPersonConstants.MOBILE_NO_COL, rowHeader, "Mobile number");
+        writeString(ClientPersonConstants.MOBILE_NO_COL, rowHeader, "Mobile number*");
         writeString(ClientPersonConstants.DOB_COL, rowHeader, "Date of Birth ");
         writeString(ClientPersonConstants.CLIENT_TYPE_COL, rowHeader, "Client Type ");
         writeString(ClientPersonConstants.IS_STAFF_COL, rowHeader, "Is a staff memeber ");
@@ -207,6 +209,8 @@ public class ClientPersonWorkbookPopulator extends AbstractWorkbookPopulator {
         writeString(ClientPersonConstants.LOOKUP_ADDRESS_TYPE_COL, rowHeader, "Lookup AddressType ");
         writeString(ClientPersonConstants.LOOKUP_STATE_PROVINCE_COL, rowHeader, "Lookup State/Province ");
         writeString(ClientPersonConstants.LOOKUP_COUNTRY_COL, rowHeader, "Lookup Country ");
+        writeString(ClientPersonConstants.NIN_NUMBER_COL, rowHeader, "Nin Number*");
+        writeString(ClientPersonConstants.CARD_NUMBER_COL, rowHeader, "Card Number*");
 
     }
 

@@ -60,7 +60,12 @@ import org.apache.fineract.useradministration.domain.AppUser;
 @Getter
 @Setter
 @Table(name = "m_client", uniqueConstraints = { @UniqueConstraint(columnNames = { "account_no" }, name = "account_no_UNIQUE"), //
-        @UniqueConstraint(columnNames = { "mobile_no" }, name = "mobile_no_UNIQUE") })
+        @UniqueConstraint(columnNames = { "mobile_no" }, name = "mobile_no_UNIQUE"),
+        @UniqueConstraint(columnNames = { "nin_number" }, name = "nin_number_UNIQUE"),
+        @UniqueConstraint(columnNames = { "card_number" }, name = "card_number_UNIQUE"),
+        @UniqueConstraint(columnNames = { "crb_validation_id" }, name = "crb_validation_id_UNIQUE"),
+        @UniqueConstraint(columnNames = { "crb_validation_reference" }, name = "crb_validation_reference_UNIQUE")
+})
 public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
     @Column(name = "account_no", length = 20, unique = true, nullable = false)
@@ -252,6 +257,21 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     @Column(name = "pin_requires_change")
     private boolean pinRequiresChange;
 
+    @Column(name = "nin_number", nullable = false, length = 14, unique = true)
+    private String nationalId;
+
+    @Column(name = "card_number", nullable = false, length = 9, unique = true)
+    private String cardNumber;
+
+    @Column(name = "crb_validation_id", length = 50, unique = true)
+    private String crbValidationId;
+
+    @Column(name = "crb_validation_reference", length = 50, unique = true)
+    private String crbValidationReference;
+
+    @Column(name = "crb_verified")
+    private boolean crbVerified;
+
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "client", orphanRemoval = true, fetch = FetchType.LAZY)
     protected Set<ClientIdentifier> identifiers = new HashSet<>();
 
@@ -260,10 +280,10 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
             final LocalDate activationDate, final LocalDate officeJoiningDate, final ExternalId externalId, final String mobileNo,
             final String emailAddress, final Staff staff, final LocalDate submittedOnDate, final Long savingsProductId,
             final Long savingsAccountId, final LocalDate dateOfBirth, final CodeValue gender, final CodeValue clientType,
-            final CodeValue clientClassification, final Integer legalForm, final Boolean isStaff) {
+            final CodeValue clientClassification, final Integer legalForm, final Boolean isStaff, final String nationalId, final String cardNumber) {
         return new Client(currentUser, status, office, clientParentGroup, accountNo, firstname, middlename, lastname, fullname,
                 activationDate, officeJoiningDate, externalId, mobileNo, emailAddress, staff, submittedOnDate, savingsProductId,
-                savingsAccountId, dateOfBirth, gender, clientType, clientClassification, legalForm, isStaff);
+                savingsAccountId, dateOfBirth, gender, clientType, clientClassification, legalForm, isStaff, nationalId, cardNumber);
     }
 
     protected Client() {}
@@ -273,7 +293,7 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
             final LocalDate activationDate, final LocalDate officeJoiningDate, final ExternalId externalId, final String mobileNo,
             final String emailAddress, final Staff staff, final LocalDate submittedOnDate, final Long savingsProductId,
             final Long savingsAccountId, final LocalDate dateOfBirth, final CodeValue gender, final CodeValue clientType,
-            final CodeValue clientClassification, final Integer legalForm, final Boolean isStaff) {
+            final CodeValue clientClassification, final Integer legalForm, final Boolean isStaff, String nationalId, String cardNumber) {
 
         if (StringUtils.isBlank(accountNo)) {
             this.accountNumber = new RandomPasswordGenerator(19).generate();
@@ -338,6 +358,8 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
         this.clientClassification = clientClassification;
         this.setLegalForm(legalForm);
         this.isStaff = isStaff;
+        this.nationalId = nationalId;
+        this.cardNumber = cardNumber;
 
         deriveDisplayName();
         validate();
@@ -903,5 +925,53 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
     public void setPinRequiresChange(boolean pinRequiresChange) {
         this.pinRequiresChange = pinRequiresChange;
+    }
+
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    public void setAccountNumber(String accountNumber) {
+        this.accountNumber = accountNumber;
+    }
+
+    public String getNationalId() {
+        return nationalId;
+    }
+
+    public void setNationalId(String nationalId) {
+        this.nationalId = nationalId;
+    }
+
+    public String getCardNumber() {
+        return cardNumber;
+    }
+
+    public void setCardNumber(String cardNumber) {
+        this.cardNumber = cardNumber;
+    }
+
+    public String getCrbValidationId() {
+        return crbValidationId;
+    }
+
+    public void setCrbValidationId(String crbValidationId) {
+        this.crbValidationId = crbValidationId;
+    }
+
+    public String getCrbValidationReference() {
+        return crbValidationReference;
+    }
+
+    public void setCrbValidationReference(String crbValidationReference) {
+        this.crbValidationReference = crbValidationReference;
+    }
+
+    public boolean isCrbVerified() {
+        return crbVerified;
+    }
+
+    public void setCrbVerified(boolean crbVerified) {
+        this.crbVerified = crbVerified;
     }
 }

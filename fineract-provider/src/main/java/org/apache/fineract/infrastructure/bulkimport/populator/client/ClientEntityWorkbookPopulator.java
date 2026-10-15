@@ -183,12 +183,14 @@ public class ClientEntityWorkbookPopulator extends AbstractWorkbookPopulator {
         worksheet.setColumnWidth(ClientEntityConstants.LOOKUP_STATE_PROVINCE, TemplatePopulateImportConstants.SMALL_COL_SIZE);
         worksheet.setColumnWidth(ClientEntityConstants.LOOKUP_COUNTRY, TemplatePopulateImportConstants.SMALL_COL_SIZE);
         worksheet.setColumnWidth(ClientEntityConstants.LOOKUP_MAIN_BUSINESS_LINE, TemplatePopulateImportConstants.MEDIUM_COL_SIZE);
+        worksheet.setColumnWidth(ClientEntityConstants.NIN_NUMBER, TemplatePopulateImportConstants.MEDIUM_COL_SIZE);
+        worksheet.setColumnWidth(ClientEntityConstants.CARD_NUMBER, TemplatePopulateImportConstants.MEDIUM_COL_SIZE);
         writeString(ClientEntityConstants.NAME_COL, rowHeader, "Name");
         writeString(ClientEntityConstants.OFFICE_NAME_COL, rowHeader, "Office Name*");
         writeString(ClientEntityConstants.STAFF_NAME_COL, rowHeader, "Staff Name");
         writeString(ClientEntityConstants.INCOPORATION_DATE_COL, rowHeader, "Incorporation Date");
         writeString(ClientEntityConstants.INCOPORATION_VALID_TILL_COL, rowHeader, "Incorporation Validity Till Date");
-        writeString(ClientEntityConstants.MOBILE_NO_COL, rowHeader, "Mobile number");
+        writeString(ClientEntityConstants.MOBILE_NO_COL, rowHeader, "Mobile number*");
         writeString(ClientEntityConstants.CLIENT_TYPE_COL, rowHeader, "Client Type ");
         writeString(ClientEntityConstants.CLIENT_CLASSIFICATION_COL, rowHeader, "Client Classification ");
         writeString(ClientEntityConstants.INCOPORATION_NUMBER_COL, rowHeader, "Incorporation Number");
@@ -221,6 +223,8 @@ public class ClientEntityWorkbookPopulator extends AbstractWorkbookPopulator {
         writeString(ClientEntityConstants.LOOKUP_STATE_PROVINCE, rowHeader, "Lookup State/Province ");
         writeString(ClientEntityConstants.LOOKUP_COUNTRY, rowHeader, "Lookup Country ");
         writeString(ClientEntityConstants.LOOKUP_MAIN_BUSINESS_LINE, rowHeader, "Lookup Business Line");
+        writeString(ClientEntityConstants.NIN_NUMBER, rowHeader, "NIN Number");
+        writeString(ClientEntityConstants.CARD_NUMBER, rowHeader, "Card Number");
 
     }
 

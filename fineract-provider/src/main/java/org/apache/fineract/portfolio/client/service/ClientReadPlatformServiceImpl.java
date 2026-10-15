@@ -523,6 +523,8 @@ public class ClientReadPlatformServiceImpl implements ClientReadPlatformService 
             final String mainBusinessLineValue = rs.getString("mainBusinessLineValue");
             final CodeValueData mainBusinessLine = CodeValueData.instance(mainBusinessLineId, mainBusinessLineValue);
             final String remarks = rs.getString("remarks");
+            final String ninNumber = rs.getString("ninNumber");
+            final String cardNumber = rs.getString("cardNumber");
 
             final ClientNonPersonData clientNonPerson = new ClientNonPersonData(constitution, incorpNo, incorpValidityTill,
                     mainBusinessLine, remarks);
@@ -532,7 +534,7 @@ public class ClientReadPlatformServiceImpl implements ClientReadPlatformService 
                     closedByUsername, closedByFirstname, closedByLastname);
 
             return ClientData.instance(accountNo, status, subStatus, officeId, officeName, transferToOfficeId, transferToOfficeName, id,
-                    firstname, middlename, lastname, fullname, displayName, externalId, mobileNo, emailAddress, dateOfBirth, gender,
+                    firstname, middlename, lastname, fullname, displayName, externalId, mobileNo, ninNumber, cardNumber, emailAddress, dateOfBirth, gender,
                     activationDate, imageId, staffId, staffName, timeline, savingsProductId, savingsProductName, savingsAccountId,
                     clienttype, classification, legalForm, clientNonPerson, isStaff);
 
@@ -700,6 +702,8 @@ public class ClientReadPlatformServiceImpl implements ClientReadPlatformService 
             builder.append("c.firstname as firstname, c.middlename as middlename, c.lastname as lastname, ");
             builder.append("c.fullname as fullname, c.display_name as displayName, ");
             builder.append("c.mobile_no as mobileNo, ");
+            builder.append("c.nin_number as ninNumber, ");
+            builder.append("c.card_number as cardNumber, ");
             builder.append("c.is_staff as isStaff, ");
             builder.append("c.email_address as emailAddress, ");
             builder.append("c.date_of_birth as dateOfBirth, ");
@@ -842,6 +846,8 @@ public class ClientReadPlatformServiceImpl implements ClientReadPlatformService 
             final String mainBusinessLineValue = rs.getString("mainBusinessLineValue");
             final CodeValueData mainBusinessLine = CodeValueData.instance(mainBusinessLineId, mainBusinessLineValue);
             final String remarks = rs.getString("remarks");
+            final String ninNumber = rs.getString("ninNumber");
+            final String cardNumber = rs.getString("cardNumber");
 
             final ClientNonPersonData clientNonPerson = new ClientNonPersonData(constitution, incorpNo, incorpValidityTill,
                     mainBusinessLine, remarks);
@@ -851,7 +857,7 @@ public class ClientReadPlatformServiceImpl implements ClientReadPlatformService 
                     closedByUsername, closedByFirstname, closedByLastname);
 
             return ClientData.instance(accountNo, status, subStatus, officeId, officeName, transferToOfficeId, transferToOfficeName, id,
-                    firstname, middlename, lastname, fullname, displayName, externalId, mobileNo, emailAddress, dateOfBirth, gender,
+                    firstname, middlename, lastname, fullname, displayName, externalId, mobileNo, ninNumber, cardNumber, emailAddress, dateOfBirth, gender,
                     activationDate, imageId, staffId, staffName, timeline, savingsProductId, savingsProductName, savingsAccountId,
                     clienttype, classification, legalForm, clientNonPerson, isStaff);
 

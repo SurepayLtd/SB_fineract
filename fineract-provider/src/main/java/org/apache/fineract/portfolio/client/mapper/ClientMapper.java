@@ -80,6 +80,8 @@ public interface ClientMapper {
     @Mapping(target = "legalFormId", ignore = true)
     @Mapping(target = "clientCollateralManagements", ignore = true)
     @Mapping(target = "groups", ignore = true)
+    @Mapping(target = "ninNumber", ignore = true)
+    @Mapping(target = "cardNumber", ignore = true)
     ClientData map(Client source);
 
     @Named("clientTypeCode")

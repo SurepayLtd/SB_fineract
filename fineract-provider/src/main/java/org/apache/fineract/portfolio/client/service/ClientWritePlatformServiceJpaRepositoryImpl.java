@@ -189,6 +189,14 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final String mobileNo = command.stringValueOfParameterNamed("mobileNo");
             throw new PlatformDataIntegrityException("error.msg.client.duplicate.mobileNo",
                     "Client with mobileNo `" + mobileNo + "` already exists", "mobileNo", mobileNo);
+        }else if (realCause.getMessage().contains("nin_number")) {
+            final String ninNumber = command.stringValueOfParameterNamed("ninNumber");
+            throw new PlatformDataIntegrityException("error.msg.client.duplicate.ninNumber",
+                    "Client with ninNumber `" + ninNumber + "` already exists", "ninNumber", ninNumber);
+        }else if (realCause.getMessage().contains("card_number")) {
+            final String cardNumber = command.stringValueOfParameterNamed("cardNumber");
+            throw new PlatformDataIntegrityException("error.msg.client.duplicate.cardNumber",
+                    "Client with cardNumber `" + cardNumber + "` already exists", "cardNumber", cardNumber);
         }
 
         logAsErrorUnexpectedDataIntegrityException(dve);
@@ -272,6 +280,8 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final String fullname = command.stringValueOfParameterNamed(ClientApiConstants.fullnameParamName);
             final boolean isStaff = command.booleanPrimitiveValueOfParameterNamed(ClientApiConstants.isStaffParamName);
             final LocalDate dataOfBirth = command.localDateValueOfParameterNamed(ClientApiConstants.dateOfBirthParamName);
+            final String ninNumber = command.stringValueOfParameterNamed(ClientApiConstants.ninNoParamName);
+            final String cardNumber = command.stringValueOfParameterNamed(ClientApiConstants.cardNoParamName);
 
             ClientStatus status = ClientStatus.PENDING;
             boolean active = false;
@@ -300,10 +310,13 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             String phone = validatePhone(mobileNo);
 
+            String validNin = validateNin(ninNumber);
+            String validCard = validateCardNo(cardNumber);
+
             final Client newClient = Client.instance(currentUser, status, clientOffice, clientParentGroup, accountNo, firstname, middlename,
                     lastname, fullname, activationDate, officeJoiningDate, externalId, phone, emailAddress, staff, submittedOnDate,
                     savingsProductId, savingsAccountId, dataOfBirth, gender, clientType, clientClassification, legalForm.getValue(),
-                    isStaff);
+                    isStaff, validNin, validCard);
 
             this.clientRepository.saveAndFlush(newClient);
             boolean rollbackTransaction = false;
@@ -456,6 +469,20 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 String phone = validatePhone(newValue);
                 changes.put(ClientApiConstants.mobileNoParamName, phone);
                 clientForUpdate.setMobileNo(StringUtils.defaultIfEmpty(phone, null));
+            }
+
+            if (command.isChangeInStringParameterNamed(ClientApiConstants.ninNoParamName, clientForUpdate.getNationalId())) {
+                final String newValue = command.stringValueOfParameterNamed(ClientApiConstants.ninNoParamName);
+                String nin = validateNin(newValue);
+                changes.put(ClientApiConstants.ninNoParamName, nin);
+                clientForUpdate.setNationalId(StringUtils.defaultIfEmpty(nin, null));
+            }
+
+            if (command.isChangeInStringParameterNamed(ClientApiConstants.cardNoParamName, clientForUpdate.getCardNumber())) {
+                final String newValue = command.stringValueOfParameterNamed(ClientApiConstants.cardNoParamName);
+                String cardNo = validateCardNo(newValue);
+                changes.put(ClientApiConstants.cardNoParamName, cardNo);
+                clientForUpdate.setCardNumber(StringUtils.defaultIfEmpty(cardNo, null));
             }
 
             if (command.isChangeInStringParameterNamed(ClientApiConstants.emailAddressParamName, clientForUpdate.getEmailAddress())) {
@@ -1553,6 +1580,38 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             throw new GeneralPlatformDomainRuleException("error.msg.sms.is.not.enabled",
                     "Sms is not enabled on this platform. Activate it to proceed");
         }
+    }
+
+    public String validateCardNo(final String cardNumber) {
+        if (cardNumber == null || cardNumber.trim().isEmpty()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.nationalId.validation.failed",
+                    "Card number is required.");
+        }
+
+        final String normalizedCardNumber = cardNumber.trim();
+
+        if (normalizedCardNumber.length() != 9 || !normalizedCardNumber.matches("\\d{9}")) {
+            throw new GeneralPlatformDomainRuleException("error.msg.nationalId.validation.failed",
+                    "Invalid card number. Card number must contain exactly 9 digits.");
+        }
+
+        return normalizedCardNumber;
+    }
+
+    public String validateNin(final String ninNumber) {
+        if (ninNumber == null || ninNumber.trim().isEmpty()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.nationalId.validation.failed", "NIN number is required.");
+        }
+
+        final String normalizedNin = ninNumber.trim().toUpperCase();
+
+        if (normalizedNin.length() < 3 || normalizedNin.length() > 14 || !(normalizedNin.startsWith("CM") || normalizedNin.startsWith("CF"))) {
+            throw new GeneralPlatformDomainRuleException(
+                    "error.msg.nationalId.validation.failed",
+                    "Invalid NIN number format. NIN must start with CM or CF and be between 3 and 14 characters.");
+        }
+
+        return normalizedNin;
     }
 
     public String validatePhone(final String phone) {

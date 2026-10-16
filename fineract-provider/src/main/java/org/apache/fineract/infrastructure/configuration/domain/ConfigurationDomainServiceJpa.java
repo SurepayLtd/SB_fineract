@@ -577,4 +577,24 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
         }
         return defaultValue;
     }
+
+    @Override
+    public boolean isCRBEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB).isEnabled();
+    }
+
+    @Override
+    public boolean isCRBValidateDetailsEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_VALIDATE_CLIENT_DETAILS).isEnabled();
+    }
+
+    @Override
+    public boolean isCRBValidateNINEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_VALIDATE_NIN).isEnabled();
+    }
+
+    @Override
+    public boolean isCRBValidatePhoneEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_VALIDATE_PHONE).isEnabled();
+    }
 }

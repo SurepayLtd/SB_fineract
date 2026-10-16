@@ -26,6 +26,7 @@ import org.springframework.util.StringUtils;
 public enum ClientStatus {
 
     INVALID(0, "clientStatusType.invalid"), //
+    CRB_PENDING(50, "clientStatusType.crb.pending"),
     PENDING(100, "clientStatusType.pending"), //
     ACTIVE(300, "clientStatusType.active"), //
     TRANSFER_IN_PROGRESS(303, "clientStatusType.transfer.in.progress"), //
@@ -41,6 +42,9 @@ public enum ClientStatus {
         switch (statusValue) {
             case 100:
                 enumeration = ClientStatus.PENDING;
+            break;
+            case 50:
+                enumeration = ClientStatus.CRB_PENDING;
             break;
             case 300:
                 enumeration = ClientStatus.ACTIVE;
@@ -75,6 +79,8 @@ public enum ClientStatus {
 
         if (clientString.equalsIgnoreCase(ClientStatus.PENDING.toString())) {
             clientStatus = ClientStatus.PENDING;
+        } else if (clientString.equalsIgnoreCase(ClientStatus.CRB_PENDING.toString())) {
+            clientStatus = ClientStatus.CRB_PENDING;
         } else if (clientString.equalsIgnoreCase(ClientStatus.ACTIVE.toString())) {
             clientStatus = ClientStatus.ACTIVE;
         } else if (clientString.equalsIgnoreCase(ClientStatus.TRANSFER_IN_PROGRESS.toString())) {
@@ -115,6 +121,10 @@ public enum ClientStatus {
 
     public boolean isActive() {
         return this.value.equals(ClientStatus.ACTIVE.getValue());
+    }
+
+    public boolean isCrbPending() {
+        return this.value.equals(ClientStatus.CRB_PENDING.getValue());
     }
 
     public boolean isClosed() {

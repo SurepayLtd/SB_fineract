@@ -166,6 +166,18 @@ public final class ClientDataValidator {
                     .notExceedingLengthOf(50);
         }
 
+        if (this.fromApiJsonHelper.parameterExists(ClientApiConstants.ninNoParamName, element)) {
+            final String ninNo = this.fromApiJsonHelper.extractStringNamed(ClientApiConstants.ninNoParamName, element);
+            baseDataValidator.reset().parameter(ClientApiConstants.ninNoParamName).value(ninNo).ignoreIfNull()
+                    .notExceedingLengthOf(14);
+        }
+
+        if (this.fromApiJsonHelper.parameterExists(ClientApiConstants.cardNoParamName, element)) {
+            final String cardNo = this.fromApiJsonHelper.extractStringNamed(ClientApiConstants.cardNoParamName, element);
+            baseDataValidator.reset().parameter(ClientApiConstants.cardNoParamName).value(cardNo).ignoreIfNull()
+                    .notExceedingLengthOf(9);
+        }
+
         final Boolean active = this.fromApiJsonHelper.extractBooleanNamed(ClientApiConstants.activeParamName, element);
         if (active != null) {
             if (active.booleanValue()) {

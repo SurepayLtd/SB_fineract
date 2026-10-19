@@ -3892,4 +3892,27 @@ public class CommandWrapperBuilder {
         this.href = "/accounttransfers/" + fromAccountId + "/reverse/" + transferId;
         return this;
     }
+
+    public CommandWrapperBuilder createClientCRBConsent() {
+        this.actionName = "CREATE";
+        this.entityName = "CRBCONSENT";
+        this.href = "/crbconsents/template";
+        return this;
+    }
+
+    public CommandWrapperBuilder validateCrbOtp(final Long consentId) {
+        this.actionName = "VALIDATEOTP";
+        this.entityName = "CRBCONSENT";
+        this.entityId = consentId;
+        this.href = "/crbconsents/" + consentId + "/validateOtp";
+        return this;
+    }
+
+    public CommandWrapperBuilder revokeCrbConsent(final Long consentId) {
+        this.actionName = "REVOKE";
+        this.entityName = "CRBCONSENT";
+        this.entityId = consentId;
+        this.href = "/crbconsents/" + consentId + "/revoke";
+        return this;
+    }
 }

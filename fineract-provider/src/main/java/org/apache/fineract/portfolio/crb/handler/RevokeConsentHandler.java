@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 @RequiredArgsConstructor
 @Service
-@CommandType(entity = "CRBCONSENT", action = "VALIDATEOTP")
+@CommandType(entity = "CRBCONSENT", action = "REVOKE")
 public class RevokeConsentHandler implements NewCommandSourceHandler {
 
     private final CrbConsentWriteService crbConsentWriteService;

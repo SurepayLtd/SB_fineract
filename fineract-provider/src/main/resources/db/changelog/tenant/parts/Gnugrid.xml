@@ -31,9 +31,8 @@
         <addColumn tableName="m_client">
             <column name="nin_number" type="VARCHAR(14)"/>
             <column name="card_number" type="VARCHAR(9)"/>
-            <column name="crb_validation_id" type="VARCHAR(50)"/>
-            <column name="crb_validation_reference" type="VARCHAR(50)"/>
-            <column name="crb_verified" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="crb_verification_status" type="INT"/>
+            <column name="crb_verified_at" type="DATETIME"/>
         </addColumn>
 
         <addUniqueConstraint tableName="m_client" columnNames="nin_number"
@@ -42,11 +41,183 @@
         <addUniqueConstraint tableName="m_client" columnNames="card_number"
                 constraintName="card_number_UNIQUE"/>
 
-        <addUniqueConstraint tableName="m_client" columnNames="crb_validation_id"
-                constraintName="crb_validation_id_UNIQUE"/>
+    </changeSet>
 
-        <addUniqueConstraint tableName="m_client" columnNames="crb_validation_reference"
-                constraintName="crb_validation_reference_UNIQUE"/>
+    <changeSet id="create-crb-consent-table" author="victor">
+
+        <createTable tableName="m_crb_consent">
+
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="client_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="consented_by" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="consent_version" type="VARCHAR(50)"/>
+
+            <column name="consent_text" type="VARCHAR(128)"/>
+
+            <column name="consent_channel" type="INT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="consent_status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="consented_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="revoked_by" type="BIGINT"/>
+
+            <column name="revoke_reason_cv_id" type="BIGINT"/>
+
+            <column name="revoked_at" type="DATETIME"/>
+
+            <column name="phone_number" type="VARCHAR(30)"/>
+
+            <column name="otp_hash" type="VARCHAR(255)"/>
+
+            <column name="otp_expires_at" type="DATETIME"/>
+
+            <column name="otp_verified_at" type="DATETIME"/>
+
+            <column name="verified_by" type="BIGINT"/>
+
+            <column name="otp_used" type="BOOLEAN" defaultValueBoolean="false"/>
+
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="m_crb_consent"
+                baseColumnNames="client_id"
+                constraintName="fk_crb_consent_client"
+                referencedTableName="m_client"
+                referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+                baseTableName="m_crb_consent"
+                baseColumnNames="consented_by"
+                constraintName="fk_crb_consent_consented_by"
+                referencedTableName="m_appuser"
+                referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+                baseTableName="m_crb_consent"
+                baseColumnNames="revoked_by"
+                constraintName="fk_crb_consent_revoked_by"
+                referencedTableName="m_appuser"
+                referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+                baseTableName="m_crb_consent"
+                baseColumnNames="revoke_reason_cv_id"
+                constraintName="fk_crb_consent_revoke_reason"
+                referencedTableName="m_code_value"
+                referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+                baseTableName="m_crb_consent"
+                baseColumnNames="verified_by"
+                constraintName="fk_crb_consent_verified_by"
+                referencedTableName="m_appuser"
+                referencedColumnNames="id"/>
+
+        <createIndex tableName="m_crb_consent" indexName="idx_crb_consent_client">
+            <column name="client_id"/>
+        </createIndex>
+
+        <createIndex tableName="m_crb_consent" indexName="idx_crb_consent_status">
+            <column name="consent_status"/>
+        </createIndex>
+
+    </changeSet>
+
+    <changeSet id="crb-configs" author="victor">
+
+        <insert tableName="c_configuration">
+            <column name="name" value="enable-surepay-crb"/>
+            <column name="value" valueNumeric="5"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Enables SurePay CRB integration."/>
+        </insert>
+
+        <insert tableName="c_configuration">
+            <column name="name" value="enable-surepay-crb-validate-client-details"/>
+            <column name="value" valueNumeric="5"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Enables CRB validation of client personal details."/>
+        </insert>
+
+        <insert tableName="c_configuration">
+            <column name="name" value="enable-surepay-crb-validate-nin"/>
+            <column name="value" valueNumeric="5"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Enables CRB validation of client National Identification Numbers (NINs)."/>
+        </insert>
+
+        <insert tableName="c_configuration">
+            <column name="name" value="enable-surepay-crb-validate-phone"/>
+            <column name="value" valueNumeric="5"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Enables CRB validation of client phone numbers."/>
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="READ_CRBCONSENT" />
+            <column name="entity_name" value="CRBCONSENT" />
+            <column name="action_name" value="READ" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="CREATE_CRBCONSENT" />
+            <column name="entity_name" value="CRBCONSENT" />
+            <column name="action_name" value="CREATE" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="REVOKE_CRBCONSENT" />
+            <column name="entity_name" value="CRBCONSENT" />
+            <column name="action_name" value="REVOKE" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="VALIDATEOTP_CRBCONSENT" />
+            <column name="entity_name" value="CRBCONSENT" />
+            <column name="action_name" value="VALIDATEOTP" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+
+        <insert tableName="m_code">
+            <column name="code_name" value="CrbRevokeReason"/>
+            <column name="is_system_defined" valueBoolean="true"/>
+        </insert>
     </changeSet>
 
 </databaseChangeLog>

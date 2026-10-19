@@ -830,16 +830,11 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
         this.crbVerifiedAt = null;
     }
 
-    public void markCrbVerified(final boolean ninMatches, final boolean namesMatch, final boolean cardMatches, final LocalDateTime verifiedAt) {
+    public void markCrbVerified(final LocalDateTime verifiedAt) {
 
         if (!ClientStatus.CRB_PENDING.getValue().equals(this.status) || !CRBStatus.PENDING.getValue().equals(this.crbVerificationStatus)) {
             throw new GeneralPlatformDomainRuleException("error.msg.client.crb.verification.not.pending",
                     "Client is not awaiting CRB verification."
-            );
-        }
-
-        if (!ninMatches || !namesMatch || !cardMatches) {
-            throw new GeneralPlatformDomainRuleException("error.msg.client.crb.verification.failed", "Client identity details did not pass CRB verification."
             );
         }
 

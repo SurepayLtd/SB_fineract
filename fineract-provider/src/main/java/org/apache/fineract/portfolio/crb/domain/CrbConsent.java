@@ -34,8 +34,8 @@ public class CrbConsent extends AbstractPersistableCustom<Long> {
     @Column(name = "consent_version", nullable = false, length = 50)
     private String consentVersion;
 
-    @Column(name = "consent_text_hash", nullable = false, length = 128)
-    private String consentTextHash;
+    @Column(name = "consent_text", nullable = false)
+    private String consentText;
 
     @Column(name = "consent_channel", nullable = false)
     private Integer consentChannel;
@@ -79,11 +79,11 @@ public class CrbConsent extends AbstractPersistableCustom<Long> {
 
     protected CrbConsent() {}
 
-    public CrbConsent(Client client, AppUser consentedBy, String consentVersion, String consentTextHash, Integer consentChannel, Integer consentStatus, String otpHash, LocalDateTime otpExpiresAt, LocalDateTime consentedAt) {
+    public CrbConsent(Client client, AppUser consentedBy, String consentVersion, String consentText, Integer consentChannel, Integer consentStatus, String otpHash, LocalDateTime otpExpiresAt, LocalDateTime consentedAt) {
         this.client = client;
         this.consentedBy = consentedBy;
         this.consentVersion = consentVersion;
-        this.consentTextHash = consentTextHash;
+        this.consentText = consentText;
         this.consentChannel = consentChannel;
         this.consentStatus = consentStatus;
         this.phoneNumber = client != null ? client.mobileNo(): null ;
@@ -94,7 +94,7 @@ public class CrbConsent extends AbstractPersistableCustom<Long> {
     }
 
     public static CrbConsent fromJson(JsonCommand command, Client client, AppUser appUser, Integer consentStatus, String otpHash, LocalDateTime otpExpiresAt, LocalDateTime consentedAt){
-        String consentTextHash = command.stringValueOfParameterNamed("consentTextHash");
+        String consentTextHash = command.stringValueOfParameterNamed("consentText");
         Integer consentChannel = command.integerValueOfParameterNamed("consentChannel");
         return new CrbConsent(client, appUser, "CRB_CONSENT_V1", consentTextHash, consentChannel, consentStatus, otpHash, otpExpiresAt, consentedAt);
     }

@@ -7,7 +7,8 @@ public enum CRBStatus {
     VERIFIED(3, "crb.Pending"),
     FAILED(4, "crb.Pending"),
     MANUAL_REVIEW(5, "crb.Pending"),
-    OVERRIDDEN(6, "crb.Pending");
+    OVERRIDDEN(6, "crb.Pending"),
+    ERROR(7, "crb.Error");
 
     private final Integer value;
     private final String code;

@@ -2,6 +2,8 @@ package org.apache.fineract.portfolio.crb.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.fineract.infrastructure.codes.data.CodeValueData;
+import org.apache.fineract.infrastructure.codes.service.CodeValueReadPlatformService;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.crb.data.CrbConsentData;
@@ -14,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +24,8 @@ import java.util.Collection;
 public class CrbConsentReadServiceImpl implements CrbConsentReadService{
     private final PlatformSecurityContext context;
     private final JdbcTemplate jdbcTemplate;
+    private final CodeValueReadPlatformService codeValueReadPlatformService;
+
 
     @Override
     public CrbConsentData retrieveConsent(Long consentId) {
@@ -40,7 +45,13 @@ public class CrbConsentReadServiceImpl implements CrbConsentReadService{
     @Override
     public CrbConsentData retrieveChannelTemplate() {
         this.context.authenticatedUser();
-        return CrbConsentData.channelTemplate(getChannels());
+        return CrbConsentData.channelTemplate(getChannels(), null);
+    }
+
+    @Override
+    public CrbConsentData retrieveAllNarrations(String consentNarrations) {
+        final List<CodeValueData> narrations = new ArrayList<>(this.codeValueReadPlatformService.retrieveCodeValuesByCode(consentNarrations));
+        return CrbConsentData.channelTemplate(null, narrations);
     }
 
     protected static class ConsentMapper implements RowMapper<CrbConsentData> {

@@ -2,6 +2,7 @@ package org.apache.fineract.portfolio.crb.data;
 
 
 import lombok.Getter;
+import org.apache.fineract.infrastructure.codes.data.CodeValueData;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.portfolio.crb.domain.ConsentChannel;
 import org.apache.fineract.portfolio.crb.domain.ConsentStatus;
@@ -25,6 +26,7 @@ public final class CrbConsentData {
     private final Long verifiedBy;
     private final Long revokedBy;
     private final Collection<EnumOptionData> consentChannels;
+    private final Collection<CodeValueData> narrations;
 
 
     public CrbConsentData(Long id, Long clientId, String clientName, EnumOptionData consentChannel, EnumOptionData consentStatus, String phoneNumber, String consentVersion, LocalDateTime consentedAt,
@@ -42,9 +44,10 @@ public final class CrbConsentData {
         this.verifiedBy = verifiedBy;
         this.revokedBy = revokedBy;
         this.consentChannels = null;
+        this.narrations = null;
     }
 
-    public CrbConsentData(Collection<EnumOptionData> consentChannels) {
+    public CrbConsentData(Collection<EnumOptionData> consentChannels, Collection<CodeValueData> narrations) {
         this.consentChannels = consentChannels;
         this.id = null;
         this.clientId = null;
@@ -58,6 +61,7 @@ public final class CrbConsentData {
         this.consentedBy = null;
         this.verifiedBy = null;
         this.revokedBy = null;
+        this.narrations = narrations;
     }
 
     public static CrbConsentData instance(final Long id, final Long clientId, final String clientName, final Integer consentChannel, final Integer consentStatus,
@@ -68,8 +72,8 @@ public final class CrbConsentData {
         );
     }
 
-    public static CrbConsentData channelTemplate(Collection<EnumOptionData> consentChannels){
-        return new CrbConsentData(consentChannels);
+    public static CrbConsentData channelTemplate(Collection<EnumOptionData> consentChannels, Collection<CodeValueData> narrations){
+        return new CrbConsentData(consentChannels, narrations);
     }
 
     public static EnumOptionData getChannel(Integer channel){

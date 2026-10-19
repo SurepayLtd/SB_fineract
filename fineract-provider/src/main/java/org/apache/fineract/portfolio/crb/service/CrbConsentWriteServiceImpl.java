@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.infrastructure.codes.domain.CodeValue;
-import org.apache.fineract.infrastructure.codes.domain.CodeValueRepository;
 import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrapper;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
@@ -16,6 +15,7 @@ import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRu
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.security.service.HashingPasswordEncoder;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
 import org.apache.fineract.portfolio.client.api.ClientApiConstants;
 import org.apache.fineract.portfolio.client.domain.Client;
@@ -85,7 +85,9 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
             crbConsent.setOtpUsed(false);
             this.crbConsentRepository.save(crbConsent);
 
-            //this.smsNotificationWritePlatformService
+            if (otp !=null) {
+                this.smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.OTP_CRB_CONSENT, Integer.valueOf(otp), null);
+            }
 
             return new CommandProcessingResultBuilder()
                     .withEntityId(crbConsent.getId())
@@ -153,6 +155,7 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
             }
 
             consent.setOtpUsed(true);
+            consent.setConsentStatus(ConsentStatus.VERIFIED.getValue());
             consent.setConsentedAt(tenantDateTime);
             consent.setVerifiedBy(user);
             consent.setOtpVerifiedAt(tenantDateTime);
@@ -162,7 +165,6 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
 
             return new CommandProcessingResultBuilder()
                     .withCommandId(command.commandId())
-                    .withEntityExternalId(client.getExternalId())
                     .withOfficeId(client.officeId())
                     .withClientId(client.getId())
                     .withEntityId(consentId)
@@ -188,7 +190,7 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
             final CrbConsent consent = this.crbConsentRepository.findById(consentId)
                     .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.crb.consent.not.found", "CRB consent record not found."));
 
-            final Long revokeReasonId = command.longValueOfParameterNamed(ClientApiConstants.rejectionReasonIdParamName);
+            final Long revokeReasonId = command.longValueOfParameterNamed(CrbApiConstants.revokeReasonIdParamName);
 
             final CodeValue rejectionReason = this.codeValueRepository.findOneByCodeNameAndIdWithNotFoundDetection(CrbApiConstants.CRB_REVOKE_REASON, revokeReasonId);
 

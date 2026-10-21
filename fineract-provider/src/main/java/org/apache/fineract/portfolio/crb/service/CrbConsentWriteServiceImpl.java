@@ -19,6 +19,7 @@ import org.apache.fineract.infrastructure.security.service.PlatformSecurityConte
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
 import org.apache.fineract.portfolio.client.api.ClientApiConstants;
+import org.apache.fineract.portfolio.client.domain.CRBStatus;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.crb.data.CrbApiConstants;
@@ -138,7 +139,7 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
                         "This consent was not initiated using OTP.");
             }
 
-            if (!ConsentStatus.PENDING.getValue().equals(consent.getConsentStatus())) {
+            if (!ConsentStatus.PENDING.getValue().equals(consent.getConsentStatus()) && !ConsentStatus.REACTIVATED.getValue().equals(consent.getConsentStatus())) {
                 throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.not.pending",
                         "CRB consent is not awaiting OTP verification.");
             }
@@ -220,6 +221,7 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
 
 
             consent.revoke(user, tenantDateTime, rejectionReason);
+            client.setCrbVerificationStatus(CRBStatus.NOT_STARTED.getValue());
 
             this.crbConsentRepository.saveAndFlush(consent);
 
@@ -261,9 +263,9 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
                         "OTP cannot be resent because the CRB consent has been revoked. Create a new consent request.");
             }
 
-            if (!Objects.equals(consent.getConsentStatus(), ConsentStatus.PENDING.getValue())) {
+            if (!Objects.equals(consent.getConsentStatus(), ConsentStatus.PENDING.getValue()) && !Objects.equals(consent.getConsentStatus(), ConsentStatus.REACTIVATED.getValue())) {
                 throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.otp.resend.invalid.status",
-                        "OTP can only be resent when the CRB consent is pending.");
+                        "OTP can only be resent when the CRB consent is pending or reactivated.");
             }
 
             if (consent.getConsentedAt() != null || consent.getOtpVerifiedAt() != null) {
@@ -364,6 +366,7 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
                 consent.setOtpExpiresAt(expiryTime);
                 consent.setOtpUsed(false);
                 consent.setOtpVerifiedAt(null);
+                consent.setConsentedAt(null);
 
                 consent.reactivate(user, tenantDateTime);
 

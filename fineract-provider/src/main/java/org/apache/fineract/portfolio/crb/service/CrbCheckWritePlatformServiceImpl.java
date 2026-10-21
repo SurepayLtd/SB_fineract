@@ -15,10 +15,12 @@ import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.crb.data.*;
 import org.apache.fineract.portfolio.crb.domain.*;
 import org.apache.fineract.portfolio.crb.serializer.CrbDataValidator;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 
@@ -75,7 +77,6 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
             if (result.isVerified() && client.isCrbPending() ) {
                 client.markCrbVerified(DateUtils.getLocalDateTimeOfTenant());
-                this.clientRepositoryWrapper.saveAndFlush(client);
             }
 
             return new CommandProcessingResultBuilder()
@@ -180,8 +181,25 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
         Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
 
+        final String nationalId = client.getNationalId();
+        final String surname = client.getLastname();
+        final String givenName = client.getFirstname();
+        final String otherName = client.getMiddlename() != null ? client.getMiddlename() : null;
+        final LocalDate dateOfBirth = client.dateOfBirth();
+        final String cardNumber = getString(client, nationalId);
+
+        final boolean hasSurname = surname != null && !surname.isBlank();
+        final boolean hasGivenName = givenName != null && !givenName.isBlank();
+        final boolean hasOtherName = otherName != null && !otherName.isBlank();
+        final boolean hasDateOfBirth = dateOfBirth != null;
+
+        if (!hasSurname && !hasGivenName && !hasOtherName && !hasDateOfBirth) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.personal.information.required",
+                    "At least one of surname, given name, other name, or date of birth must be supplied.");
+        }
+
         var requestData = new ValidatePersonalInformationRequestData(
-                client.getNationalId(), client.getLastname(), client.getFirstname(), client.getMiddlename(), client.dateOfBirth().toString(), Integer.valueOf(client.getCardNumber())
+                nationalId, surname, givenName, otherName, dateOfBirth != null ? dateOfBirth.toString() : null, Integer.valueOf(cardNumber)
         );
 
         var responseData = this.gnugridNotificationWritePlatformService.validatePersonalInfo(requestData);
@@ -203,6 +221,23 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
                 .currency(validation.getCurrency())
                 .responsePayload(serializeResponse(responseData))
                 .build();
+    }
+
+    @NotNull
+    private static String getString(Client client, String nationalId) {
+
+        final String cardNumber = client.getCardNumber();
+
+        if (nationalId == null || nationalId.isBlank()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.nin.required",
+                    "National identification number (NIN) is required for CRB validation.");
+        }
+
+        if (cardNumber == null || cardNumber.isBlank()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.card.number.required",
+                    "Card number is required for CRB validation.");
+        }
+        return cardNumber;
     }
 
     private CrbProviderResult validateNin(Long clientId){

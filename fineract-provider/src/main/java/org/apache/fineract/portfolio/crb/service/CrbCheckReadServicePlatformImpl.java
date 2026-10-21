@@ -64,13 +64,13 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
             final BigDecimal cost = rs.getBigDecimal("cost");
             final String currency = rs.getString("currency");
             final String message  = rs.getString("message");
-            final String errorMessage = rs.getString("error_message");
-            final String responsePayload = rs.getString("response_payload");
-            final LocalDateTime createdAt = rs.getTimestamp("created_at") != null
-                            ? rs.getTimestamp("created_at").toLocalDateTime()
+            final String errorMessage = rs.getString("errorMessage");
+            final String responsePayload = rs.getString("responsePayload");
+            final LocalDateTime createdAt = rs.getTimestamp("createdAt") != null
+                            ? rs.getTimestamp("createdAt").toLocalDateTime()
                             : null;
-            final LocalDateTime completedAt = rs.getTimestamp("completed_at") != null
-                            ? rs.getTimestamp("completed_at").toLocalDateTime()
+            final LocalDateTime completedAt = rs.getTimestamp("completedAt") != null
+                            ? rs.getTimestamp("completedAt").toLocalDateTime()
                             : null;
             final Map<String, Object> responseDetails = extractResponseDetails(validationType, responsePayload);
             return CrbCheckData.display(id, clientId, clientName, validationType, requestType, status, consentStatus,

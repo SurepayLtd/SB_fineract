@@ -6,7 +6,8 @@ public enum ConsentStatus {
 
     PENDING(1, "status.Pending", "Pending"),
     VERIFIED(2, "status.Veried", "Verified"),
-    REVOKED(3, "status.Revoked", "Revoked");
+    REVOKED(3, "status.Revoked", "Revoked"),
+    REACTIVATED(4, "status.Reactivated", "Reactivated");
 
     private final Integer value;
     private final String code;

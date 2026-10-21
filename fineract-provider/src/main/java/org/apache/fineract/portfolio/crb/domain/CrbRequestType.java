@@ -4,7 +4,7 @@ import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRu
 
 public enum CrbRequestType {
     INITIAL(1, "crbRequestType.Initial", "Initial Validation"),
-    REVALIDATION(1, "crbRequestType.Revalidation", "Revalidation");
+    REVALIDATION(2, "crbRequestType.Revalidation", "Revalidation");
 
     private final Integer value;
     private final String code;

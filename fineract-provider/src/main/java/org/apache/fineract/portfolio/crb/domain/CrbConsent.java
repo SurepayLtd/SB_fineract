@@ -117,6 +117,6 @@ public class CrbConsent extends AbstractPersistableCustom<Long> {
     public void reactivate(final AppUser user, final LocalDateTime reactivatedAt){
         this.reactivatedBy = user;
         this.reactivatedAt = reactivatedAt;
-        this.consentStatus = ConsentStatus.PENDING.getValue();
+        this.consentStatus = ConsentStatus.REACTIVATED.getValue();
     }
 }

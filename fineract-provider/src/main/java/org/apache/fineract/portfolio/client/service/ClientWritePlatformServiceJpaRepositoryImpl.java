@@ -407,7 +407,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 changes.put(ClientApiConstants.dateOfBirthParamName, valueAsInput);
                 changes.put(ClientApiConstants.dateFormatParamName, dateFormatAsInput);
                 changes.put(ClientApiConstants.localeParamName, localeAsInput);
-
+                validateDOB(command.localDateValueOfParameterNamed(ClientApiConstants.dateOfBirthParamName));
                 clientForUpdate.setDateOfBirth(command.localDateValueOfParameterNamed(ClientApiConstants.dateOfBirthParamName));
             }
 
@@ -1443,6 +1443,21 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
         return normalizedNin;
     }
 
+    public void validateDOB(final LocalDate dob) {
+
+        if (dob == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.date.of.birth.required", "Date of birth is required.");
+        }
+
+        if (dob.isAfter(LocalDate.now())) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.date.of.birth.in.future", "Date of birth cannot be in the future.");
+        }
+
+        if (dob.isBefore(LocalDate.of(1900, 1, 1))) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.date.of.birth.invalid", "Date of birth cannot be earlier than 1 January 1900.");
+        }
+    }
+
     public String validatePhone(final String phone) {
 
         if (phone == null || phone.trim().isEmpty()) {
@@ -1616,6 +1631,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             String validNin = validateNin(ninNumber);
             String validCard = validateCardNo(cardNumber);
+            validateDOB(dataOfBirth);
 
             final Client newClient = Client.instance(currentUser, status, clientOffice, clientParentGroup, accountNo, firstname, middlename,
                     lastname, fullname, activationDate, officeJoiningDate, externalId, phone, emailAddress, staff, submittedOnDate,
@@ -1776,20 +1792,13 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
             String validNin = validateNin(ninNumber);
             String validCard = validateCardNo(cardNumber);
+            validateDOB(dataOfBirth);
 
             final Client newClient = Client.instance(currentUser, status, clientOffice, clientParentGroup, accountNo, firstname, middlename,
                     lastname, fullname, null, null, externalId, phone, emailAddress, staff, submittedOnDate,
                     null, null, dataOfBirth, gender, clientType, clientClassification, legalForm.getValue(),
                     isStaff, validNin, validCard);
 
-            this.clientRepository.saveAndFlush(newClient);
-            boolean rollbackTransaction = false;
-            if (newClient.isActive()) {
-                validateParentGroupRulesBeforeClientActivation(newClient);
-                runEntityDatatableCheck(newClient.getId(), newClient.getLegalForm());
-                final CommandWrapper commandWrapper = new CommandWrapperBuilder().activateClient(null).build();
-                rollbackTransaction = this.commandProcessingService.validateRollbackCommand(commandWrapper, currentUser);
-            }
 
             this.clientRepository.saveAndFlush(newClient);
             if (newClient.isAccountNumberRequiresAutoGeneration()) {
@@ -1797,8 +1806,6 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 newClient.updateAccountNo(accountNumberGenerator.generate(newClient, accountNumberFormat));
                 this.clientRepository.saveAndFlush(newClient);
             }
-
-            final Locale locale = command.extractLocale();
 
             if (isEntity) {
                 extractAndCreateClientNonPerson(newClient, command);
@@ -1829,7 +1836,6 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                     .withClientId(newClient.getId()) //
                     .withGroupId(groupId) //
                     .withEntityId(newClient.getId()) //
-                    .setRollbackTransaction(rollbackTransaction)//
                     .build();
         } catch (final JpaSystemException | DataIntegrityViolationException dve) {
             handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);

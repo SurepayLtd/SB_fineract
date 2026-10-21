@@ -1,5 +1,7 @@
 package org.apache.fineract.portfolio.crb.domain;
 
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
+
 public enum CrbValidationType {
     DETAILS(1, "crbValidationType.details", "Validation Details"),
     NIN(2, "crbValidationType.nin", "NIN Number"),
@@ -22,7 +24,9 @@ public enum CrbValidationType {
                 return status;
             }
         }
-        throw new IllegalArgumentException("Invalid Crb Validation value: " + value);
+        throw new GeneralPlatformDomainRuleException("error.msg.invalid.crb.validation.value",
+                "Invalid CRB validation value: " + value
+        );
     }
 
     public Integer getValue() {

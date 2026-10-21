@@ -1,21 +1,25 @@
 package org.apache.fineract.portfolio.client.domain;
 
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
+
 public enum CRBStatus {
 
-    NOT_STARTED(1, "crb.notStarted"),
-    PENDING(2, "crb.Pending"),
-    VERIFIED(3, "crb.Pending"),
-    FAILED(4, "crb.Pending"),
-    MANUAL_REVIEW(5, "crb.Pending"),
-    OVERRIDDEN(6, "crb.Pending"),
-    ERROR(7, "crb.Error");
+    NOT_STARTED(1, "crb.notStarted", "Not Started"),
+    PENDING(2, "crb.Pending", "Pending"),
+    VERIFIED(3, "crb.Verified", "Verified"),
+    FAILED(4, "crb.Failed", "Failed"),
+    MANUAL_REVIEW(5, "crb.Manual", "Manual"),
+    OVERRIDDEN(6, "crb.Overriden", "Overridden"),
+    ERROR(7, "crb.Error", "Error");
 
     private final Integer value;
     private final String code;
+    private final String description;
 
-    CRBStatus(Integer value, String code) {
+    CRBStatus(Integer value, String code, String description) {
         this.value = value;
         this.code = code;
+        this.description = description;
     }
 
     public static CRBStatus fromInt(Integer value){
@@ -24,7 +28,7 @@ public enum CRBStatus {
                 return status;
             }
         }
-        throw new IllegalArgumentException("Invalid CRB status value: " + value);
+        throw new GeneralPlatformDomainRuleException("error.msg.invalid.crb.status.value", "Invalid CRB Status value: " + value);
     }
 
     public Integer getValue() {
@@ -33,5 +37,9 @@ public enum CRBStatus {
 
     public String getCode() {
         return code;
+    }
+
+    public String getDescription() {
+        return description;
     }
 }

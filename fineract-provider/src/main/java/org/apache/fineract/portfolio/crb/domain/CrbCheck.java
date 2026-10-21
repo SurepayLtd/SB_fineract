@@ -24,6 +24,10 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "consent_id", nullable = false)
+    private CrbConsent consent;
+
     @Column(name = "validation_type", nullable = false)
     private Integer validationType;
 
@@ -33,10 +37,10 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
     @Column(name = "check_status", nullable = false)
     private Integer status;
 
-    @Column(name = "provider_validation_id", length = 100)
+    @Column(name = "provider_validation_id", length = 100, unique = true)
     private String providerValidationId;
 
-    @Column(name = "provider_reference", length = 150)
+    @Column(name = "provider_reference", length = 150, unique = true)
     private String providerReference;
 
     @Column(name = "cost", precision = 19, scale = 4)
@@ -71,9 +75,10 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
 
     protected CrbCheck(){}
 
-    public CrbCheck(Client client, Integer validationType, Integer requestType, String providerValidationId, String providerReference, BigDecimal cost, String currency, String requestPayload, String responsePayload, String errorMessage, String message,
+    public CrbCheck(Client client, CrbConsent consent, Integer validationType, Integer requestType, String providerValidationId, String providerReference, BigDecimal cost, String currency, String requestPayload, String responsePayload, String errorMessage, String message,
                     LocalDateTime completedAt) {
         this.client = client;
+        this.consent = consent;
         this.validationType = validationType;
         this.requestType = requestType;
         this.status = CRBStatus.PENDING.getValue();
@@ -88,8 +93,8 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
         this.completedAt = completedAt;
     }
 
-    public static CrbCheck create(final Client client, final Integer type, final Integer requestType) {
-        return new CrbCheck(client, type, requestType, null, null, null, null, null, null, null, null, null);
+    public static CrbCheck create(final Client client, final CrbConsent consent, final Integer type, final Integer requestType) {
+        return new CrbCheck(client, consent, type, requestType, null, null, null, null, null, null, null, null, null);
     }
 
     public void complete(final Integer status, final String validationId, final String reference,

@@ -820,6 +820,7 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     }
 
     public void markCrbVerificationPending() {
+
         if (!ClientStatus.CRB_PENDING.getValue().equals(this.status) || !CRBStatus.NOT_STARTED.getValue().equals(this.crbVerificationStatus)) {
             throw new GeneralPlatformDomainRuleException("error.msg.client.crb.verification.not.awaiting",
                     "Client is not awaiting CRB verification."

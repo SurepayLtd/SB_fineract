@@ -24,6 +24,7 @@ import org.apache.fineract.infrastructure.core.config.MapstructMapperConfig;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.portfolio.client.data.ClientData;
 import org.apache.fineract.portfolio.client.data.ClientTimelineData;
+import org.apache.fineract.portfolio.client.domain.CRBStatus;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientEnumerations;
 import org.apache.fineract.useradministration.domain.AppUser;
@@ -82,6 +83,7 @@ public interface ClientMapper {
     @Mapping(target = "groups", ignore = true)
     @Mapping(target = "ninNumber", source = "source.nationalId")
     @Mapping(target = "cardNumber", source = "source.cardNumber")
+    @Mapping(target = "crbVerificationStatus", source = "source", qualifiedByName = "mapCrbVerificationStatus")
     ClientData map(Client source);
 
     @Named("clientTypeCode")
@@ -128,6 +130,15 @@ public interface ClientMapper {
     @Named("clientStatusEnum")
     default EnumOptionData clientStatusEnum(Client client) {
         return ClientEnumerations.status(client.getStatus());
+    }
+
+    @Named("mapCrbVerificationStatus")
+    default EnumOptionData mapCrbVerificationStatus(Client client) {
+
+        CRBStatus status = CRBStatus.fromInt(client.getCrbVerificationStatus());
+
+
+        return new EnumOptionData(status.getValue().longValue(), status.getCode(), status.getDescription());
     }
 
     @Named("clientTimelineData")

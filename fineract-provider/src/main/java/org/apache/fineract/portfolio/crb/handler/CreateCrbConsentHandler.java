@@ -17,6 +17,6 @@ public class CreateCrbConsentHandler implements NewCommandSourceHandler {
 
     @Override
     public CommandProcessingResult processCommand(JsonCommand command) {
-        return this.crbConsentWriteService.createConsent(command);
+        return this.crbConsentWriteService.createConsent(command.getClientId(), command);
     }
 }

@@ -1,5 +1,7 @@
 package org.apache.fineract.portfolio.crb.domain;
 
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
+
 public enum CrbRequestType {
     INITIAL(1, "crbRequestType.Initial", "Initial Validation"),
     REVALIDATION(1, "crbRequestType.Revalidation", "Revalidation");
@@ -20,7 +22,7 @@ public enum CrbRequestType {
                 return status;
             }
         }
-        throw new IllegalArgumentException("Invalid CRB Request value: " + value);
+        throw new GeneralPlatformDomainRuleException("error.msg.invalid.crb.request.value", "Invalid CRB Request value: " + value);
     }
 
     public Integer getValue() {

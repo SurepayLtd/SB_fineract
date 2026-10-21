@@ -1,11 +1,7 @@
 package org.apache.fineract.portfolio.crb.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 
 import lombok.Getter;
@@ -17,7 +13,7 @@ import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.useradministration.domain.AppUser;
 
 @Entity
-@Table(name = "m_crb_consent")
+@Table(name = "m_crb_consent", uniqueConstraints = {@UniqueConstraint(name = "uk_m_crb_consent_client", columnNames = "client_id")})
 @Getter
 @Setter
 public class CrbConsent extends AbstractPersistableCustom<Long> {
@@ -34,7 +30,7 @@ public class CrbConsent extends AbstractPersistableCustom<Long> {
     @Column(name = "consent_version", nullable = false, length = 50)
     private String consentVersion;
 
-    @Column(name = "consent_text", nullable = false)
+    @Column(name = "consent_text", columnDefinition = "TEXT", nullable = false)
     private String consentText;
 
     @Column(name = "consent_channel", nullable = false)
@@ -43,7 +39,7 @@ public class CrbConsent extends AbstractPersistableCustom<Long> {
     @Column(name = "consent_status", nullable = false)
     private Integer consentStatus;
 
-    @Column(name = "consented_at", nullable = false)
+    @Column(name = "consented_at")
     private LocalDateTime consentedAt;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -56,6 +52,13 @@ public class CrbConsent extends AbstractPersistableCustom<Long> {
 
     @Column(name = "revoked_at")
     private LocalDateTime revokedAt;
+
+    @Column(name = "reactivated_at")
+    private LocalDateTime reactivatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "reactivated_by")
+    private AppUser reactivatedBy;
 
     @Column(name = "phone_number", length = 30)
     private String phoneNumber;
@@ -107,8 +110,13 @@ public class CrbConsent extends AbstractPersistableCustom<Long> {
     public void revoke(final AppUser user, final LocalDateTime revokedAt, CodeValue revokeReason) {
         this.revokedAt = revokedAt;
         this.revokedBy = user;
-        this.consentedAt = null;
         this.consentStatus = ConsentStatus.REVOKED.getValue();
         this.revokeReason = revokeReason;
+    }
+
+    public void reactivate(final AppUser user, final LocalDateTime reactivatedAt){
+        this.reactivatedBy = user;
+        this.reactivatedAt = reactivatedAt;
+        this.consentStatus = ConsentStatus.PENDING.getValue();
     }
 }

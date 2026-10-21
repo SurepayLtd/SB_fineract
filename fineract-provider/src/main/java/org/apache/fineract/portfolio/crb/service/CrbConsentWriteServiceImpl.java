@@ -7,6 +7,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.infrastructure.codes.domain.CodeValue;
 import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrapper;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
+import org.apache.fineract.infrastructure.configuration.exception.GlobalConfigurationException;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
@@ -21,7 +22,7 @@ import org.apache.fineract.portfolio.client.api.ClientApiConstants;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.crb.data.CrbApiConstants;
-import org.apache.fineract.portfolio.crb.data.CrbDataValidator;
+import org.apache.fineract.portfolio.crb.serializer.CrbDataValidator;
 import org.apache.fineract.portfolio.crb.domain.ConsentChannel;
 import org.apache.fineract.portfolio.crb.domain.ConsentStatus;
 import org.apache.fineract.portfolio.crb.domain.CrbConsent;
@@ -34,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -44,22 +46,35 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
     private final ConfigurationDomainService configurationDomainService;
     private final ClientRepositoryWrapper clientRepositoryWrapper;
     private final PlatformSecurityContext platformSecurityContext;
-    private final SecureRandom secureRandom;
+    private final  SecureRandom secureRandom;
     private final CrbDataValidator fromApiJsonDeserializer;
     private final SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService;
     private final CodeValueRepositoryWrapper codeValueRepository;
 
     @Transactional
     @Override
-    public CommandProcessingResult createConsent(JsonCommand command) {
+    public CommandProcessingResult createConsent(Long clientId, JsonCommand command) {
 
         try{
 
             final AppUser user = this.platformSecurityContext.authenticatedUser();
             this.fromApiJsonDeserializer.validateCrbConsent(command);
-            final Long clientId = command.longValueOfParameterNamed("clientId");
+
+            boolean crbEnabled = configurationDomainService.isCRBEnabled();
+
+            if (!crbEnabled){
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.response",
+                        "CRB not enabled for this Tenant."
+                );
+            }
+            if (this.crbConsentRepository.existsByClientId(clientId)) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.already.exists",
+                        "A CRB consent record already exists for client ID " + clientId + ". Update the existing consent record instead.");
+            }
+
             final Integer consentChannel = command.integerValueOfParameterNamed("consentChannel");
             final Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
+
             final String phone = client.mobileNo();
 
             String otp = null;
@@ -146,7 +161,7 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
             }
 
             final String salt = client.getId() + client.getMobileNo();
-            final String otpToVerify = salt + otpCode;
+            final String otpToVerify = new HashingPasswordEncoder().encode(salt + otpCode);
 
             final boolean otpMatches = consent.getOtpHash().equals(otpToVerify);
 
@@ -220,6 +235,162 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
         } catch (final PersistenceException dve) {
             final Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
             handleDataIntegrityIssues(throwable, dve);
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult reSendOtp(final Long consentId) {
+        try {
+            this.platformSecurityContext.authenticatedUser();
+
+            final CrbConsent consent = this.crbConsentRepository.findById(consentId)
+                    .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.crb.consent.not.found",
+                            "CRB consent with ID " + consentId + " was not found."));
+
+            final Client client = consent.getClient();
+
+            if (!Objects.equals(consent.getConsentChannel(), ConsentChannel.OTP.getValue())) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.otp.resend.invalid.channel",
+                        "OTP cannot be resent because this consent was not created using the OTP channel.");
+            }
+
+            if (Objects.equals(consent.getConsentStatus(), ConsentStatus.REVOKED.getValue())) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.otp.resend.revoked",
+                        "OTP cannot be resent because the CRB consent has been revoked. Create a new consent request.");
+            }
+
+            if (!Objects.equals(consent.getConsentStatus(), ConsentStatus.PENDING.getValue())) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.otp.resend.invalid.status",
+                        "OTP can only be resent when the CRB consent is pending.");
+            }
+
+            if (consent.getConsentedAt() != null || consent.getOtpVerifiedAt() != null) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.otp.resend.already.verified",
+                        "OTP cannot be resent because the CRB consent has already been verified.");
+            }
+
+            final String phone = client.mobileNo();
+
+            if (phone == null || phone.isBlank()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.otp.resend.phone.missing",
+                        "OTP cannot be resent because the client has no registered phone number.");
+            }
+
+            final String otp = String.valueOf(this.secureRandom.nextInt(90000) + 10000);
+
+            final String salt = client.getId() + phone;
+            final String hashedOtp = new HashingPasswordEncoder().encode(salt + otp);
+
+            final Integer otpExpiryMinutes = this.configurationDomainService.retrieveMomoPaymentOtpExpiryMinutes();
+
+            if (otpExpiryMinutes == null || otpExpiryMinutes <= 0) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.otp.invalid.expiry",
+                        "The configured OTP expiry duration is invalid.");
+            }
+
+            final LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(otpExpiryMinutes);
+
+            consent.setOtpUsed(false);
+            consent.setOtpHash(hashedOtp);
+            consent.setOtpExpiresAt(expiryTime);
+
+            this.crbConsentRepository.saveAndFlush(consent);
+
+            this.smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.OTP_CRB_CONSENT, Integer.valueOf(otp), null);
+
+            return new CommandProcessingResultBuilder()
+                    .withOfficeId(client.officeId())
+                    .withClientId(client.getId())
+                    .withEntityId(consentId)
+                    .build();
+
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+
+        } catch (final PersistenceException dve) {
+            final Throwable throwable = ExceptionUtils.getRootCause(dve);
+            handleDataIntegrityIssues(throwable != null ? throwable : dve, dve);
+            return CommandProcessingResult.empty();
+        }
+    }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult reactivateConsent(final Long consentId) {
+
+        try {
+            AppUser user = this.platformSecurityContext.authenticatedUser();
+
+            final CrbConsent consent = this.crbConsentRepository.findById(consentId)
+                    .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.crb.consent.not.found",
+                            "CRB consent with ID " + consentId + " was not found."));
+
+            final Client client = consent.getClient();
+            final String phone = client.mobileNo();
+
+            final LocalDateTime tenantDateTime = DateUtils.getLocalDateTimeOfTenant();
+
+
+            String otp = null;
+
+            if (!Objects.equals(consent.getConsentStatus(), ConsentStatus.REVOKED.getValue())) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.reactivate.invalid.status",
+                        "Only revoked CRB consent can be reactivated.");
+            }
+
+            if (Objects.equals(consent.getConsentChannel(), ConsentChannel.OTP.getValue())) {
+
+                if (phone == null || phone.isBlank()) {
+                    throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.reactivate.phone.missing",
+                            "The client must have a registered phone number to reactivate consent.");
+                }
+
+                final Integer otpExpiryMinutes = this.configurationDomainService.retrieveMomoPaymentOtpExpiryMinutes();
+
+                if (otpExpiryMinutes == null || otpExpiryMinutes <= 0) {
+                    throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.otp.invalid.expiry",
+                            "The configured OTP expiry duration is invalid.");
+                }
+
+                otp = String.valueOf(this.secureRandom.nextInt(90000) + 10000);
+                final String salt = client.getId() + phone;
+                final String hashedOtp = new HashingPasswordEncoder().encode(salt + otp);
+                final LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(otpExpiryMinutes);
+
+                consent.setOtpHash(hashedOtp);
+                consent.setOtpExpiresAt(expiryTime);
+                consent.setOtpUsed(false);
+                consent.setOtpVerifiedAt(null);
+
+                consent.reactivate(user, tenantDateTime);
+
+            } else {
+                consent.reactivate(user, tenantDateTime);
+                consent.setConsentedAt(tenantDateTime);
+            }
+
+            this.crbConsentRepository.saveAndFlush(consent);
+
+            if (otp !=null) {
+                this.smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.OTP_CRB_CONSENT, Integer.valueOf(otp), null);
+            }
+
+
+            return new CommandProcessingResultBuilder()
+                    .withOfficeId(client.officeId())
+                    .withClientId(client.getId())
+                    .withEntityId(consentId)
+                    .build();
+        }catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+
+        } catch (final PersistenceException dve) {
+            final Throwable throwable = ExceptionUtils.getRootCause(dve);
+            handleDataIntegrityIssues(throwable != null ? throwable : dve, dve);
             return CommandProcessingResult.empty();
         }
     }

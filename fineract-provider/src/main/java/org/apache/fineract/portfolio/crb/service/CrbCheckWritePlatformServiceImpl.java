@@ -4,16 +4,17 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.fineract.infrastructure.core.api.JsonCommand;
+import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
+import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.portfolio.client.domain.CRBStatus;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.crb.data.*;
-import org.apache.fineract.portfolio.crb.domain.CrbCheck;
-import org.apache.fineract.portfolio.crb.domain.CrbCheckRepository;
-import org.apache.fineract.portfolio.crb.domain.CrbRequestType;
-import org.apache.fineract.portfolio.crb.domain.CrbValidationType;
+import org.apache.fineract.portfolio.crb.domain.*;
+import org.apache.fineract.portfolio.crb.serializer.CrbDataValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,26 +25,43 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class CrbIntegrationWritePlatformServiceImpl implements CrbIntegrationWritePlatformService{
+public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformService {
 
     private final ClientRepositoryWrapper clientRepositoryWrapper;
     private final GnugridNotificationWritePlatformService gnugridNotificationWritePlatformService;
     private final CrbCheckRepository crbCheckRepository;
     private final ObjectMapper objectMapper;
+    private final CrbConsentRepository crbConsentRepository;
+    private final CrbDataValidator fromApiJsonDeserializer;
+
 
 
     @Transactional
     @Override
-    public void createInitialCheck(CrbValidationType type, Long clientId) {
+    public CommandProcessingResult createInitialCheck(Long clientId, JsonCommand command) {
+
         final Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
 
-        final CrbCheck crbCheck = CrbCheck.create(client, type.getValue(), CrbRequestType.INITIAL.getValue());
+        this.fromApiJsonDeserializer.validateCrbCheck(command);
+
+        Integer type = command.integerValueOfParameterNamed("crbValidationType");
+
+        final CrbConsent crbConsent = this.crbConsentRepository.findVerifiedClient(client.getId(), ConsentStatus.VERIFIED.getValue());
+
+        if (crbConsent == null){
+            throw new GeneralPlatformDomainRuleException("error.msg.client.crb.consent",
+                    "Client has not consented to CRB verification."
+            );
+        }
+
+        final CrbCheck crbCheck = CrbCheck.create(client, crbConsent, type, CrbRequestType.INITIAL.getValue());
 
         this.crbCheckRepository.saveAndFlush(crbCheck);
 
         try{
+            CrbValidationType type1 = CrbValidationType.fromInt(type);
 
-            var result = validate(type, client.getId());
+            var result = validate(type1, client.getId());
 
             int status = result.isVerified()
                     ? CRBStatus.VERIFIED.getValue()
@@ -60,6 +78,10 @@ public class CrbIntegrationWritePlatformServiceImpl implements CrbIntegrationWri
                 this.clientRepositoryWrapper.saveAndFlush(client);
             }
 
+            return new CommandProcessingResultBuilder()
+                    .withEntityId(crbCheck.getId())
+                    .withClientId(clientId)
+                    .build();
 
         } catch (Exception e) {
             crbCheck.setStatus(CRBStatus.ERROR.getValue());
@@ -71,14 +93,66 @@ public class CrbIntegrationWritePlatformServiceImpl implements CrbIntegrationWri
             throw e;
         }
 
+
     }
 
     @Transactional
     @Override
-    public void reCheck(CrbValidationType type, Long clientId) {
+    public CommandProcessingResult reCheck(Long clientId, JsonCommand command) {
+
         final Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
 
-        var result = revalidate(type, client.getId());
+        this.fromApiJsonDeserializer.validateCrbCheck(command);
+
+        Integer type = command.integerValueOfParameterNamed("crbValidationType");
+
+        final CrbConsent crbConsent = this.crbConsentRepository.findVerifiedClient(client.getId(), ConsentStatus.VERIFIED.getValue());
+
+        if (crbConsent == null){
+            throw new GeneralPlatformDomainRuleException("error.msg.client.crb.consent",
+                    "Client has not consented to CRB verification."
+            );
+        }
+
+        final CrbCheck crbCheck = CrbCheck.create(client, crbConsent, type, CrbRequestType.REVALIDATION.getValue());
+
+        this.crbCheckRepository.saveAndFlush(crbCheck);
+
+        try{
+
+            CrbValidationType type1 = CrbValidationType.fromInt(type);
+
+            var result = revalidate(type1, client.getId());
+
+            int status = result.isVerified()
+                    ? CRBStatus.VERIFIED.getValue()
+                    : CRBStatus.FAILED.getValue();
+
+            LocalDateTime completedAt = DateUtils.getLocalDateTimeOfTenant();
+
+            crbCheck.complete(status, null, null, result.getCost(), result.getCurrency(), result.getResponsePayload(), result.getMessage(), null, completedAt);
+
+            this.crbCheckRepository.saveAndFlush(crbCheck);
+
+            if (result.isVerified() && client.isCrbPending() ) {
+                client.markCrbVerified(DateUtils.getLocalDateTimeOfTenant());
+                this.clientRepositoryWrapper.saveAndFlush(client);
+            }
+
+            return new CommandProcessingResultBuilder()
+                    .withEntityId(crbConsent.getId())
+                    .withClientId(clientId)
+                    .build();
+
+        } catch (Exception e) {
+            crbCheck.setStatus(CRBStatus.ERROR.getValue());
+            crbCheck.setErrorMessage(e.getMessage());
+            crbCheck.setCompletedAt(DateUtils.getLocalDateTimeOfTenant());
+
+            this.crbCheckRepository.saveAndFlush(crbCheck);
+
+            throw e;
+        }
 
     }
 
@@ -189,7 +263,7 @@ public class CrbIntegrationWritePlatformServiceImpl implements CrbIntegrationWri
 
     private CrbProviderResult reValidateDetails(Long clientId){
 
-        CrbCheck crbCheck = this.crbCheckRepository.findHistoryWithProviderId(clientId, CrbValidationType.DETAILS.getValue())
+        CrbCheck crbCheck = this.crbCheckRepository.findHistoryWithProviderId(clientId, CrbValidationType.DETAILS.getValue(), CrbRequestType.INITIAL.getValue())
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.crb.check.not.found",
@@ -223,7 +297,7 @@ public class CrbIntegrationWritePlatformServiceImpl implements CrbIntegrationWri
         Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
 
 
-        CrbCheck crbCheck = this.crbCheckRepository.findHistoryWithProviderId(clientId, CrbValidationType.NIN.getValue())
+        CrbCheck crbCheck = this.crbCheckRepository.findHistoryWithProviderId(clientId, CrbValidationType.NIN.getValue(), CrbRequestType.INITIAL.getValue())
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.crb.check.not.found",
@@ -257,7 +331,7 @@ public class CrbIntegrationWritePlatformServiceImpl implements CrbIntegrationWri
 
         Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
 
-        CrbCheck crbCheck = this.crbCheckRepository.findHistoryWithProviderId(clientId, CrbValidationType.PHONE.getValue())
+        CrbCheck crbCheck = this.crbCheckRepository.findHistoryWithProviderId(clientId, CrbValidationType.PHONE.getValue(), CrbRequestType.INITIAL.getValue())
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.crb.check.not.found",

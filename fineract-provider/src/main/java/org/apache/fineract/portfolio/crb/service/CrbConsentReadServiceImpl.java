@@ -61,6 +61,7 @@ public class CrbConsentReadServiceImpl implements CrbConsentReadService{
             final Long consentedBy = rs.getObject("consented_by", Long.class);
             final Long verifiedBy = rs.getObject("verified_by", Long.class);
             final Long revokedBy = rs.getObject("revoked_by", Long.class);
+            final Long reactivatedBy = rs.getObject("reactivated_by", Long.class);
 
             return CrbConsentData.instance(
                     rs.getLong("id"),
@@ -74,14 +75,22 @@ public class CrbConsentReadServiceImpl implements CrbConsentReadService{
                             ? rs.getTimestamp("consented_at").toLocalDateTime() : null,
                     rs.getTimestamp("revoked_at") != null
                             ? rs.getTimestamp("revoked_at").toLocalDateTime() : null,
+                    rs.getTimestamp("reactivated_at") != null
+                            ? rs.getTimestamp("reactivated_at").toLocalDateTime() : null,
                     consentedBy,
+                    rs.getString("consentedByName"),
                     verifiedBy,
-                    revokedBy
-            );
+                    rs.getString("verifiedByName"),
+                    revokedBy,
+                    rs.getString("revokedByName"),
+                    reactivatedBy,
+                    rs.getString("reactivatedByName")
+
+                    );
         }
 
         public String schema() {
-            final StringBuilder builder = new StringBuilder(300);
+            final StringBuilder builder = new StringBuilder(500);
 
             builder.append("cc.id AS id, ");
             builder.append("cc.client_id AS client_id, ");
@@ -92,11 +101,25 @@ public class CrbConsentReadServiceImpl implements CrbConsentReadService{
             builder.append("cc.consent_version AS consent_version, ");
             builder.append("cc.consented_at AS consented_at, ");
             builder.append("cc.revoked_at AS revoked_at, ");
+            builder.append("cc.reactivated_at AS reactivated_at, ");
             builder.append("cc.consented_by AS consented_by, ");
+            builder.append("consentedUser.username AS consentedByName, ");
             builder.append("cc.verified_by AS verified_by, ");
-            builder.append("cc.revoked_by AS revoked_by");
-            builder.append(" FROM m_crb_consent cc ");
-            builder.append(" JOIN m_client c ON c.id = cc.client_id ");
+            builder.append("verifiedUser.username AS verifiedByName, ");
+            builder.append("cc.revoked_by AS revoked_by, ");
+            builder.append("revokedUser.username AS revokedByName, ");
+            builder.append("cc.reactivated_by AS reactivated_by, ");
+            builder.append("reactivatedUser.username AS reactivatedByName ");
+            builder.append("FROM m_crb_consent cc ");
+            builder.append("JOIN m_client c ON c.id = cc.client_id ");
+            builder.append("LEFT JOIN m_appuser consentedUser ");
+            builder.append("ON consentedUser.id = cc.consented_by ");
+            builder.append("LEFT JOIN m_appuser verifiedUser ");
+            builder.append("ON verifiedUser.id = cc.verified_by ");
+            builder.append("LEFT JOIN m_appuser revokedUser ");
+            builder.append("ON revokedUser.id = cc.revoked_by ");
+            builder.append("LEFT JOIN m_appuser reactivatedUser ");
+            builder.append("ON reactivatedUser.id = cc.reactivated_by ");
 
             return builder.toString();
         }

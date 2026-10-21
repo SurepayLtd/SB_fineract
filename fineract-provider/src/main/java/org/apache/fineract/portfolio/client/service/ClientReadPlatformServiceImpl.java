@@ -62,11 +62,7 @@ import org.apache.fineract.portfolio.client.data.ClientData;
 import org.apache.fineract.portfolio.client.data.ClientFamilyMembersData;
 import org.apache.fineract.portfolio.client.data.ClientNonPersonData;
 import org.apache.fineract.portfolio.client.data.ClientTimelineData;
-import org.apache.fineract.portfolio.client.domain.Client;
-import org.apache.fineract.portfolio.client.domain.ClientEnumerations;
-import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
-import org.apache.fineract.portfolio.client.domain.ClientStatus;
-import org.apache.fineract.portfolio.client.domain.LegalForm;
+import org.apache.fineract.portfolio.client.domain.*;
 import org.apache.fineract.portfolio.client.exception.ClientNotFoundException;
 import org.apache.fineract.portfolio.client.mapper.ClientMapper;
 import org.apache.fineract.portfolio.collateralmanagement.domain.ClientCollateralManagement;
@@ -379,6 +375,9 @@ public class ClientReadPlatformServiceImpl implements ClientReadPlatformService 
             sqlBuilder.append("c.firstname as firstname, c.middlename as middlename, c.lastname as lastname, ");
             sqlBuilder.append("c.fullname as fullname, c.display_name as displayName, ");
             sqlBuilder.append("c.mobile_no as mobileNo, ");
+            sqlBuilder.append("c.nin_number as ninNumber, ");
+            sqlBuilder.append("c.card_number as cardNumber, ");
+            sqlBuilder.append("c.crb_verification_status as crbVerificationStatus, ");
             sqlBuilder.append("c.is_staff as isStaff, ");
             sqlBuilder.append("c.email_address as emailAddress, ");
             sqlBuilder.append("c.date_of_birth as dateOfBirth, ");
@@ -525,6 +524,8 @@ public class ClientReadPlatformServiceImpl implements ClientReadPlatformService 
             final String remarks = rs.getString("remarks");
             final String ninNumber = rs.getString("ninNumber");
             final String cardNumber = rs.getString("cardNumber");
+            final Integer crbVerificationStatus = JdbcSupport.getInteger(rs, "crbVerificationStatus");
+            final EnumOptionData crbStatus = crbStatus(crbVerificationStatus);
 
             final ClientNonPersonData clientNonPerson = new ClientNonPersonData(constitution, incorpNo, incorpValidityTill,
                     mainBusinessLine, remarks);
@@ -536,8 +537,13 @@ public class ClientReadPlatformServiceImpl implements ClientReadPlatformService 
             return ClientData.instance(accountNo, status, subStatus, officeId, officeName, transferToOfficeId, transferToOfficeName, id,
                     firstname, middlename, lastname, fullname, displayName, externalId, mobileNo, ninNumber, cardNumber, emailAddress, dateOfBirth, gender,
                     activationDate, imageId, staffId, staffName, timeline, savingsProductId, savingsProductName, savingsAccountId,
-                    clienttype, classification, legalForm, clientNonPerson, isStaff);
+                    clienttype, classification, legalForm, clientNonPerson, isStaff, crbStatus);
 
+        }
+
+        private EnumOptionData crbStatus(Integer value){
+            CRBStatus status = CRBStatus.fromInt(value);
+            return new EnumOptionData(status.getValue().longValue(), status.getCode(), status.getDescription());
         }
     }
 
@@ -704,6 +710,7 @@ public class ClientReadPlatformServiceImpl implements ClientReadPlatformService 
             builder.append("c.mobile_no as mobileNo, ");
             builder.append("c.nin_number as ninNumber, ");
             builder.append("c.card_number as cardNumber, ");
+            builder.append("c.crb_verification_status as crbVerificationStatus, ");
             builder.append("c.is_staff as isStaff, ");
             builder.append("c.email_address as emailAddress, ");
             builder.append("c.date_of_birth as dateOfBirth, ");
@@ -848,6 +855,9 @@ public class ClientReadPlatformServiceImpl implements ClientReadPlatformService 
             final String remarks = rs.getString("remarks");
             final String ninNumber = rs.getString("ninNumber");
             final String cardNumber = rs.getString("cardNumber");
+            final Integer crbVerificationStatus = JdbcSupport.getInteger(rs, "crbVerificationStatus");
+            final EnumOptionData crbStatus = crbStatus(crbVerificationStatus);
+
 
             final ClientNonPersonData clientNonPerson = new ClientNonPersonData(constitution, incorpNo, incorpValidityTill,
                     mainBusinessLine, remarks);
@@ -859,8 +869,13 @@ public class ClientReadPlatformServiceImpl implements ClientReadPlatformService 
             return ClientData.instance(accountNo, status, subStatus, officeId, officeName, transferToOfficeId, transferToOfficeName, id,
                     firstname, middlename, lastname, fullname, displayName, externalId, mobileNo, ninNumber, cardNumber, emailAddress, dateOfBirth, gender,
                     activationDate, imageId, staffId, staffName, timeline, savingsProductId, savingsProductName, savingsAccountId,
-                    clienttype, classification, legalForm, clientNonPerson, isStaff);
+                    clienttype, classification, legalForm, clientNonPerson, isStaff, crbStatus);
 
+        }
+
+        private EnumOptionData crbStatus(Integer value){
+            CRBStatus status = CRBStatus.fromInt(value);
+            return new EnumOptionData(status.getValue().longValue(), status.getCode(), status.getDescription());
         }
     }
 

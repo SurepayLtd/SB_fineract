@@ -22,15 +22,21 @@ public final class CrbConsentData {
     private final String consentVersion;
     private final LocalDateTime consentedAt;
     private final LocalDateTime revokedAt;
+    private final LocalDateTime reactivatedAt;
     private final Long consentedBy;
+    private final String consentedByName;
     private final Long verifiedBy;
+    private final String verifiedByName;
     private final Long revokedBy;
+    private final String revokedByName;
+    private final Long reactivatedBy;
+    private final String reactivatedByName;
     private final Collection<EnumOptionData> consentChannels;
     private final Collection<CodeValueData> narrations;
 
 
-    public CrbConsentData(Long id, Long clientId, String clientName, EnumOptionData consentChannel, EnumOptionData consentStatus, String phoneNumber, String consentVersion, LocalDateTime consentedAt,
-                          LocalDateTime revokedAt, Long consentedBy, Long verifiedBy, Long revokedBy) {
+    private CrbConsentData(Long id, Long clientId, String clientName, EnumOptionData consentChannel, EnumOptionData consentStatus, String phoneNumber, String consentVersion, LocalDateTime consentedAt, LocalDateTime revokedAt,
+                           LocalDateTime reactivatedAt, Long consentedBy, String consentedByName, Long verifiedBy, String verifiedByName, Long revokedBy, String revokedByName, Long reactivatedBy, String reactivatedByName) {
         this.id = id;
         this.clientId = clientId;
         this.clientName = clientName;
@@ -40,9 +46,15 @@ public final class CrbConsentData {
         this.consentVersion = consentVersion;
         this.consentedAt = consentedAt;
         this.revokedAt = revokedAt;
+        this.reactivatedAt = reactivatedAt;
         this.consentedBy = consentedBy;
+        this.consentedByName = consentedByName;
         this.verifiedBy = verifiedBy;
+        this.verifiedByName = verifiedByName;
         this.revokedBy = revokedBy;
+        this.revokedByName = revokedByName;
+        this.reactivatedBy = reactivatedBy;
+        this.reactivatedByName = reactivatedByName;
         this.consentChannels = null;
         this.narrations = null;
     }
@@ -61,14 +73,19 @@ public final class CrbConsentData {
         this.consentedBy = null;
         this.verifiedBy = null;
         this.revokedBy = null;
+        this.reactivatedBy= null;
+        this.reactivatedAt = null;
+        this.consentedByName = null;
+        this.revokedByName = null;
+        this.reactivatedByName = null;
+        this.verifiedByName = null;
         this.narrations = narrations;
     }
 
-    public static CrbConsentData instance(final Long id, final Long clientId, final String clientName, final Integer consentChannel, final Integer consentStatus,
-                                          final String phoneNumber, final String consentVersion, final LocalDateTime consentedAt, final LocalDateTime revokedAt,
-                                          final Long consentedBy, final Long verifiedBy, final Long revokedBy) {
+    public static CrbConsentData instance(Long id, Long clientId, String clientName, Integer consentChannel, Integer consentStatus, String phoneNumber, String consentVersion, LocalDateTime consentedAt, LocalDateTime revokedAt,
+                                          LocalDateTime reactivatedAt, Long consentedBy, String consentedByName, Long verifiedBy, String verifiedByName, Long revokedBy, String revokedByName, Long reactivatedBy, String reactivatedByName) {
         return new CrbConsentData(id, clientId, clientName,  getChannel(consentChannel), getStatus(consentStatus), phoneNumber, consentVersion, consentedAt,
-                revokedAt, consentedBy, verifiedBy, revokedBy
+                revokedAt, reactivatedAt, consentedBy, consentedByName, verifiedBy, verifiedByName, revokedBy, revokedByName, reactivatedBy, reactivatedByName
         );
     }
 

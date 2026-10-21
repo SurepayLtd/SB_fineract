@@ -86,16 +86,17 @@ public class CrbConsentApiResource {
     }
 
     @POST
+    @Path("{clientId}")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Create CRB Consent", description = "Creates a consent record for a client. OTP consent sends an OTP to the client's registered phone number. PAPER consent is recorded as verified.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = CrbConsentApiResourceSwagger.PostCrbConsentRequest.class)))
     @ApiResponses({@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = CrbConsentApiResourceSwagger.PostCrbConsentResponse.class)))
     })
-    public String create(@Parameter(hidden = true) final String apiRequestBodyAsJson) {
+    public String create(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId, @Parameter(hidden = true) final String apiRequestBodyAsJson) {
 
         final CommandWrapper commandRequest = new CommandWrapperBuilder()
-                .createClientCRBConsent()
+                .createClientCRBConsent(clientId)
                 .withJson(apiRequestBodyAsJson)
                 .build();
 
@@ -136,9 +137,17 @@ public class CrbConsentApiResource {
             commandRequest = builder.revokeCrbConsent(consentId)
                     .withJson(apiRequestBodyAsJson)
                     .build();
+        }else if (CommandParameterUtil.is(commandParam, "reactivate")) {
+            commandRequest = builder.reactivateCrbConsent(consentId)
+                    .withJson(apiRequestBodyAsJson)
+                    .build();
+        }else if (CommandParameterUtil.is(commandParam, "resendOtp")) {
+            commandRequest = builder.resendOtpCrbConsent(consentId)
+                    .withJson(apiRequestBodyAsJson)
+                    .build();
         }else {
             throw new UnrecognizedQueryParamException("command", commandParam,
-                    new Object[] { "validateOtp", "revoke"}
+                    new Object[] { "validateOtp", "revoke", "reactivate", "resendOtp"}
             );
         }
 

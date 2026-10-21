@@ -8,6 +8,8 @@ public class CrbApiConstants {
 
     public static final String CRB_RESOURCE_NAME = "CRBCONSENT";
 
+    public static final String CRB_CHECK_RESOURCE_NAME = "CRBCHECK";
+
     public static final String localeParamName = "locale";
     public static final String dateFormatParamName = "dateFormat";
     public static final String consentTextParamName = "consentText";
@@ -24,6 +26,7 @@ public class CrbApiConstants {
     public static final String verifiedByParamName = "verifiedBy";
     public static final String revokedByParamName = "revokedBy";
     public static final String otpCodeParamName = "otpCode";
+    public static final String crbValidationTypeParamName= "crbValidationType";
 
 
     public static final String CRB_REVOKE_REASON = "CrbRevokeReason";
@@ -32,9 +35,11 @@ public class CrbApiConstants {
 
 
 
-    protected static final Set<String> CRB_CREATE_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, consentTextParamName, consentChannelParamName));
+    public static final Set<String> CRB_CREATE_CONSENT_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, consentTextParamName, consentChannelParamName));
 
-    protected static final Set<String> VALIDATE_OTP_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, otpCodeParamName));
+    public static final Set<String> CRB_CREATE_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbValidationTypeParamName));
+
+    public static final Set<String> VALIDATE_OTP_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, otpCodeParamName));
 
     public static final Set<String> CRB_CONSENT_RESPONSE_DATA_PARAMETERS =
             new HashSet<>(Arrays.asList(

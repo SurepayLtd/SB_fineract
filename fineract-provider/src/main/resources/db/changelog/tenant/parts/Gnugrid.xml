@@ -61,7 +61,7 @@
 
             <column name="consent_version" type="VARCHAR(50)"/>
 
-            <column name="consent_text" type="VARCHAR(128)"/>
+            <column name="consent_text" type="TEXT"/>
 
             <column name="consent_channel" type="INT">
                 <constraints nullable="false"/>
@@ -71,13 +71,11 @@
                 <constraints nullable="false"/>
             </column>
 
-            <column name="consented_at" type="DATETIME">
-                <constraints nullable="false"/>
-            </column>
+            <column name="consented_at" type="DATETIME"/>
 
             <column name="revoked_by" type="BIGINT"/>
 
-            <column name="revoke_reason_cv_id" type="BIGINT"/>
+            <column name="revoke_reason_cv_id" type="INT"/>
 
             <column name="revoked_at" type="DATETIME"/>
 
@@ -116,12 +114,6 @@
                 referencedTableName="m_appuser"
                 referencedColumnNames="id"/>
 
-        <addForeignKeyConstraint
-                baseTableName="m_crb_consent"
-                baseColumnNames="revoke_reason_cv_id"
-                constraintName="fk_crb_consent_revoke_reason"
-                referencedTableName="m_code_value"
-                referencedColumnNames="id"/>
 
         <addForeignKeyConstraint
                 baseTableName="m_crb_consent"
@@ -137,6 +129,83 @@
         <createIndex tableName="m_crb_consent" indexName="idx_crb_consent_status">
             <column name="consent_status"/>
         </createIndex>
+
+    </changeSet>
+
+    <changeSet id="create-m-crb-check" author="victor">
+
+        <createTable tableName="m_crb_check">
+
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="client_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="consent_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="validation_type" type="INT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="request_type" type="INT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="check_status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="provider_validation_id" type="VARCHAR(200)"/>
+
+            <column name="provider_reference" type="VARCHAR(150)"/>
+
+            <column name="cost" type="DECIMAL(19,2)"/>
+
+            <column name="currency" type="VARCHAR(10)"/>
+
+            <column name="request_payload" type="LONGTEXT"/>
+
+            <column name="response_payload" type="LONGTEXT"/>
+
+            <column name="error_message" type="TEXT"/>
+
+            <column name="message" type="TEXT"/>
+
+            <column name="created_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="completed_at" type="DATETIME"/>
+
+        </createTable>
+
+        <addUniqueConstraint tableName="m_crb_check"
+                columnNames="provider_validation_id"
+                constraintName="uk_m_crb_check_validation_id"/>
+
+        <addUniqueConstraint tableName="m_crb_check"
+                columnNames="provider_reference"
+                constraintName="uk_m_crb_check_provider_reference"/>
+
+        <createIndex tableName="m_crb_check" indexName="idx_m_crb_check_client_created">
+            <column name="client_id"/>
+            <column name="created_at"/>
+        </createIndex>
+
+        <createIndex tableName="m_crb_check" indexName="idx_m_crb_check_consent">
+            <column name="consent_id"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="m_crb_check" baseColumnNames="client_id" constraintName="fk_m_crb_check_client" referencedTableName="m_client"
+                                 referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint baseTableName="m_crb_check" baseColumnNames="consent_id" constraintName="fk_m_crb_check_consent" referencedTableName="m_crb_consent"
+                                 referencedColumnNames="id"/>
+
 
     </changeSet>
 
@@ -214,10 +283,78 @@
             <column name="can_maker_checker" valueBoolean="false" />
         </insert>
 
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="READ_CRBCHECK" />
+            <column name="entity_name" value="CRBCHECK" />
+            <column name="action_name" value="READ" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="CREATE_CRBCHECK" />
+            <column name="entity_name" value="CRBCHECK" />
+            <column name="action_name" value="CREATE" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="ACTION_REDO_CRBCHECK" />
+            <column name="entity_name" value="CRBCHECK" />
+            <column name="action_name" value="ACTION_REDO" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+
         <insert tableName="m_code">
             <column name="code_name" value="CrbRevokeReason"/>
             <column name="is_system_defined" valueBoolean="true"/>
         </insert>
+
+    </changeSet>
+    <changeSet id="initial_client_crb" author="victor">
+        <sql>
+            UPDATE m_client
+            SET crb_verification_status = 1
+            WHERE crb_verification_status IS NULL;
+        </sql>
     </changeSet>
 
+    <changeSet id="additional_consent_fields" author="victor">
+        <addColumn tableName="m_crb_consent">
+            <column name="reactivated_by" type="BIGINT"/>
+            <column name="reactivated_at" type="DATETIME"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+                baseTableName="m_crb_consent"
+                baseColumnNames="reactivated_by"
+                constraintName="fk_crb_consent_reactivated_by"
+                referencedTableName="m_appuser"
+                referencedColumnNames="id"/>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="REACTIVATE_CRBCONSENT" />
+            <column name="entity_name" value="CRBCONSENT" />
+            <column name="action_name" value="REACTIVATE" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="RESENDOTP_CRBCONSENT" />
+            <column name="entity_name" value="CRBCONSENT" />
+            <column name="action_name" value="RESENDOTP" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+    </changeSet>
+
+    <changeSet id="add-unique-client-crb-consent" author="victor">
+        <addUniqueConstraint
+                tableName="m_crb_consent"
+                columnNames="client_id"
+                constraintName="uk_m_crb_consent_client"/>
+    </changeSet>
 </databaseChangeLog>

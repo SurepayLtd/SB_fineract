@@ -1,5 +1,7 @@
 package org.apache.fineract.portfolio.crb.domain;
 
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
+
 public enum ConsentChannel {
 
     OTP(1, "channel.Otp", "OTP Channel"),
@@ -21,7 +23,7 @@ public enum ConsentChannel {
                 return status;
             }
         }
-        throw new IllegalArgumentException("Invalid Consent Channel value: " + value);
+        throw new GeneralPlatformDomainRuleException("error.msg.invalid.crb.channel.value", "Invalid Consent Channel value: " + value);
     }
 
     public Integer getValue() {

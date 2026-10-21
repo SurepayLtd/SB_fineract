@@ -1,4 +1,4 @@
-package org.apache.fineract.portfolio.crb.data;
+package org.apache.fineract.portfolio.crb.serializer;
 
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
@@ -10,6 +10,7 @@ import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.exception.InvalidJsonException;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
+import org.apache.fineract.portfolio.crb.data.CrbApiConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -38,7 +39,7 @@ public final class CrbDataValidator {
         }
 
         final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
-        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, CrbApiConstants.CRB_CREATE_REQUEST_DATA_PARAMETERS);
+        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, CrbApiConstants.CRB_CREATE_CONSENT_REQUEST_DATA_PARAMETERS);
 
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
         final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
@@ -47,7 +48,7 @@ public final class CrbDataValidator {
         final JsonElement element = command.parsedJson();
 
         final String consentText = this.fromApiJsonHelper.extractStringNamed(CrbApiConstants.consentTextParamName, element);
-        baseDataValidator.reset().parameter(CrbApiConstants.consentTextParamName).value(consentText).notExceedingLengthOf(128);
+        baseDataValidator.reset().parameter(CrbApiConstants.consentTextParamName).value(consentText).notExceedingLengthOf(500);
 
         final Long consentChannel = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.consentChannelParamName, element);
         baseDataValidator.reset().parameter(CrbApiConstants.consentChannelParamName).value(consentChannel).ignoreIfNull().notExceedingLengthOf(5);
@@ -79,6 +80,28 @@ public final class CrbDataValidator {
 
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
 
+    }
+
+    public void validateCrbCheck(final JsonCommand command){
+        final String json = command.json();
+
+        if (StringUtils.isBlank(json)) {
+            throw new InvalidJsonException();
+        }
+
+        final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
+        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, CrbApiConstants.CRB_CREATE_CHECK_REQUEST_DATA_PARAMETERS);
+
+        final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
+                .resource(CrbApiConstants.CRB_RESOURCE_NAME);
+
+        final JsonElement element = command.parsedJson();
+
+        final Long crbValidationType = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbValidationTypeParamName, element);
+        baseDataValidator.reset().parameter(CrbApiConstants.crbValidationTypeParamName).value(crbValidationType).ignoreIfNull().notExceedingLengthOf(5);
+
+        throwExceptionIfValidationWarningsExist(dataValidationErrors);
     }
 
     private void throwExceptionIfValidationWarningsExist(final List<ApiParameterError> dataValidationErrors) {

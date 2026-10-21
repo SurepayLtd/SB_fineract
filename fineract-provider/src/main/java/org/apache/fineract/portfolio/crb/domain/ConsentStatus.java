@@ -1,5 +1,7 @@
 package org.apache.fineract.portfolio.crb.domain;
 
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
+
 public enum ConsentStatus {
 
     PENDING(1, "status.Pending", "Pending"),
@@ -22,7 +24,7 @@ public enum ConsentStatus {
                 return status;
             }
         }
-        throw new IllegalArgumentException("Invalid Consent Status value: " + value);
+        throw new GeneralPlatformDomainRuleException("error.msg.invalid.crb.consent.value", "Invalid Consent Status value: " + value);
     }
 
     public Integer getValue() {

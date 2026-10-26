@@ -102,6 +102,7 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
             this.crbConsentRepository.save(crbConsent);
 
             if (otp !=null) {
+                log.info("Create Consent OTP: {}", otp);
                 this.smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.OTP_CRB_CONSENT, Integer.valueOf(otp), null);
             }
 
@@ -300,6 +301,7 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
 
             this.crbConsentRepository.saveAndFlush(consent);
 
+            log.info("Resend OTP: {}", otp);
             this.smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.OTP_CRB_CONSENT, Integer.valueOf(otp), null);
 
             return new CommandProcessingResultBuilder()
@@ -378,6 +380,7 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
             this.crbConsentRepository.saveAndFlush(consent);
 
             if (otp !=null) {
+                log.info("Reactivate OTP: {}", otp);
                 this.smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.OTP_CRB_CONSENT, Integer.valueOf(otp), null);
             }
 

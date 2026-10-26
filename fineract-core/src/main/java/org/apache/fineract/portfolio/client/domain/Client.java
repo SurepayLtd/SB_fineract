@@ -64,8 +64,6 @@ import org.apache.fineract.useradministration.domain.AppUser;
         @UniqueConstraint(columnNames = { "mobile_no" }, name = "mobile_no_UNIQUE"),
         @UniqueConstraint(columnNames = { "nin_number" }, name = "nin_number_UNIQUE"),
         @UniqueConstraint(columnNames = { "card_number" }, name = "card_number_UNIQUE"),
-        @UniqueConstraint(columnNames = { "crb_validation_id" }, name = "crb_validation_id_UNIQUE"),
-        @UniqueConstraint(columnNames = { "crb_validation_reference" }, name = "crb_validation_reference_UNIQUE")
 })
 public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
@@ -460,7 +458,7 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     }
 
     public boolean isNotPending() {
-        return !isPending();
+        return !isPending() || !isCrbPending();
     }
 
     public boolean isPending() {
@@ -821,10 +819,10 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
     public void markCrbVerificationPending() {
 
-        if (!ClientStatus.CRB_PENDING.getValue().equals(this.status) || !CRBStatus.NOT_STARTED.getValue().equals(this.crbVerificationStatus)) {
-            throw new GeneralPlatformDomainRuleException("error.msg.client.crb.verification.not.awaiting",
-                    "Client is not awaiting CRB verification."
-            );
+        if ((!ClientStatus.CRB_PENDING.getValue().equals(this.status) && !ClientStatus.ACTIVE.getValue().equals(this.status))
+                || !CRBStatus.NOT_STARTED.getValue().equals(this.crbVerificationStatus)) {
+
+            throw new GeneralPlatformDomainRuleException("error.msg.client.crb.verification.not.awaiting", "Client is not awaiting CRB verification.");
         }
 
         this.crbVerificationStatus = CRBStatus.PENDING.getValue();
@@ -833,7 +831,7 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
     public void markCrbVerified(final LocalDateTime verifiedAt) {
 
-        if (!ClientStatus.CRB_PENDING.getValue().equals(this.status) || !CRBStatus.PENDING.getValue().equals(this.crbVerificationStatus)) {
+        if (!CRBStatus.PENDING.getValue().equals(this.crbVerificationStatus)) {
             throw new GeneralPlatformDomainRuleException("error.msg.client.crb.verification.not.pending",
                     "Client is not awaiting CRB verification."
             );
@@ -847,7 +845,9 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
         this.crbVerifiedAt = verifiedAt;
         this.crbVerificationStatus = CRBStatus.VERIFIED.getValue();
-        this.status = ClientStatus.PENDING.getValue();
+        if (ClientStatus.CRB_PENDING.getValue().equals(this.status)) {
+            this.status = ClientStatus.PENDING.getValue();
+        }
     }
 
     public boolean canTransactViaUssd() {

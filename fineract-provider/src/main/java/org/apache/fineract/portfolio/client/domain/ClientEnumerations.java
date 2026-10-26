@@ -39,6 +39,9 @@ public final class ClientEnumerations {
             case INVALID:
                 optionData = new EnumOptionData(ClientStatus.INVALID.getValue().longValue(), ClientStatus.INVALID.getCode(), "Invalid");
             break;
+            case CRB_PENDING:
+                optionData = new EnumOptionData(ClientStatus.CRB_PENDING.getValue().longValue(), ClientStatus.CRB_PENDING.getCode(), "Crb Pending");
+            break;
             case PENDING:
                 optionData = new EnumOptionData(ClientStatus.PENDING.getValue().longValue(), ClientStatus.PENDING.getCode(), "Pending");
             break;

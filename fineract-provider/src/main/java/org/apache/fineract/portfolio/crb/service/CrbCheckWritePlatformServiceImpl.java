@@ -137,7 +137,6 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
             if (result.isVerified() && client.isCrbPending() ) {
                 client.markCrbVerified(DateUtils.getLocalDateTimeOfTenant());
-                this.clientRepositoryWrapper.saveAndFlush(client);
             }
 
             return new CommandProcessingResultBuilder()

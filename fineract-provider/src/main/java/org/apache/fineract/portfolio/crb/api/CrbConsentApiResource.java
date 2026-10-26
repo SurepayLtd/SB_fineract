@@ -52,7 +52,7 @@ public class CrbConsentApiResource {
                     content = @Content(schema = @Schema(implementation = CrbConsentApiResourceSwagger.GetCrbConsentTemplateResponse.class))
             )
     })
-    public String retrieveTemplate(@Context final UriInfo uriInfo, @Parameter(description = "commandParam") final String commandParam) {
+    public String retrieveTemplate(@Context final UriInfo uriInfo, @QueryParam("command") @Parameter(description = "commandParam") final String commandParam) {
         context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_RESOURCE_NAME);
 
         CrbConsentData consentData = null;
@@ -69,16 +69,16 @@ public class CrbConsentApiResource {
     }
 
     @GET
-    @Path("{consentId}")
+    @Path("{clientId}")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Retrieve CRB Consent", description = "Retrieves a CRB consent record by its ID.")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = CrbConsentApiResourceSwagger.GetCrbConsentIdResponse.class)))})
-    public String retrieveConsent(@PathParam("consentId") @Parameter(description = "consentId") final Long consentId, @Context final UriInfo uriInfo) {
+    public String retrieveConsent(@PathParam("clientId") @Parameter(description = "clientId") final Long clientId, @Context final UriInfo uriInfo) {
 
         context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_RESOURCE_NAME);
 
-        final CrbConsentData consentData = crbConsentReadService.retrieveConsent(consentId);
+        final CrbConsentData consentData = crbConsentReadService.retrieveConsent(clientId);
 
         final ApiRequestJsonSerializationSettings settings = apiRequestParameterHelper.process(uriInfo.getQueryParameters());
 
@@ -114,7 +114,7 @@ public class CrbConsentApiResource {
     })
     public String update(
             @PathParam("consentId") @Parameter(description = "consentId") final Long consentId,
-            @QueryParam("command") @Parameter(description = "validateOtp or revoke") final String command,
+            @QueryParam("command") @Parameter(description = "validateOtp or revoke or reactivate or resendOtp") final String command,
             @Parameter(hidden = true) final String apiRequestBodyAsJson) {
 
         final CommandWrapperBuilder builder = new CommandWrapperBuilder();

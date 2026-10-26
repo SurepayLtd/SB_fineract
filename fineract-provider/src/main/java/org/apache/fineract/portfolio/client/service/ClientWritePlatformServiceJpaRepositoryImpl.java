@@ -73,13 +73,7 @@ import org.apache.fineract.portfolio.account.service.AccountNumberGenerator;
 import org.apache.fineract.portfolio.address.service.AddressWritePlatformService;
 import org.apache.fineract.portfolio.client.api.ClientApiConstants;
 import org.apache.fineract.portfolio.client.data.ClientDataValidator;
-import org.apache.fineract.portfolio.client.domain.Client;
-import org.apache.fineract.portfolio.client.domain.ClientEnumerations;
-import org.apache.fineract.portfolio.client.domain.ClientNonPerson;
-import org.apache.fineract.portfolio.client.domain.ClientNonPersonRepositoryWrapper;
-import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
-import org.apache.fineract.portfolio.client.domain.ClientStatus;
-import org.apache.fineract.portfolio.client.domain.LegalForm;
+import org.apache.fineract.portfolio.client.domain.*;
 import org.apache.fineract.portfolio.client.exception.ClientActiveForUpdateException;
 import org.apache.fineract.portfolio.client.exception.ClientHasNoStaffException;
 import org.apache.fineract.portfolio.client.exception.ClientMustBePendingToBeDeletedException;
@@ -900,6 +894,8 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
     @Override
     public CommandProcessingResult reActivateClient(Long entityId, JsonCommand command) {
+        boolean isCrbEnabled = this.configurationDomainService.isCRBEnabled();
+
         final AppUser currentUser = this.context.authenticatedUser();
         this.fromApiJsonDeserializer.validateReactivate(command);
 
@@ -914,7 +910,20 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             throw new InvalidClientStateTransitionException("reactivation", "date.cannot.before.client.closed.date", errorMessage,
                     reactivateDate, client.getClosureDate());
         }
-        client.reActivate(currentUser, reactivateDate);
+        if (isCrbEnabled){
+
+            Integer crbStatus = client.getCrbVerificationStatus();
+            if (crbStatus.equals(CRBStatus.PENDING.getValue()) || crbStatus.equals(CRBStatus.NOT_STARTED.getValue())){
+                client.setStatus(ClientStatus.CRB_PENDING.getValue());
+                client.setClosureDate(null);
+                client.setClosureReason(null);
+                client.setReactivateDate(reactivateDate);
+                client.setReactivatedBy(currentUser);
+            }
+
+        }else {
+            client.reActivate(currentUser, reactivateDate);
+        }
         this.clientRepository.saveAndFlush(client);
         return new CommandProcessingResultBuilder() //
                 .withCommandId(command.commandId()) //
@@ -926,6 +935,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
     @Override
     public CommandProcessingResult undoRejection(Long entityId, JsonCommand command) {
+        boolean isCrbEnabled = this.configurationDomainService.isCRBEnabled();
         final AppUser currentUser = this.context.authenticatedUser();
         this.fromApiJsonDeserializer.validateUndoRejection(command);
 
@@ -941,7 +951,18 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                     undoRejectDate, client.getRejectedDate());
         }
 
-        client.reOpened(currentUser, undoRejectDate);
+        if (isCrbEnabled){
+
+            Integer crbStatus = client.getCrbVerificationStatus();
+            if (crbStatus.equals(CRBStatus.PENDING.getValue()) || crbStatus.equals(CRBStatus.NOT_STARTED.getValue())){
+                client.setStatus(ClientStatus.CRB_PENDING.getValue());
+                client.setReopenedBy(currentUser);
+                client.setReopenedDate(undoRejectDate);
+            }
+
+        }else {
+            client.reOpened(currentUser, undoRejectDate);
+        }
         this.clientRepository.saveAndFlush(client);
 
         return new CommandProcessingResultBuilder() //
@@ -954,6 +975,8 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
     @Override
     public CommandProcessingResult undoWithdrawal(Long entityId, JsonCommand command) {
+        boolean isCrbEnabled = this.configurationDomainService.isCRBEnabled();
+
         final AppUser currentUser = this.context.authenticatedUser();
         this.fromApiJsonDeserializer.validateUndoWithDrawn(command);
 
@@ -968,7 +991,18 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             throw new InvalidClientStateTransitionException("reopened", "date.cannot.before.client.withdrawal.date", errorMessage,
                     undoWithdrawalDate, client.getWithdrawalDate());
         }
-        client.reOpened(currentUser, undoWithdrawalDate);
+
+        if (isCrbEnabled){
+            Integer crbStatus = client.getCrbVerificationStatus();
+            if (crbStatus.equals(CRBStatus.PENDING.getValue()) || crbStatus.equals(CRBStatus.NOT_STARTED.getValue())){
+                client.setStatus(ClientStatus.CRB_PENDING.getValue());
+                client.setReopenedBy(currentUser);
+                client.setReopenedDate(undoWithdrawalDate);
+            }
+
+        }else {
+            client.reOpened(currentUser, undoWithdrawalDate);
+        }
         this.clientRepository.saveAndFlush(client);
 
         return new CommandProcessingResultBuilder() //

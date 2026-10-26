@@ -28,18 +28,18 @@ public class CrbConsentReadServiceImpl implements CrbConsentReadService{
 
 
     @Override
-    public CrbConsentData retrieveConsent(Long consentId) {
+    public CrbConsentData retrieveConsent(Long clientId) {
         this.context.authenticatedUser();
         ConsentMapper mp = new ConsentMapper();
-
 
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT ");
         sql.append(mp.schema());
-        sql.append(" WHERE cc.id = ? ");
+        sql.append(" WHERE cc.client_id = ? ");
 
+        List<CrbConsentData> results = this.jdbcTemplate.query(sql.toString(), mp, clientId);
 
-        return this.jdbcTemplate.queryForObject(sql.toString(), mp, consentId);
+        return results.isEmpty() ? null : results.get(0);
     }
 
     @Override

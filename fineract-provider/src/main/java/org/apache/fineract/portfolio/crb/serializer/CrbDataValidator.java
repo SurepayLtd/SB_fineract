@@ -101,6 +101,9 @@ public final class CrbDataValidator {
         final Long crbValidationType = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbValidationTypeParamName, element);
         baseDataValidator.reset().parameter(CrbApiConstants.crbValidationTypeParamName).value(crbValidationType).ignoreIfNull().notExceedingLengthOf(5);
 
+        final Long crbRequestType = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbRequestTypeParamName, element);
+        baseDataValidator.reset().parameter(CrbApiConstants.crbRequestTypeParamName).value(crbRequestType).ignoreIfNull().notExceedingLengthOf(5);
+
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
     }
 

@@ -3941,12 +3941,4 @@ public class CommandWrapperBuilder {
         this.href = "/crbchecks/" + clientId ;
         return this;
     }
-
-    public CommandWrapperBuilder recheckClientCRBCheck(final Long clientId) {
-        this.actionName = "ACTION_REDO";
-        this.entityName = "CRBCHECK";
-        this.clientId = clientId;
-        this.href = "/crbchecks/" + clientId + "?command=recheck";
-        return this;
-    }
 }

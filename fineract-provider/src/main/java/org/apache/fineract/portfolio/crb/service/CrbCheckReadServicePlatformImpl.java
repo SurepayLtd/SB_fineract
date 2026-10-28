@@ -4,8 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.crb.data.CrbCheckData;
+import org.apache.fineract.portfolio.crb.domain.CrbRequestType;
 import org.apache.fineract.portfolio.crb.domain.CrbValidationType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -15,9 +17,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +39,11 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
         sb.append(" WHERE cc.client_id = ? ");
         sb.append(" ORDER BY cc.created_at DESC, cc.id DESC ");
         return this.jdbcTemplate.query(sb.toString(), mp, clientId);
+    }
+
+    @Override
+    public CrbCheckData retrieveTypes() {
+        return CrbCheckData.dropdown(getRequestTypes(), getValidationTypes());
     }
 
     protected static class CheckMapper implements RowMapper<CrbCheckData>{
@@ -158,6 +163,28 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
 
             return details;
         }
+    }
+
+    private Collection<EnumOptionData> getValidationTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CrbValidationType type : CrbValidationType.values()){
+            data.add(new EnumOptionData(
+                    type.getValue().longValue(), type.getCode(), type.getDescription()
+            ));
+        }
+        return data;
+    }
+
+    private Collection<EnumOptionData> getRequestTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CrbRequestType type : CrbRequestType.values()){
+            data.add(new EnumOptionData(
+                    type.getValue().longValue(), type.getCode(), type.getDescription()
+            ));
+        }
+        return data;
     }
 
 

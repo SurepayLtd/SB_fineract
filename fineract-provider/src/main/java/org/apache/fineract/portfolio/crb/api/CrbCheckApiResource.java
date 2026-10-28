@@ -26,9 +26,11 @@ import org.apache.fineract.infrastructure.core.service.CommandParameterUtil;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.crb.data.CrbApiConstants;
 import org.apache.fineract.portfolio.crb.data.CrbCheckData;
+import org.apache.fineract.portfolio.crb.data.CrbConsentData;
 import org.apache.fineract.portfolio.crb.service.CrbCheckReadServicePlatform;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
 
 @Path("/v1/crbchecks")
@@ -65,6 +67,7 @@ public class CrbCheckApiResource {
     }
 
     @POST
+    @Path("{clientId}")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Create CRB Check", description = "Creates and executes an initial CRB validation check for a client with verified, non-revoked consent.")
@@ -73,7 +76,7 @@ public class CrbCheckApiResource {
             @ApiResponse(responseCode = "400", description = "Invalid request or missing verified consent"),
             @ApiResponse(responseCode = "404", description = "Client not found")
     })
-    public String create(@QueryParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId,
+    public String create(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId,
                          @Parameter(hidden = true) final String apiRequestBodyAsJson) {
 
 
@@ -91,33 +94,24 @@ public class CrbCheckApiResource {
         return toApiJsonSerializer.serialize(result);
     }
 
-    @POST
-    @Path("{clientId}")
+    @GET
+    @Path("template")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
-    @Operation(summary = "Recheck CRB Validation", description = "Re-executes an eligible CRB validation check using the existing check and provider reference where supported.")
-    @ApiResponses({@ApiResponse(responseCode = "200", description = "CRB recheck processed successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid command or check cannot be rechecked"),
-            @ApiResponse(responseCode = "404", description = "CRB check not found")
+    @Operation(summary = "Retrieve CRB Check Template", description = "Returns the supported check validations and request Types.")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "OK",
+            content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.GetCrbCheckTemplateResponse.class))
+    )
     })
-    public String recheck(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId,
-            @QueryParam("command") @Parameter(description = "recheck") final String command,
-            @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+    public String retrieveTemplate(@Context final UriInfo uriInfo, @QueryParam("command") @Parameter(description = "commandParam") final String commandParam) {
+        context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_CHECK_RESOURCE_NAME);
+
+        CrbCheckData checkData =crbCheckReadService.retrieveTypes();
 
 
-        if (!CommandParameterUtil.is(command, "recheck")) {
-            throw new UnrecognizedQueryParamException("command", command,
-                    new Object[] { "recheck" }
-            );
-        }
+        final ApiRequestJsonSerializationSettings settings = apiRequestParameterHelper.process(uriInfo.getQueryParameters());
 
-        final CommandWrapper commandRequest = new CommandWrapperBuilder()
-                .recheckClientCRBCheck(clientId)
-                .withJson(apiRequestBodyAsJson)
-                .build();
-
-        final CommandProcessingResult result = commandsSourceWritePlatformService.logCommandSource(commandRequest);
-
-        return toApiJsonSerializer.serialize(result);
+        return toApiJsonSerializer.serialize(settings, Collections.singletonList(checkData), CrbApiConstants.CRB_CHECK_TEMPLATE_RESPONSE_DATA_PARAMETERS);
     }
+
 }

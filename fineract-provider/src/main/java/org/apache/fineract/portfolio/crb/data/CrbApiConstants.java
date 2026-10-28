@@ -27,6 +27,8 @@ public class CrbApiConstants {
     public static final String revokedByParamName = "revokedBy";
     public static final String otpCodeParamName = "otpCode";
     public static final String crbValidationTypeParamName= "crbValidationType";
+    public static final String crbRequestTypeParamName= "crbRequestType";
+
 
 
     public static final String CRB_REVOKE_REASON = "CrbRevokeReason";
@@ -37,7 +39,7 @@ public class CrbApiConstants {
 
     public static final Set<String> CRB_CREATE_CONSENT_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, consentTextParamName, consentChannelParamName));
 
-    public static final Set<String> CRB_CREATE_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbValidationTypeParamName));
+    public static final Set<String> CRB_CREATE_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbValidationTypeParamName, crbRequestTypeParamName));
 
     public static final Set<String> VALIDATE_OTP_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, otpCodeParamName));
 
@@ -49,5 +51,8 @@ public class CrbApiConstants {
             ));
 
     public static final Set<String> CRB_CONSENT_TEMPLATE_RESPONSE_DATA_PARAMETERS = new HashSet<>(Arrays.asList("consentChannels"));
+
+    public static final Set<String> CRB_CHECK_TEMPLATE_RESPONSE_DATA_PARAMETERS = new HashSet<>(Arrays.asList("types"));
+
 
 }

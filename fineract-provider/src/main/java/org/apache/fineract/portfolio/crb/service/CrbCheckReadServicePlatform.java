@@ -7,5 +7,6 @@ import java.util.List;
 public interface CrbCheckReadServicePlatform {
 
     List<CrbCheckData> retrieveChecks(Long clientId);
+    CrbCheckData retrieveTypes();
 
 }

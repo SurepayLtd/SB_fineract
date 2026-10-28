@@ -17,6 +17,6 @@ public class CreateCrbCheckHandler implements NewCommandSourceHandler {
 
     @Override
     public CommandProcessingResult processCommand(JsonCommand command) {
-        return crbCheckWritePlatformService.createInitialCheck(command.getClientId(), command);
+        return crbCheckWritePlatformService.crbCheck(command.getClientId(), command);
     }
 }

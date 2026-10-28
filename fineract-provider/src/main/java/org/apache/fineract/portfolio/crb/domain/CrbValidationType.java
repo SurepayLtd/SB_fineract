@@ -3,7 +3,7 @@ package org.apache.fineract.portfolio.crb.domain;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 
 public enum CrbValidationType {
-    DETAILS(1, "crbValidationType.details", "Validation Details"),
+    DETAILS(1, "crbValidationType.details", "Customer Details"),
     NIN(2, "crbValidationType.nin", "NIN Number"),
     PHONE(3, "crbValidationType.details", "Phone Number");
 

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.Map;
 
 public final class CrbCheckApiResourceSwagger {
@@ -18,6 +19,9 @@ public final class CrbCheckApiResourceSwagger {
 
         @Schema(example = "1", description = "CRB validation type: client details, NIN, or phone")
         public Integer crbValidationType;
+
+        @Schema(example = "1", description = "CRB request type: initial, revalidation")
+        public Integer CrbRequestType;
     }
 
     public static final class PostCrbCheckResponse{
@@ -124,5 +128,38 @@ public final class CrbCheckApiResourceSwagger {
 
         @Schema(example = "CRB validation check created successfully")
         public String message;
+    }
+
+    @Schema(description = "GetCrbCheckTemplateResponse")
+    public static final class GetCrbCheckTemplateResponse {
+
+        private GetCrbCheckTemplateResponse() {}
+
+        static final class GetValidationType {
+
+            private GetValidationType() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "crbValidationType.details")
+            public String code;
+            @Schema(example = "Validation Details")
+            public String description;
+        }
+
+        static final class GetRequestType {
+
+            private GetRequestType() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "crbRequestType.Initial")
+            public String code;
+            @Schema(example = "Initial Validation")
+            public String description;
+        }
+
+        public Collection<GetRequestType> requestTypes;
+        public Collection<GetValidationType> validationTypes;
     }
 }

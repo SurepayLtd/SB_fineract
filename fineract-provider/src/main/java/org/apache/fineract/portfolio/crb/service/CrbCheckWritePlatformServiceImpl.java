@@ -36,17 +36,16 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
     private final CrbConsentRepository crbConsentRepository;
     private final CrbDataValidator fromApiJsonDeserializer;
 
-
-
     @Transactional
     @Override
-    public CommandProcessingResult createInitialCheck(Long clientId, JsonCommand command) {
-
+    public CommandProcessingResult crbCheck(Long clientId, JsonCommand command) {
         final Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
 
         this.fromApiJsonDeserializer.validateCrbCheck(command);
 
         Integer type = command.integerValueOfParameterNamed("crbValidationType");
+
+        Integer request = command.integerValueOfParameterNamed("crbRequestType");
 
         final CrbConsent crbConsent = this.crbConsentRepository.findVerifiedClient(client.getId(), ConsentStatus.VERIFIED.getValue());
 
@@ -55,6 +54,19 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
                     "Client has not consented to CRB verification."
             );
         }
+
+        if (request.equals(CrbRequestType.INITIAL.getValue())){
+           return createInitialCheck(client, type, crbConsent);
+        }else {
+            return reCheck(client, type, crbConsent);
+        }
+
+    }
+
+
+    private CommandProcessingResult createInitialCheck(Client client, Integer type, CrbConsent crbConsent) {
+
+
 
         final CrbCheck crbCheck = CrbCheck.create(client, crbConsent, type, CrbRequestType.INITIAL.getValue());
 
@@ -81,7 +93,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
             return new CommandProcessingResultBuilder()
                     .withEntityId(crbCheck.getId())
-                    .withClientId(clientId)
+                    .withClientId(client.getId())
                     .build();
 
         } catch (Exception e) {
@@ -97,23 +109,8 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
     }
 
-    @Transactional
-    @Override
-    public CommandProcessingResult reCheck(Long clientId, JsonCommand command) {
 
-        final Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
-
-        this.fromApiJsonDeserializer.validateCrbCheck(command);
-
-        Integer type = command.integerValueOfParameterNamed("crbValidationType");
-
-        final CrbConsent crbConsent = this.crbConsentRepository.findVerifiedClient(client.getId(), ConsentStatus.VERIFIED.getValue());
-
-        if (crbConsent == null){
-            throw new GeneralPlatformDomainRuleException("error.msg.client.crb.consent",
-                    "Client has not consented to CRB verification."
-            );
-        }
+    private CommandProcessingResult reCheck(Client client, Integer type, CrbConsent crbConsent) {
 
         final CrbCheck crbCheck = CrbCheck.create(client, crbConsent, type, CrbRequestType.REVALIDATION.getValue());
 
@@ -141,7 +138,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
             return new CommandProcessingResultBuilder()
                     .withEntityId(crbConsent.getId())
-                    .withClientId(clientId)
+                    .withClientId(client.getId())
                     .build();
 
         } catch (Exception e) {

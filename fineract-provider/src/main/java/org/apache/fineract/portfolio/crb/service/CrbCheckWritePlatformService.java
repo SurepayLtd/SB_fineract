@@ -6,7 +6,6 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 
 public interface CrbCheckWritePlatformService {
 
-    CommandProcessingResult createInitialCheck(final Long clientId, final JsonCommand command);
+    CommandProcessingResult crbCheck(final Long clientId, final JsonCommand command);
 
-    CommandProcessingResult reCheck(final Long clientId, final JsonCommand command);
 }

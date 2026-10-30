@@ -65,6 +65,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.invalid.response",
                         "CRB returned an invalid personal information validation response.");
             }
+            log.info("Personal Details: {}", responseData);
 
             return responseData;
 
@@ -97,7 +98,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.details.url") + "/" + validationId.trim();
+        String url = getProperty("crb.details.revalidation.url") + "/" + validationId.trim();
 
         try {
 
@@ -108,7 +109,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            ResponseEntity<ValidatePersonalInformationResponseData> response = restTemplate.exchange(url, HttpMethod.POST, entity, ValidatePersonalInformationResponseData.class);
+            ResponseEntity<ValidatePersonalInformationResponseData> response = restTemplate.exchange(url, HttpMethod.GET, entity, ValidatePersonalInformationResponseData.class);
 
             int code = response.getStatusCode().value();
 
@@ -119,6 +120,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.invalid.response",
                         "CRB returned an invalid personal information validation response.");
             }
+            log.info("Personal Details: {}", responseData);
 
             return responseData;
 
@@ -175,7 +177,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 throw new GeneralPlatformDomainRuleException("error.msg.crb.nin.validation.invalid.response",
                         "CRB returned an invalid NIN validation response.");
             }
-
+            log.info("NinData: {}", responseData);
             return responseData;
 
 
@@ -206,7 +208,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.nin.url") + "/" + validationId.trim();
+        String url = getProperty("crb.nin.revalidation.url") + "/" + validationId.trim();
 
         try {
 
@@ -218,7 +220,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            ResponseEntity<ValidateNINResponseData> response = restTemplate.exchange(url, HttpMethod.POST, entity, ValidateNINResponseData.class);
+            ResponseEntity<ValidateNINResponseData> response = restTemplate.exchange(url, HttpMethod.GET, entity, ValidateNINResponseData.class);
 
             int code = response.getStatusCode().value();
 
@@ -229,7 +231,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 throw new GeneralPlatformDomainRuleException("error.msg.crb.nin.validation.invalid.response",
                         "CRB returned an invalid NIN validation response.");
             }
-
+            log.info("NinData: {}", responseData);
             return responseData;
 
 
@@ -285,7 +287,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 throw new GeneralPlatformDomainRuleException("error.msg.crb.phone.validation.invalid.response",
                         "CRB returned an invalid Phone Number validation response.");
             }
-
+            log.info("PhoneData: {}", responseData);
             return responseData;
 
 
@@ -316,7 +318,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.phone.url") + "/" + validationId.trim();
+        String url = getProperty("crb.phone.revalidation.url") + "/" + validationId.trim();
 
         try {
 
@@ -327,7 +329,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            ResponseEntity<ValidatePhoneResponseData> response = restTemplate.exchange(url, HttpMethod.POST, entity, ValidatePhoneResponseData.class);
+            ResponseEntity<ValidatePhoneResponseData> response = restTemplate.exchange(url, HttpMethod.GET, entity, ValidatePhoneResponseData.class);
 
             int code = response.getStatusCode().value();
 
@@ -338,7 +340,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 throw new GeneralPlatformDomainRuleException("error.msg.crb.phone.validation.invalid.response",
                         "CRB returned an invalid Phone Number validation response.");
             }
-
+            log.info("PhoneData: {}", responseData);
             return responseData;
 
 
@@ -394,13 +396,14 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 int code = response.getStatusCode().value();
                 tokenResponse = response.getBody();
 
-                if (code != 200  || tokenResponse == null) {
+                if (code != 200 && code != 201) {
 
                     throw new GeneralPlatformDomainRuleException("error.msg.crb.authentication.invalid.response",
                             "CRB authentication returned an invalid token response."
                     );
 
                 }
+                log.info("AccessToken: {}", tokenResponse.getAccess_token());
                 return tokenResponse.getAccess_token();
 
 

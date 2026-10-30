@@ -27,7 +27,7 @@ public class ValidatePersonalInformationResponseData implements Serializable {
         private static final long serialVersionUID = 1L;
 
         private String id, reference, timestamp, status, message, nin_status, matching_status, card_status, cost, currency;
-        private String nin, document_id, surname, given_name, other_name, date_of_birth, error_message;
+        private String nin, document_id, surname, given_name, other_name, date_of_birth, vat, error_message;
     }
 
 }

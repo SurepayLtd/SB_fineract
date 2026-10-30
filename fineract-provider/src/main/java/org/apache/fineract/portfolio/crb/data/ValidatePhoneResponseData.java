@@ -28,7 +28,7 @@ public class ValidatePhoneResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private String id, reference, timestamp, status, phonenumber, message, surname, firstname, middlename, cost, currency;
+        private String id, reference, timestamp, status, phonenumber, message, surname, firstname, middlename, cost, vat, currency;
         private String phone_status, error_message;
     }
 }

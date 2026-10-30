@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 
 
 @Service
@@ -250,7 +251,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
                 && "VALID".equalsIgnoreCase(validation.getNin_status())
                 && client.getNationalId().equalsIgnoreCase(validation.getNin())
                 && client.dateOfBirth().toString().equalsIgnoreCase(validation.getDate_of_birth())
-                && client.getFullname().equalsIgnoreCase(validation.getName());
+                && namesMatch(client.getDisplayName(), validation.getName());
 
         return CrbProviderResult.builder()
                 .verified(verified)
@@ -277,7 +278,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
         final boolean verified = "SUCCESSFUL".equalsIgnoreCase(validation.getStatus())
                 && "FOUND".equalsIgnoreCase(validation.getPhone_status())
-                && client.getLastname().equalsIgnoreCase(validation.getSurname());
+                && namesMatch(client.getLastname(), validation.getSurname());
 
         return CrbProviderResult.builder()
                 .verified(verified)
@@ -344,7 +345,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
                 && "VALID".equalsIgnoreCase(validation.getNin_status())
                 && client.getNationalId().equalsIgnoreCase(validation.getNin())
                 && client.dateOfBirth().toString().equalsIgnoreCase(validation.getDate_of_birth())
-                && client.getFullname().equalsIgnoreCase(validation.getName());
+                && namesMatch(client.getDisplayName(), validation.getName());
 
         return CrbProviderResult.builder()
                 .verified(verified)
@@ -376,7 +377,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
         final boolean verified = "SUCCESSFUL".equalsIgnoreCase(validation.getStatus())
                 && "FOUND".equalsIgnoreCase(validation.getPhone_status())
-                && client.getLastname().equalsIgnoreCase(validation.getSurname());
+                && namesMatch(client.getLastname(), validation.getSurname());
 
         return CrbProviderResult.builder()
                 .verified(verified)
@@ -419,6 +420,18 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
             throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.response.serialization.failed",
                     "Unable to serialize the CRB validation response.");
         }
+    }
+
+    private boolean namesMatch(String name1, String name2) {
+        if (name1 == null || name2 == null) {
+            return false;
+        }
+
+        String[] parts1 = name1.trim().toLowerCase().split("\\s+");
+        String[] parts2 = name2.trim().toLowerCase().split("\\s+");
+
+        return parts1.length == parts2.length
+                && Arrays.stream(parts1).sorted().toList().equals(Arrays.stream(parts2).sorted().toList());
     }
 
 

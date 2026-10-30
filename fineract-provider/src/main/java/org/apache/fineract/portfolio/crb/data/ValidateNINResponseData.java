@@ -28,6 +28,6 @@ public class ValidateNINResponseData implements Serializable {
         private static final long serialVersionUID = 1L;
 
         private String id, reference, timestamp, status, nin, date_of_birth, name, nin_status, cost, currency;
-        private String message, error_message;
+        private String message, error_message, vat;
     }
 }

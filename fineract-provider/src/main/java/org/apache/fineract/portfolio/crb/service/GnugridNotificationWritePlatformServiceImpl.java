@@ -7,7 +7,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
+import org.apache.fineract.portfolio.client.domain.Client;
+import org.apache.fineract.portfolio.client.domain.LegalForm;
 import org.apache.fineract.portfolio.crb.data.*;
+import org.apache.fineract.portfolio.crb.domain.CreditEntityType;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -439,5 +442,18 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
             );
         }
 
+    }
+
+    private Integer entityType(Client client) {
+        LegalForm legalForm = LegalForm.fromInt(client.getLegalForm());
+
+        if (legalForm == null) {
+            return null;
+        }
+
+        return switch (legalForm) {
+            case PERSON -> CreditEntityType.INDIVIDUAL.getValue();
+            case ENTITY -> CreditEntityType.NON_INDIVIDUAL.getValue();
+        };
     }
 }

@@ -61,8 +61,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class SelfServiceClientReadPlatformServiceImpl
-    implements SelfServiceClientReadPlatformService {
+public class SelfServiceClientReadPlatformServiceImpl implements SelfServiceClientReadPlatformService {
 
   private final JdbcTemplate jdbcTemplate;
   private final PlatformSelfServiceSecurityContext context;
@@ -76,8 +75,7 @@ public class SelfServiceClientReadPlatformServiceImpl
   private final ParentGroupsMapper clientGroupsMapper = new ParentGroupsMapper();
 
   private final ColumnValidator columnValidator;
-  private final ClientCollateralManagementRepositoryWrapper
-      clientCollateralManagementRepositoryWrapper;
+  private final ClientCollateralManagementRepositoryWrapper clientCollateralManagementRepositoryWrapper;
   private final ClientRepositoryWrapper clientRepositoryWrapper;
   private final ClientMapper clientMapper;
 
@@ -341,6 +339,8 @@ public class SelfServiceClientReadPlatformServiceImpl
           "c.firstname as firstname, c.middlename as middlename, c.lastname as lastname, ");
       sqlBuilder.append("c.fullname as fullname, c.display_name as displayName, ");
       sqlBuilder.append("c.mobile_no as mobileNo, ");
+      sqlBuilder.append("c.nin_number as ninNumber, ");
+      sqlBuilder.append("c.card_number as cardNumber, ");
       sqlBuilder.append("c.is_staff as isStaff, ");
       sqlBuilder.append("c.email_address as emailAddress, ");
       sqlBuilder.append("c.date_of_birth as dateOfBirth, ");
@@ -497,6 +497,8 @@ public class SelfServiceClientReadPlatformServiceImpl
       final String remarks = rs.getString("remarks");
       final Integer crbVerificationStatus = JdbcSupport.getInteger(rs, "crbVerificationStatus");
       final EnumOptionData crb = crbStatus(crbVerificationStatus);
+      final String ninNumber = rs.getString("ninNumber");
+      final String cardNumber = rs.getString("cardNumber");
 
       final ClientNonPersonData clientNonPerson =
           new ClientNonPersonData(
@@ -533,6 +535,8 @@ public class SelfServiceClientReadPlatformServiceImpl
           displayName,
           externalId,
           mobileNo,
+          ninNumber,
+          cardNumber,
           emailAddress,
           dateOfBirth,
           gender,
@@ -747,6 +751,8 @@ public class SelfServiceClientReadPlatformServiceImpl
           "c.firstname as firstname, c.middlename as middlename, c.lastname as lastname, ");
       builder.append("c.fullname as fullname, c.display_name as displayName, ");
       builder.append("c.mobile_no as mobileNo, ");
+      builder.append("c.nin_number as ninNumber, ");
+      builder.append("c.card_number as cardNumber, ");
       builder.append("c.is_staff as isStaff, ");
       builder.append("c.email_address as emailAddress, ");
       builder.append("c.date_of_birth as dateOfBirth, ");
@@ -899,6 +905,8 @@ public class SelfServiceClientReadPlatformServiceImpl
       final CodeValueData mainBusinessLine =
           CodeValueData.instance(mainBusinessLineId, mainBusinessLineValue);
       final String remarks = rs.getString("remarks");
+      final String ninNumber = rs.getString("ninNumber");
+      final String cardNumber = rs.getString("cardNumber");
 
       final Integer crbVerificationStatus = JdbcSupport.getInteger(rs, "crbVerificationStatus");
       final EnumOptionData crb = crbStatus(crbVerificationStatus);
@@ -938,6 +946,8 @@ public class SelfServiceClientReadPlatformServiceImpl
           displayName,
           externalId,
           mobileNo,
+          ninNumber,
+          cardNumber,
           emailAddress,
           dateOfBirth,
           gender,

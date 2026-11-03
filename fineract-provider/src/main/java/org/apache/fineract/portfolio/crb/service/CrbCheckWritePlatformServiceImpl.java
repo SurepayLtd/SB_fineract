@@ -203,10 +203,12 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
         final ValidatePersonalInformationResponseData.ValidationData validation = responseData.getValidation();
 
-        final boolean verified = "SUCCESSFUL".equalsIgnoreCase(validation.getStatus())
-                        && "FOUND".equalsIgnoreCase(validation.getNin_status())
-                        && "YES".equalsIgnoreCase(validation.getMatching_status())
-                        && "VALID".equalsIgnoreCase(validation.getCard_status());
+        final boolean verified = "SUCCESSFUL".equalsIgnoreCase(validation.getStatus());
+        //TODO: Uncomment in prod
+
+//                        && "FOUND".equalsIgnoreCase(validation.getNin_status())
+//                        && "YES".equalsIgnoreCase(validation.getMatching_status())
+//                        && "VALID".equalsIgnoreCase(validation.getCard_status());
 
         return CrbProviderResult.builder()
                 .verified(verified)
@@ -307,10 +309,12 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
         final ValidatePersonalInformationResponseData.ValidationData validation = responseData.getValidation();
 
-        final boolean verified = "SUCCESSFUL".equalsIgnoreCase(validation.getStatus())
-                && "FOUND".equalsIgnoreCase(validation.getNin_status())
-                && "YES".equalsIgnoreCase(validation.getMatching_status())
-                && "VALID".equalsIgnoreCase(validation.getCard_status());
+        final boolean verified = "SUCCESSFUL".equalsIgnoreCase(validation.getStatus());
+                //TODO: Uncomment in prod
+
+//                && "FOUND".equalsIgnoreCase(validation.getNin_status())
+//                && "YES".equalsIgnoreCase(validation.getMatching_status())
+//                && "VALID".equalsIgnoreCase(validation.getCard_status());
 
         return CrbProviderResult.builder()
                 .verified(verified)

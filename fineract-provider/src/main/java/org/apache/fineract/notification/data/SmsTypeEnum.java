@@ -81,7 +81,9 @@ public enum SmsTypeEnum {
     LOAN_INSTALLMENT_OVERDUE_D30(51, "","Loan Overdue D+30","Optional"),
     LOAN_INSTALLMENT_OVERDUE_D60(52, "","Loan Overdue D+60","Optional"),
     LOAN_INSTALLMENT_OVERDUE_D90(53, "","Loan Overdue D+90","Optional"),
-    OTP_CRB_CONSENT(54, "SmsTypeEnum.otpCrb", "CRB Consent OTP", "Mandatory");
+    OTP_CRB_CONSENT(54, "SmsTypeEnum.otpCrb", "CRB Consent OTP", "Mandatory"),
+    OTP_CRB_CLIENT(55, "SmsTypeEnum.otpCrb", "CRB Consent Client", "Mandatory");
+
 
 
     private final Integer value;

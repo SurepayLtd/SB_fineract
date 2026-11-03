@@ -43,6 +43,7 @@ import org.apache.fineract.portfolio.client.data.ClientData;
 import org.apache.fineract.portfolio.client.data.ClientNonPersonData;
 import org.apache.fineract.portfolio.client.data.ClientTimelineData;
 import org.apache.fineract.portfolio.client.domain.Client;
+import org.apache.fineract.portfolio.client.domain.CRBStatus;
 import org.apache.fineract.portfolio.client.domain.ClientEnumerations;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.client.domain.ClientStatus;
@@ -343,6 +344,7 @@ public class SelfServiceClientReadPlatformServiceImpl
       sqlBuilder.append("c.is_staff as isStaff, ");
       sqlBuilder.append("c.email_address as emailAddress, ");
       sqlBuilder.append("c.date_of_birth as dateOfBirth, ");
+      sqlBuilder.append("c.crb_verification_status as crbVerificationStatus, ");
       sqlBuilder.append("c.gender_cv_id as genderId, ");
       sqlBuilder.append("cv.code_value as genderValue, ");
       sqlBuilder.append("c.client_type_cv_id as clienttypeId, ");
@@ -493,6 +495,8 @@ public class SelfServiceClientReadPlatformServiceImpl
       final CodeValueData mainBusinessLine =
           CodeValueData.instance(mainBusinessLineId, mainBusinessLineValue);
       final String remarks = rs.getString("remarks");
+      final Integer crbVerificationStatus = JdbcSupport.getInteger(rs, "crbVerificationStatus");
+      final EnumOptionData crb = crbStatus(crbVerificationStatus);
 
       final ClientNonPersonData clientNonPerson =
           new ClientNonPersonData(
@@ -544,7 +548,11 @@ public class SelfServiceClientReadPlatformServiceImpl
           classification,
           legalForm,
           clientNonPerson,
-          isStaff);
+          isStaff, crb);
+    }
+    private EnumOptionData crbStatus(Integer value){
+      CRBStatus status = CRBStatus.fromInt(value);
+      return new EnumOptionData(status.getValue().longValue(), status.getCode(), status.getDescription());
     }
   }
 
@@ -742,6 +750,7 @@ public class SelfServiceClientReadPlatformServiceImpl
       builder.append("c.is_staff as isStaff, ");
       builder.append("c.email_address as emailAddress, ");
       builder.append("c.date_of_birth as dateOfBirth, ");
+      builder.append("c.crb_verification_status as crbVerificationStatus, ");
       builder.append("c.gender_cv_id as genderId, ");
       builder.append("cv.code_value as genderValue, ");
       builder.append("c.client_type_cv_id as clienttypeId, ");
@@ -891,6 +900,9 @@ public class SelfServiceClientReadPlatformServiceImpl
           CodeValueData.instance(mainBusinessLineId, mainBusinessLineValue);
       final String remarks = rs.getString("remarks");
 
+      final Integer crbVerificationStatus = JdbcSupport.getInteger(rs, "crbVerificationStatus");
+      final EnumOptionData crb = crbStatus(crbVerificationStatus);
+
       final ClientNonPersonData clientNonPerson =
           new ClientNonPersonData(
               constitution, incorpNo, incorpValidityTill, mainBusinessLine, remarks);
@@ -941,7 +953,12 @@ public class SelfServiceClientReadPlatformServiceImpl
           classification,
           legalForm,
           clientNonPerson,
-          isStaff);
+          isStaff, crb);
+    }
+
+    private EnumOptionData crbStatus(Integer value){
+      CRBStatus status = CRBStatus.fromInt(value);
+      return new EnumOptionData(status.getValue().longValue(), status.getCode(), status.getDescription());
     }
   }
 }

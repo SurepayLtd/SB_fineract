@@ -180,6 +180,8 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
 
             this.crbConsentRepository.saveAndFlush(consent);
 
+            this.smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.OTP_CRB_CLIENT, null, null);
+
             return new CommandProcessingResultBuilder()
                     .withCommandId(command.commandId())
                     .withOfficeId(client.officeId())

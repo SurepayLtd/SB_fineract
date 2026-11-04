@@ -89,6 +89,9 @@ public class JpaTemplateDomainService implements TemplateDomainService {
             case 2:
                 type = TemplateType.SMS;
             break;
+            case 3:
+                type = TemplateType.TEXT;
+            break;
             default:
                 type = null;
         }

@@ -88,6 +88,9 @@ public class Template extends AbstractPersistableCustom<Long> {
             case 2:
                 type = TemplateType.SMS;
             break;
+            case 3:
+                type = TemplateType.TEXT;
+            break;
         }
 
         final JsonArray array = command.arrayOfParameterNamed("mappers");

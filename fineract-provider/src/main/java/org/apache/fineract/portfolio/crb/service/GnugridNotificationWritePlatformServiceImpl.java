@@ -7,10 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
-import org.apache.fineract.portfolio.client.domain.Client;
-import org.apache.fineract.portfolio.client.domain.LegalForm;
 import org.apache.fineract.portfolio.crb.data.*;
-import org.apache.fineract.portfolio.crb.domain.CreditEntityType;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -46,7 +43,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.details.url");
+        String url = baseUrl() + "validate-personal-info";
 
         try {
 
@@ -101,7 +98,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.details.revalidation.url") + "/" + validationId.trim();
+        String url = baseUrl() + "personal-info-validation" + "/" + validationId.trim();
 
         try {
 
@@ -155,7 +152,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.nin.url");
+        String url = baseUrl() + "validate-nin";
 
         try {
 
@@ -211,7 +208,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.nin.revalidation.url") + "/" + validationId.trim();
+        String url = baseUrl() + "nin-validation" + "/" + validationId.trim();
 
         try {
 
@@ -265,7 +262,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.phone.url");
+        String url = baseUrl() + "validate-phone";
 
         try {
 
@@ -321,7 +318,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.phone.revalidation.url") + "/" + validationId.trim();
+        String url = baseUrl() + "phone-validation" + "/" + validationId.trim();
 
         try {
 
@@ -376,7 +373,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
             RestTemplate restTemplate = new RestTemplate();
 
-            String url = getProperty("crb.oauth.url");
+            String url = baseUrl() + "oauth/token";
 
 
             try {
@@ -444,16 +441,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
     }
 
-    private Integer entityType(Client client) {
-        LegalForm legalForm = LegalForm.fromInt(client.getLegalForm());
-
-        if (legalForm == null) {
-            return null;
-        }
-
-        return switch (legalForm) {
-            case PERSON -> CreditEntityType.INDIVIDUAL.getValue();
-            case ENTITY -> CreditEntityType.NON_INDIVIDUAL.getValue();
-        };
+    private String baseUrl(){
+        return getProperty("crb.base.url");
     }
 }

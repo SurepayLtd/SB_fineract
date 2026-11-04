@@ -43,7 +43,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.details.url");
+        String url = baseUrl() + "validate-personal-info";
 
         try {
 
@@ -98,7 +98,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.details.revalidation.url") + "/" + validationId.trim();
+        String url = baseUrl() + "personal-info-validation" + "/" + validationId.trim();
 
         try {
 
@@ -152,7 +152,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.nin.url");
+        String url = baseUrl() + "validate-nin";
 
         try {
 
@@ -208,7 +208,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.nin.revalidation.url") + "/" + validationId.trim();
+        String url = baseUrl() + "nin-validation" + "/" + validationId.trim();
 
         try {
 
@@ -262,7 +262,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.phone.url");
+        String url = baseUrl() + "validate-phone";
 
         try {
 
@@ -318,7 +318,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
         String accessToken = getCrbAccessToken();
         RestTemplate restTemplate = new RestTemplate();
-        String url = getProperty("crb.phone.revalidation.url") + "/" + validationId.trim();
+        String url = baseUrl() + "phone-validation" + "/" + validationId.trim();
 
         try {
 
@@ -373,7 +373,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
             RestTemplate restTemplate = new RestTemplate();
 
-            String url = getProperty("crb.oauth.url");
+            String url = baseUrl() + "oauth/token";
 
 
             try {
@@ -439,5 +439,9 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
             );
         }
 
+    }
+
+    private String baseUrl(){
+        return getProperty("crb.base.url");
     }
 }

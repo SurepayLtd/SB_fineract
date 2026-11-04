@@ -44,6 +44,11 @@
     </changeSet>
 
     <changeSet id="create-crb-consent-table" author="victor">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="m_crb_consent"/>
+            </not>
+        </preConditions>
 
         <createTable tableName="m_crb_consent">
 
@@ -133,6 +138,12 @@
     </changeSet>
 
     <changeSet id="create-m-crb-check" author="victor">
+
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="m_crb_check"/>
+            </not>
+        </preConditions>
 
         <createTable tableName="m_crb_check">
 
@@ -356,5 +367,23 @@
                 tableName="m_crb_consent"
                 columnNames="client_id"
                 constraintName="uk_m_crb_consent_client"/>
+    </changeSet>
+
+    <changeSet id="crb_template" author="victor">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*)
+                FROM m_template
+                WHERE name IN (
+                'CRB_CONSENT'
+                );
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="m_template">
+            <column name="entity" valueNumeric="0"/>
+            <column name="type" valueNumeric="2"/>
+            <column name="name" value="CRB_CONSENT"/>
+            <column name="text" value="I consent to the verification of my identity and personal information through the Credit Reference Bureau for the purposes of this application."/>
+        </insert>
     </changeSet>
 </databaseChangeLog>

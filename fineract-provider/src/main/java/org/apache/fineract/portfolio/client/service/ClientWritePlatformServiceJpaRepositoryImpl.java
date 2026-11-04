@@ -1664,8 +1664,12 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             String phone = validatePhone(mobileNo);
 
             String validNin = validateNin(ninNumber);
-            String validCard = validateCardNo(cardNumber);
-            validateDOB(dataOfBirth);
+            String validCard = null;
+
+            if (legalForm.isPerson()) {
+                validCard = validateCardNo(cardNumber);
+                validateDOB(dataOfBirth);
+            }
 
             final Client newClient = Client.instance(currentUser, status, clientOffice, clientParentGroup, accountNo, firstname, middlename,
                     lastname, fullname, activationDate, officeJoiningDate, externalId, phone, emailAddress, staff, submittedOnDate,
@@ -1812,7 +1816,13 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final String ninNumber = command.stringValueOfParameterNamed(ClientApiConstants.ninNoParamName);
             final String cardNumber = command.stringValueOfParameterNamed(ClientApiConstants.cardNoParamName);
 
-            ClientStatus status = ClientStatus.CRB_PENDING;
+            ClientStatus status = null;
+
+            if (legalForm.isPerson()) {
+                status = ClientStatus.CRB_PENDING;
+            }else {
+                status = ClientStatus.PENDING;
+            }
 
 
             LocalDate submittedOnDate = DateUtils.getBusinessLocalDate();
@@ -1825,8 +1835,12 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             String phone = validatePhone(mobileNo);
 
             String validNin = validateNin(ninNumber);
-            String validCard = validateCardNo(cardNumber);
-            validateDOB(dataOfBirth);
+            String validCard = null;
+
+            if (legalForm.isPerson()) {
+                validCard = validateCardNo(cardNumber);
+                validateDOB(dataOfBirth);
+            }
 
             final Client newClient = Client.instance(currentUser, status, clientOffice, clientParentGroup, accountNo, firstname, middlename,
                     lastname, fullname, null, null, externalId, phone, emailAddress, staff, submittedOnDate,

@@ -3892,4 +3892,53 @@ public class CommandWrapperBuilder {
         this.href = "/accounttransfers/" + fromAccountId + "/reverse/" + transferId;
         return this;
     }
+
+    public CommandWrapperBuilder createClientCRBConsent(Long clientId) {
+        this.actionName = "CREATE";
+        this.entityName = "CRBCONSENT";
+        this.clientId = clientId;
+        this.href = "/crbconsents/template";
+        return this;
+    }
+
+    public CommandWrapperBuilder validateCrbOtp(final Long consentId) {
+        this.actionName = "VALIDATEOTP";
+        this.entityName = "CRBCONSENT";
+        this.entityId = consentId;
+        this.href = "/crbconsents/" + consentId + "/validateOtp";
+        return this;
+    }
+
+    public CommandWrapperBuilder revokeCrbConsent(final Long consentId) {
+        this.actionName = "REVOKE";
+        this.entityName = "CRBCONSENT";
+        this.entityId = consentId;
+        this.href = "/crbconsents/" + consentId + "/revoke";
+        return this;
+    }
+
+    public CommandWrapperBuilder reactivateCrbConsent(final Long consentId) {
+        this.actionName = "REACTIVATE";
+        this.entityName = "CRBCONSENT";
+        this.entityId = consentId;
+        this.href = "/crbconsents/" + consentId + "/reactivate";
+        return this;
+    }
+
+    public CommandWrapperBuilder resendOtpCrbConsent(final Long consentId) {
+        this.actionName = "RESENDOTP";
+        this.entityName = "CRBCONSENT";
+        this.entityId = consentId;
+        this.href = "/crbconsents/" + consentId + "/resend-otp";
+        return this;
+    }
+
+    public CommandWrapperBuilder createCrbCheck(final Long clientId) {
+        this.actionName = "CREATE";
+        this.entityName = "CRBCHECK";
+        this.clientId = clientId;
+        this.json = "{}";
+        this.href = "/crbchecks/" + clientId ;
+        return this;
+    }
 }

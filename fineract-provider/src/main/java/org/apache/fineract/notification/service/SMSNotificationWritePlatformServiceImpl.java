@@ -659,6 +659,23 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                     messageId = String.format("PROFILE-CHANGE-%s", clientId);
                 }
             break;
+            case OTP_CRB_CONSENT:
+                if (isMandatory) {
+                    message = String.format("Dear %s, CRB Consent OTP %s. If you did not request this change, contact %s.",
+                            clientName, otp, ThreadLocalContextUtil.getTenant().getName()
+                    );
+                    messageId = String.format("CRB-CONSENT-OTP%s", clientId);
+                }
+            break;
+            case OTP_CRB_CLIENT:
+                if (isMandatory) {
+                    message = String.format("Dear %s, CRB Consent has been approved. If you did not request this change, contact %s.",
+                            clientName, otp, ThreadLocalContextUtil.getTenant().getName()
+                    );
+                    messageId = String.format("CRB-CONSENT-CLIENT%s", clientId);
+                }
+            break;
+
             default:
                 log.info("No sms type found to process a notification");
                 return;

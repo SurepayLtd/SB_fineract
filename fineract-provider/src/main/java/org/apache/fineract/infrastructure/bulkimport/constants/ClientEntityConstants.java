@@ -62,4 +62,6 @@ public final class ClientEntityConstants {
     public static final int LOOKUP_STATE_PROVINCE = 41;// AP
     public static final int LOOKUP_COUNTRY = 42;// AQ
     public static final int LOOKUP_MAIN_BUSINESS_LINE = 43;// AR
+    public static final int NIN_NUMBER = 44;// AT
+    public static final int CARD_NUMBER = 45;// AU
 }

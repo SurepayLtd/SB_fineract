@@ -43,6 +43,7 @@ import org.apache.fineract.portfolio.client.data.ClientData;
 import org.apache.fineract.portfolio.client.data.ClientNonPersonData;
 import org.apache.fineract.portfolio.client.data.ClientTimelineData;
 import org.apache.fineract.portfolio.client.domain.Client;
+import org.apache.fineract.portfolio.client.domain.CRBStatus;
 import org.apache.fineract.portfolio.client.domain.ClientEnumerations;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.client.domain.ClientStatus;
@@ -60,8 +61,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class SelfServiceClientReadPlatformServiceImpl
-    implements SelfServiceClientReadPlatformService {
+public class SelfServiceClientReadPlatformServiceImpl implements SelfServiceClientReadPlatformService {
 
   private final JdbcTemplate jdbcTemplate;
   private final PlatformSelfServiceSecurityContext context;
@@ -75,8 +75,7 @@ public class SelfServiceClientReadPlatformServiceImpl
   private final ParentGroupsMapper clientGroupsMapper = new ParentGroupsMapper();
 
   private final ColumnValidator columnValidator;
-  private final ClientCollateralManagementRepositoryWrapper
-      clientCollateralManagementRepositoryWrapper;
+  private final ClientCollateralManagementRepositoryWrapper clientCollateralManagementRepositoryWrapper;
   private final ClientRepositoryWrapper clientRepositoryWrapper;
   private final ClientMapper clientMapper;
 
@@ -340,9 +339,12 @@ public class SelfServiceClientReadPlatformServiceImpl
           "c.firstname as firstname, c.middlename as middlename, c.lastname as lastname, ");
       sqlBuilder.append("c.fullname as fullname, c.display_name as displayName, ");
       sqlBuilder.append("c.mobile_no as mobileNo, ");
+      sqlBuilder.append("c.nin_number as ninNumber, ");
+      sqlBuilder.append("c.card_number as cardNumber, ");
       sqlBuilder.append("c.is_staff as isStaff, ");
       sqlBuilder.append("c.email_address as emailAddress, ");
       sqlBuilder.append("c.date_of_birth as dateOfBirth, ");
+      sqlBuilder.append("c.crb_verification_status as crbVerificationStatus, ");
       sqlBuilder.append("c.gender_cv_id as genderId, ");
       sqlBuilder.append("cv.code_value as genderValue, ");
       sqlBuilder.append("c.client_type_cv_id as clienttypeId, ");
@@ -493,6 +495,10 @@ public class SelfServiceClientReadPlatformServiceImpl
       final CodeValueData mainBusinessLine =
           CodeValueData.instance(mainBusinessLineId, mainBusinessLineValue);
       final String remarks = rs.getString("remarks");
+      final Integer crbVerificationStatus = JdbcSupport.getInteger(rs, "crbVerificationStatus");
+      final EnumOptionData crb = crbStatus(crbVerificationStatus);
+      final String ninNumber = rs.getString("ninNumber");
+      final String cardNumber = rs.getString("cardNumber");
 
       final ClientNonPersonData clientNonPerson =
           new ClientNonPersonData(
@@ -529,6 +535,8 @@ public class SelfServiceClientReadPlatformServiceImpl
           displayName,
           externalId,
           mobileNo,
+          ninNumber,
+          cardNumber,
           emailAddress,
           dateOfBirth,
           gender,
@@ -544,7 +552,11 @@ public class SelfServiceClientReadPlatformServiceImpl
           classification,
           legalForm,
           clientNonPerson,
-          isStaff);
+          isStaff, crb);
+    }
+    private EnumOptionData crbStatus(Integer value){
+      CRBStatus status = CRBStatus.fromInt(value);
+      return new EnumOptionData(status.getValue().longValue(), status.getCode(), status.getDescription());
     }
   }
 
@@ -739,9 +751,12 @@ public class SelfServiceClientReadPlatformServiceImpl
           "c.firstname as firstname, c.middlename as middlename, c.lastname as lastname, ");
       builder.append("c.fullname as fullname, c.display_name as displayName, ");
       builder.append("c.mobile_no as mobileNo, ");
+      builder.append("c.nin_number as ninNumber, ");
+      builder.append("c.card_number as cardNumber, ");
       builder.append("c.is_staff as isStaff, ");
       builder.append("c.email_address as emailAddress, ");
       builder.append("c.date_of_birth as dateOfBirth, ");
+      builder.append("c.crb_verification_status as crbVerificationStatus, ");
       builder.append("c.gender_cv_id as genderId, ");
       builder.append("cv.code_value as genderValue, ");
       builder.append("c.client_type_cv_id as clienttypeId, ");
@@ -890,6 +905,11 @@ public class SelfServiceClientReadPlatformServiceImpl
       final CodeValueData mainBusinessLine =
           CodeValueData.instance(mainBusinessLineId, mainBusinessLineValue);
       final String remarks = rs.getString("remarks");
+      final String ninNumber = rs.getString("ninNumber");
+      final String cardNumber = rs.getString("cardNumber");
+
+      final Integer crbVerificationStatus = JdbcSupport.getInteger(rs, "crbVerificationStatus");
+      final EnumOptionData crb = crbStatus(crbVerificationStatus);
 
       final ClientNonPersonData clientNonPerson =
           new ClientNonPersonData(
@@ -926,6 +946,8 @@ public class SelfServiceClientReadPlatformServiceImpl
           displayName,
           externalId,
           mobileNo,
+          ninNumber,
+          cardNumber,
           emailAddress,
           dateOfBirth,
           gender,
@@ -941,7 +963,12 @@ public class SelfServiceClientReadPlatformServiceImpl
           classification,
           legalForm,
           clientNonPerson,
-          isStaff);
+          isStaff, crb);
+    }
+
+    private EnumOptionData crbStatus(Integer value){
+      CRBStatus status = CRBStatus.fromInt(value);
+      return new EnumOptionData(status.getValue().longValue(), status.getCode(), status.getDescription());
     }
   }
 }

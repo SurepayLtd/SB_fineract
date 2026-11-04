@@ -46,6 +46,7 @@ import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.domain.AbstractAuditableWithUTCDateTimeCustom;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.documentmanagement.domain.Image;
@@ -60,7 +61,10 @@ import org.apache.fineract.useradministration.domain.AppUser;
 @Getter
 @Setter
 @Table(name = "m_client", uniqueConstraints = { @UniqueConstraint(columnNames = { "account_no" }, name = "account_no_UNIQUE"), //
-        @UniqueConstraint(columnNames = { "mobile_no" }, name = "mobile_no_UNIQUE") })
+        @UniqueConstraint(columnNames = { "mobile_no" }, name = "mobile_no_UNIQUE"),
+        @UniqueConstraint(columnNames = { "nin_number" }, name = "nin_number_UNIQUE"),
+        @UniqueConstraint(columnNames = { "card_number" }, name = "card_number_UNIQUE"),
+})
 public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
     @Column(name = "account_no", length = 20, unique = true, nullable = false)
@@ -252,6 +256,18 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     @Column(name = "pin_requires_change")
     private boolean pinRequiresChange;
 
+    @Column(name = "nin_number", nullable = false, length = 14, unique = true)
+    private String nationalId;
+
+    @Column(name = "card_number", nullable = false, length = 9, unique = true)
+    private String cardNumber;
+
+    @Column(name = "crb_verification_status")
+    private Integer crbVerificationStatus;
+
+    @Column(name = "crb_verified_at")
+    private LocalDateTime crbVerifiedAt;
+
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "client", orphanRemoval = true, fetch = FetchType.LAZY)
     protected Set<ClientIdentifier> identifiers = new HashSet<>();
 
@@ -260,10 +276,10 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
             final LocalDate activationDate, final LocalDate officeJoiningDate, final ExternalId externalId, final String mobileNo,
             final String emailAddress, final Staff staff, final LocalDate submittedOnDate, final Long savingsProductId,
             final Long savingsAccountId, final LocalDate dateOfBirth, final CodeValue gender, final CodeValue clientType,
-            final CodeValue clientClassification, final Integer legalForm, final Boolean isStaff) {
+            final CodeValue clientClassification, final Integer legalForm, final Boolean isStaff, final String nationalId, final String cardNumber) {
         return new Client(currentUser, status, office, clientParentGroup, accountNo, firstname, middlename, lastname, fullname,
                 activationDate, officeJoiningDate, externalId, mobileNo, emailAddress, staff, submittedOnDate, savingsProductId,
-                savingsAccountId, dateOfBirth, gender, clientType, clientClassification, legalForm, isStaff);
+                savingsAccountId, dateOfBirth, gender, clientType, clientClassification, legalForm, isStaff, nationalId, cardNumber);
     }
 
     protected Client() {}
@@ -273,7 +289,7 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
             final LocalDate activationDate, final LocalDate officeJoiningDate, final ExternalId externalId, final String mobileNo,
             final String emailAddress, final Staff staff, final LocalDate submittedOnDate, final Long savingsProductId,
             final Long savingsAccountId, final LocalDate dateOfBirth, final CodeValue gender, final CodeValue clientType,
-            final CodeValue clientClassification, final Integer legalForm, final Boolean isStaff) {
+            final CodeValue clientClassification, final Integer legalForm, final Boolean isStaff, final String nationalId, final String cardNumber) {
 
         if (StringUtils.isBlank(accountNo)) {
             this.accountNumber = new RandomPasswordGenerator(19).generate();
@@ -338,7 +354,9 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
         this.clientClassification = clientClassification;
         this.setLegalForm(legalForm);
         this.isStaff = isStaff;
-
+        this.nationalId = nationalId;
+        this.cardNumber = cardNumber;
+        this.crbVerificationStatus = CRBStatus.NOT_STARTED.getValue();
         deriveDisplayName();
         validate();
     }
@@ -419,6 +437,10 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
         return ClientStatus.fromInt(this.status).isActive();
     }
 
+    public boolean isCrbPending() {
+        return ClientStatus.fromInt(this.status).isCrbPending();
+    }
+
     public boolean isClosed() {
         return ClientStatus.fromInt(this.status).isClosed();
     }
@@ -436,7 +458,7 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
     }
 
     public boolean isNotPending() {
-        return !isPending();
+        return !isPending() || !isCrbPending();
     }
 
     public boolean isPending() {
@@ -795,6 +817,39 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
         this.pinResetAt = LocalDateTime.now();
     }
 
+    public void markCrbVerificationPending() {
+
+        if ((!ClientStatus.CRB_PENDING.getValue().equals(this.status) && !ClientStatus.ACTIVE.getValue().equals(this.status))
+                || !CRBStatus.NOT_STARTED.getValue().equals(this.crbVerificationStatus)) {
+
+            throw new GeneralPlatformDomainRuleException("error.msg.client.crb.verification.not.awaiting", "Client is not awaiting CRB verification.");
+        }
+
+        this.crbVerificationStatus = CRBStatus.PENDING.getValue();
+        this.crbVerifiedAt = null;
+    }
+
+    public void markCrbVerified(final LocalDateTime verifiedAt) {
+
+        if (!CRBStatus.PENDING.getValue().equals(this.crbVerificationStatus)) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.crb.verification.not.pending",
+                    "Client is not awaiting CRB verification."
+            );
+        }
+
+        if (verifiedAt == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.crb.verification.date.required",
+                    "CRB verification date and time are required."
+            );
+        }
+
+        this.crbVerifiedAt = verifiedAt;
+        this.crbVerificationStatus = CRBStatus.VERIFIED.getValue();
+        if (ClientStatus.CRB_PENDING.getValue().equals(this.status)) {
+            this.status = ClientStatus.PENDING.getValue();
+        }
+    }
+
     public boolean canTransactViaUssd() {
         return this.momoPaymentActive && !this.pinBlocked;
     }
@@ -903,5 +958,45 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
 
     public void setPinRequiresChange(boolean pinRequiresChange) {
         this.pinRequiresChange = pinRequiresChange;
+    }
+
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    public void setAccountNumber(String accountNumber) {
+        this.accountNumber = accountNumber;
+    }
+
+    public String getNationalId() {
+        return nationalId;
+    }
+
+    public void setNationalId(String nationalId) {
+        this.nationalId = nationalId;
+    }
+
+    public String getCardNumber() {
+        return cardNumber;
+    }
+
+    public void setCardNumber(String cardNumber) {
+        this.cardNumber = cardNumber;
+    }
+
+    public Integer getCrbVerificationStatus() {
+        return crbVerificationStatus;
+    }
+
+    public void setCrbVerificationStatus(Integer crbVerificationStatus) {
+        this.crbVerificationStatus = crbVerificationStatus;
+    }
+
+    public LocalDateTime getCrbVerifiedAt() {
+        return crbVerifiedAt;
+    }
+
+    public void setCrbVerifiedAt(LocalDateTime crbVerifiedAt) {
+        this.crbVerifiedAt = crbVerifiedAt;
     }
 }

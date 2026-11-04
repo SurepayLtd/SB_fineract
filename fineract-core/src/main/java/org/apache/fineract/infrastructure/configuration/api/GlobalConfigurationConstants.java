@@ -93,6 +93,10 @@ public final class GlobalConfigurationConstants {
     public static final String ENABLE_SUREPAY_SELF_SERVICE = "enable-surepay-self-service";
     public static final String SEND_SMS_NOTIFICATION_WHEN_CHARGE_WAIVED = "send-sms-when-charge-waived";
     public static final String SEND_SMS_NOTIFICATION_WHEN_INTEREST_CREDITED = "send-sms-when-interest-credited";
+    public static final String ENABLE_SUREPAY_CRB = "enable-surepay-crb";
+    public static final String ENABLE_SUREPAY_CRB_VALIDATE_CLIENT_DETAILS = "enable-surepay-crb-validate-client-details";
+    public static final String ENABLE_SUREPAY_CRB_VALIDATE_NIN = "enable-surepay-crb-validate-nin";
+    public static final String ENABLE_SUREPAY_CRB_VALIDATE_PHONE = "enable-surepay-crb-validate-phone";
 
 
     private GlobalConfigurationConstants() {}

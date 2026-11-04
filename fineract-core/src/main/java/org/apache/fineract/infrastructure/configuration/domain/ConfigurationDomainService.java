@@ -152,4 +152,12 @@ public interface ConfigurationDomainService {
 
     Integer retrieveMaxLoginAttempts();
 
+    boolean isCRBEnabled();
+
+    boolean isCRBValidateDetailsEnabled();
+
+    boolean isCRBValidateNINEnabled();
+
+    boolean isCRBValidatePhoneEnabled();
+
 }

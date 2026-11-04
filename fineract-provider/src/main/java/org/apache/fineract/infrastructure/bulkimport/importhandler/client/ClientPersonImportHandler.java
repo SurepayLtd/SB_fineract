@@ -30,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.commands.domain.CommandWrapper;
 import org.apache.fineract.commands.service.CommandWrapperBuilder;
 import org.apache.fineract.commands.service.PortfolioCommandSourceWritePlatformService;
+import org.apache.fineract.infrastructure.bulkimport.constants.ClientEntityConstants;
 import org.apache.fineract.infrastructure.bulkimport.constants.ClientPersonConstants;
 import org.apache.fineract.infrastructure.bulkimport.constants.TemplatePopulateImportConstants;
 import org.apache.fineract.infrastructure.bulkimport.data.Count;
@@ -135,7 +136,8 @@ public class ClientPersonImportHandler implements ImportHandler {
         }
         Boolean isStaff = ImportHandlerUtils.readAsBoolean(ClientPersonConstants.IS_STAFF_COL, row);
         Boolean isMomoPaymentActive = ImportHandlerUtils.readAsBoolean(ClientPersonConstants.MOMO_PAYMENT_ACTIVE_COL, row);
-//        log.info("Momo Payment: {}", isMomoPaymentActive);
+        String ninNumber = ImportHandlerUtils.readAsString(ClientPersonConstants.NIN_NUMBER_COL, row);
+        String cardNumber = Objects.requireNonNull(ImportHandlerUtils.readAsLong(ClientPersonConstants.CARD_NUMBER_COL, row)).toString();
 
         AddressData addressDataObj = null;
         Collection<AddressData> addressList = null;
@@ -154,6 +156,7 @@ public class ClientPersonImportHandler implements ImportHandler {
             String addressLine2 = ImportHandlerUtils.readAsString(ClientPersonConstants.ADDRESS_LINE_2_COL, row);
             String addressLine3 = ImportHandlerUtils.readAsString(ClientPersonConstants.ADDRESS_LINE_3_COL, row);
             String city = ImportHandlerUtils.readAsString(ClientPersonConstants.CITY_COL, row);
+
 
             String postalCode = ImportHandlerUtils.readAsString(ClientPersonConstants.POSTAL_CODE_COL, row);
             Boolean isActiveAddress = ImportHandlerUtils.readAsBoolean(ClientPersonConstants.IS_ACTIVE_ADDRESS_COL, row);
@@ -183,7 +186,7 @@ public class ClientPersonImportHandler implements ImportHandler {
         }
         return ClientData.importClientPersonInstance(legalFormId, row.getRowNum(), firstName, lastName, middleName, submittedOn,
                 activationDate, active, externalId, officeId, staffId, mobileNo, dob, clientTypeId, genderId, clientClassificationId,
-                isStaff, addressList, locale, dateFormat, isMomoPaymentActive);
+                isStaff, addressList, locale, dateFormat, isMomoPaymentActive, ninNumber, cardNumber);
 
     }
 

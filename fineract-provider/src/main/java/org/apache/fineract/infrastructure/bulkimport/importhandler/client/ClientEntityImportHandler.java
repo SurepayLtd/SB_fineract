@@ -100,6 +100,9 @@ public class ClientEntityImportHandler implements ImportHandler {
             mobileNo = Objects.requireNonNull(ImportHandlerUtils.readAsLong(ClientEntityConstants.MOBILE_NO_COL, row)).toString();
         }
 
+        String ninNumber = ImportHandlerUtils.readAsString(ClientEntityConstants.NIN_NUMBER, row);
+        String cardNumber = Objects.requireNonNull(ImportHandlerUtils.readAsLong(ClientEntityConstants.CARD_NUMBER, row)).toString();
+
         String clientType = ImportHandlerUtils.readAsString(ClientEntityConstants.CLIENT_TYPE_COL, row);
         Long clientTypeId = null;
         if (clientType != null) {
@@ -191,7 +194,7 @@ public class ClientEntityImportHandler implements ImportHandler {
             addressList = new ArrayList<>(List.of(addressDataObj));
         }
         return ClientData.importClientEntityInstance(legalFormId, row.getRowNum(), name, officeId, clientTypeId, clientClassicationId,
-                staffId, active, activationDate, submittedOn, externalId, incorportionDate, mobileNo, clientNonPersonData, addressList,
+                staffId, active, activationDate, submittedOn, externalId, incorportionDate, mobileNo, ninNumber, cardNumber, clientNonPersonData, addressList,
                 locale, dateFormat);
     }
 

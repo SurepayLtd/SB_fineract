@@ -73,13 +73,7 @@ import org.apache.fineract.portfolio.account.service.AccountNumberGenerator;
 import org.apache.fineract.portfolio.address.service.AddressWritePlatformService;
 import org.apache.fineract.portfolio.client.api.ClientApiConstants;
 import org.apache.fineract.portfolio.client.data.ClientDataValidator;
-import org.apache.fineract.portfolio.client.domain.Client;
-import org.apache.fineract.portfolio.client.domain.ClientEnumerations;
-import org.apache.fineract.portfolio.client.domain.ClientNonPerson;
-import org.apache.fineract.portfolio.client.domain.ClientNonPersonRepositoryWrapper;
-import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
-import org.apache.fineract.portfolio.client.domain.ClientStatus;
-import org.apache.fineract.portfolio.client.domain.LegalForm;
+import org.apache.fineract.portfolio.client.domain.*;
 import org.apache.fineract.portfolio.client.exception.ClientActiveForUpdateException;
 import org.apache.fineract.portfolio.client.exception.ClientHasNoStaffException;
 import org.apache.fineract.portfolio.client.exception.ClientMustBePendingToBeDeletedException;
@@ -189,6 +183,14 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             final String mobileNo = command.stringValueOfParameterNamed("mobileNo");
             throw new PlatformDataIntegrityException("error.msg.client.duplicate.mobileNo",
                     "Client with mobileNo `" + mobileNo + "` already exists", "mobileNo", mobileNo);
+        }else if (realCause.getMessage().contains("nin_number")) {
+            final String ninNumber = command.stringValueOfParameterNamed("ninNumber");
+            throw new PlatformDataIntegrityException("error.msg.client.duplicate.ninNumber",
+                    "Client with ninNumber `" + ninNumber + "` already exists", "ninNumber", ninNumber);
+        }else if (realCause.getMessage().contains("card_number")) {
+            final String cardNumber = command.stringValueOfParameterNamed("cardNumber");
+            throw new PlatformDataIntegrityException("error.msg.client.duplicate.cardNumber",
+                    "Client with cardNumber `" + cardNumber + "` already exists", "cardNumber", cardNumber);
         }
 
         logAsErrorUnexpectedDataIntegrityException(dve);
@@ -199,179 +201,13 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
     @Transactional
     @Override
     public CommandProcessingResult createClient(final JsonCommand command) {
+        boolean crbEnabled = configurationDomainService.isCRBEnabled();
 
-        try {
-            final AppUser currentUser = this.context.authenticatedUser();
-
-            this.fromApiJsonDeserializer.validateForCreate(command.json());
-
-            final Boolean isAddressEnabled = configurationDomainService.isAddressEnabled();
-
-            final Long officeId = command.longValueOfParameterNamed(ClientApiConstants.officeIdParamName);
-
-            final Office clientOffice = this.officeRepositoryWrapper.findOneWithNotFoundDetection(officeId);
-
-            final Long groupId = command.longValueOfParameterNamed(ClientApiConstants.groupIdParamName);
-
-            Group clientParentGroup = null;
-            if (groupId != null) {
-                clientParentGroup = this.groupRepository.findById(groupId).orElseThrow(() -> new GroupNotFoundException(groupId));
-            }
-
-            Staff staff = null;
-            final Long staffId = command.longValueOfParameterNamed(ClientApiConstants.staffIdParamName);
-            if (staffId != null) {
-                staff = this.staffRepository.findByOfficeHierarchyWithNotFoundDetection(staffId, clientOffice.getHierarchy());
-            }
-
-            CodeValue gender = null;
-            final Long genderId = command.longValueOfParameterNamed(ClientApiConstants.genderIdParamName);
-            if (genderId != null) {
-                gender = this.codeValueRepository.findOneByCodeNameAndIdWithNotFoundDetection(ClientApiConstants.GENDER, genderId);
-            }
-
-            CodeValue clientType = null;
-            final Long clientTypeId = command.longValueOfParameterNamed(ClientApiConstants.clientTypeIdParamName);
-            if (clientTypeId != null) {
-                clientType = this.codeValueRepository.findOneByCodeNameAndIdWithNotFoundDetection(ClientApiConstants.CLIENT_TYPE,
-                        clientTypeId);
-            }
-
-            CodeValue clientClassification = null;
-            final Long clientClassificationId = command.longValueOfParameterNamed(ClientApiConstants.clientClassificationIdParamName);
-            if (clientClassificationId != null) {
-                clientClassification = this.codeValueRepository
-                        .findOneByCodeNameAndIdWithNotFoundDetection(ClientApiConstants.CLIENT_CLASSIFICATION, clientClassificationId);
-            }
-
-            final Long savingsProductId = command.longValueOfParameterNamed(ClientApiConstants.savingsProductIdParamName);
-            if (savingsProductId != null) {
-                this.savingsProductRepository.findById(savingsProductId)
-                        .orElseThrow(() -> new SavingsProductNotFoundException(savingsProductId));
-            }
-
-            boolean isEntity = false;
-            LegalForm legalForm = null;
-            final Integer legalFormParamValue = command.integerValueOfParameterNamed(ClientApiConstants.legalFormIdParamName);
-            if (legalFormParamValue != null) {
-                legalForm = LegalForm.fromInt(legalFormParamValue);
-                if (legalForm != null) {
-                    isEntity = legalForm.isEntity();
-                }
-            }
-            if (legalForm == null) {
-                legalForm = LegalForm.PERSON;
-            }
-
-            final String accountNo = command.stringValueOfParameterNamed(ClientApiConstants.accountNoParamName);
-            final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
-            final String emailAddress = command.stringValueOfParameterNamed(ClientApiConstants.emailAddressParamName);
-            final String firstname = command.stringValueOfParameterNamed(ClientApiConstants.firstnameParamName);
-            final String middlename = command.stringValueOfParameterNamed(ClientApiConstants.middlenameParamName);
-            final String lastname = command.stringValueOfParameterNamed(ClientApiConstants.lastnameParamName);
-            final String fullname = command.stringValueOfParameterNamed(ClientApiConstants.fullnameParamName);
-            final boolean isStaff = command.booleanPrimitiveValueOfParameterNamed(ClientApiConstants.isStaffParamName);
-            final LocalDate dataOfBirth = command.localDateValueOfParameterNamed(ClientApiConstants.dateOfBirthParamName);
-
-            ClientStatus status = ClientStatus.PENDING;
-            boolean active = false;
-            if (command.hasParameter("active")) {
-                active = command.booleanPrimitiveValueOfParameterNamed(ClientApiConstants.activeParamName);
-            }
-
-            LocalDate activationDate = null;
-            LocalDate officeJoiningDate = null;
-            if (active) {
-                status = ClientStatus.ACTIVE;
-                activationDate = command.localDateValueOfParameterNamed(ClientApiConstants.activationDateParamName);
-                officeJoiningDate = activationDate;
-            }
-
-            LocalDate submittedOnDate = DateUtils.getBusinessLocalDate();
-            if (command.hasParameter(ClientApiConstants.submittedOnDateParamName)) {
-                submittedOnDate = command.localDateValueOfParameterNamed(ClientApiConstants.submittedOnDateParamName);
-            }
-            if (active && DateUtils.isAfter(submittedOnDate, activationDate)) {
-                submittedOnDate = activationDate;
-            }
-            final Long savingsAccountId = null;
-
-            final ExternalId externalId = externalIdFactory.createFromCommand(command, ClientApiConstants.externalIdParamName);
-
-            String phone = validatePhone(mobileNo);
-
-            final Client newClient = Client.instance(currentUser, status, clientOffice, clientParentGroup, accountNo, firstname, middlename,
-                    lastname, fullname, activationDate, officeJoiningDate, externalId, phone, emailAddress, staff, submittedOnDate,
-                    savingsProductId, savingsAccountId, dataOfBirth, gender, clientType, clientClassification, legalForm.getValue(),
-                    isStaff);
-
-            this.clientRepository.saveAndFlush(newClient);
-            boolean rollbackTransaction = false;
-            if (newClient.isActive()) {
-                validateParentGroupRulesBeforeClientActivation(newClient);
-                runEntityDatatableCheck(newClient.getId(), newClient.getLegalForm());
-                final CommandWrapper commandWrapper = new CommandWrapperBuilder().activateClient(null).build();
-                rollbackTransaction = this.commandProcessingService.validateRollbackCommand(commandWrapper, currentUser);
-            }
-
-            this.clientRepository.saveAndFlush(newClient);
-            if (newClient.isAccountNumberRequiresAutoGeneration()) {
-                AccountNumberFormat accountNumberFormat = this.accountNumberFormatRepository.findByAccountType(EntityAccountType.CLIENT);
-                newClient.updateAccountNo(accountNumberGenerator.generate(newClient, accountNumberFormat));
-                this.clientRepository.saveAndFlush(newClient);
-            }
-
-            final Locale locale = command.extractLocale();
-            final DateTimeFormatter fmt = DateTimeFormatter.ofPattern(command.dateFormat()).withLocale(locale);
-            CommandProcessingResult result = openSavingsAccount(newClient, fmt);
-            if (result.getSavingsId() != null) {
-                this.clientRepository.saveAndFlush(newClient);
-            }
-
-            if (isEntity) {
-                extractAndCreateClientNonPerson(newClient, command);
-            }
-
-            if (isAddressEnabled) {
-                this.addressWritePlatformService.addNewClientAddress(newClient, command);
-            }
-
-            if (command.arrayOfParameterNamed("familyMembers") != null) {
-                this.clientFamilyMembersWritePlatformService.addClientFamilyMember(newClient, command);
-            }
-
-            if (command.parameterExists(ClientApiConstants.datatables)) {
-                this.entityDatatableChecksWritePlatformService.saveDatatables(StatusEnum.CREATE.getValue(), EntityTables.CLIENT.getName(),
-                        newClient.getId(), null, command.arrayOfParameterNamed(ClientApiConstants.datatables));
-            }
-
-            legalForm = LegalForm.fromInt(newClient.getLegalForm());
-            entityDatatableChecksWritePlatformService.runTheCheck(newClient.getId(), EntityTables.CLIENT.getName(),
-                    StatusEnum.CREATE.getValue(), EntityTables.CLIENT.getForeignKeyColumnNameOnDatatable(), legalForm.getLabel());
-            businessEventNotifierService.notifyPostBusinessEvent(new ClientCreateBusinessEvent(newClient));
-            if (newClient.isActive()) {
-                businessEventNotifierService.notifyPostBusinessEvent(new ClientActivateBusinessEvent(newClient));
-            }
-
-            return new CommandProcessingResultBuilder() //
-                    .withCommandId(command.commandId()) //
-                    .withEntityExternalId(newClient.getExternalId()) //
-                    .withOfficeId(clientOffice.getId()) //
-                    .withClientId(newClient.getId()) //
-                    .withGroupId(groupId) //
-                    .withEntityId(newClient.getId()) //
-                    .withSavingsId(result.getSavingsId())//
-                    .setRollbackTransaction(rollbackTransaction)//
-                    .setRollbackTransaction(result.isRollbackTransaction())//
-                    .build();
-        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
-            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
-            return CommandProcessingResult.empty();
-        } catch (final PersistenceException dve) {
-            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
-            handleDataIntegrityIssues(command, throwable, dve);
-            return CommandProcessingResult.empty();
+        if (crbEnabled){
+            return crbClientCreation(command);
         }
+        return normalClientCreation(command);
+
     }
 
     /**
@@ -456,6 +292,20 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 String phone = validatePhone(newValue);
                 changes.put(ClientApiConstants.mobileNoParamName, phone);
                 clientForUpdate.setMobileNo(StringUtils.defaultIfEmpty(phone, null));
+            }
+
+            if (command.isChangeInStringParameterNamed(ClientApiConstants.ninNoParamName, clientForUpdate.getNationalId())) {
+                final String newValue = command.stringValueOfParameterNamed(ClientApiConstants.ninNoParamName);
+                String nin = validateNin(newValue);
+                changes.put(ClientApiConstants.ninNoParamName, nin);
+                clientForUpdate.setNationalId(StringUtils.defaultIfEmpty(nin, null));
+            }
+
+            if (command.isChangeInStringParameterNamed(ClientApiConstants.cardNoParamName, clientForUpdate.getCardNumber())) {
+                final String newValue = command.stringValueOfParameterNamed(ClientApiConstants.cardNoParamName);
+                String cardNo = validateCardNo(newValue);
+                changes.put(ClientApiConstants.cardNoParamName, cardNo);
+                clientForUpdate.setCardNumber(StringUtils.defaultIfEmpty(cardNo, null));
             }
 
             if (command.isChangeInStringParameterNamed(ClientApiConstants.emailAddressParamName, clientForUpdate.getEmailAddress())) {
@@ -551,7 +401,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                 changes.put(ClientApiConstants.dateOfBirthParamName, valueAsInput);
                 changes.put(ClientApiConstants.dateFormatParamName, dateFormatAsInput);
                 changes.put(ClientApiConstants.localeParamName, localeAsInput);
-
+                validateDOB(command.localDateValueOfParameterNamed(ClientApiConstants.dateOfBirthParamName));
                 clientForUpdate.setDateOfBirth(command.localDateValueOfParameterNamed(ClientApiConstants.dateOfBirthParamName));
             }
 
@@ -1044,6 +894,8 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
     @Override
     public CommandProcessingResult reActivateClient(Long entityId, JsonCommand command) {
+        boolean isCrbEnabled = this.configurationDomainService.isCRBEnabled();
+
         final AppUser currentUser = this.context.authenticatedUser();
         this.fromApiJsonDeserializer.validateReactivate(command);
 
@@ -1058,7 +910,20 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             throw new InvalidClientStateTransitionException("reactivation", "date.cannot.before.client.closed.date", errorMessage,
                     reactivateDate, client.getClosureDate());
         }
-        client.reActivate(currentUser, reactivateDate);
+        if (isCrbEnabled){
+
+            Integer crbStatus = client.getCrbVerificationStatus();
+            if (crbStatus.equals(CRBStatus.PENDING.getValue()) || crbStatus.equals(CRBStatus.NOT_STARTED.getValue())){
+                client.setStatus(ClientStatus.CRB_PENDING.getValue());
+                client.setClosureDate(null);
+                client.setClosureReason(null);
+                client.setReactivateDate(reactivateDate);
+                client.setReactivatedBy(currentUser);
+            }
+
+        }else {
+            client.reActivate(currentUser, reactivateDate);
+        }
         this.clientRepository.saveAndFlush(client);
         return new CommandProcessingResultBuilder() //
                 .withCommandId(command.commandId()) //
@@ -1070,6 +935,7 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
     @Override
     public CommandProcessingResult undoRejection(Long entityId, JsonCommand command) {
+        boolean isCrbEnabled = this.configurationDomainService.isCRBEnabled();
         final AppUser currentUser = this.context.authenticatedUser();
         this.fromApiJsonDeserializer.validateUndoRejection(command);
 
@@ -1085,7 +951,18 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
                     undoRejectDate, client.getRejectedDate());
         }
 
-        client.reOpened(currentUser, undoRejectDate);
+        if (isCrbEnabled){
+
+            Integer crbStatus = client.getCrbVerificationStatus();
+            if (crbStatus.equals(CRBStatus.PENDING.getValue()) || crbStatus.equals(CRBStatus.NOT_STARTED.getValue())){
+                client.setStatus(ClientStatus.CRB_PENDING.getValue());
+                client.setReopenedBy(currentUser);
+                client.setReopenedDate(undoRejectDate);
+            }
+
+        }else {
+            client.reOpened(currentUser, undoRejectDate);
+        }
         this.clientRepository.saveAndFlush(client);
 
         return new CommandProcessingResultBuilder() //
@@ -1098,6 +975,8 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
     @Override
     public CommandProcessingResult undoWithdrawal(Long entityId, JsonCommand command) {
+        boolean isCrbEnabled = this.configurationDomainService.isCRBEnabled();
+
         final AppUser currentUser = this.context.authenticatedUser();
         this.fromApiJsonDeserializer.validateUndoWithDrawn(command);
 
@@ -1112,7 +991,18 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
             throw new InvalidClientStateTransitionException("reopened", "date.cannot.before.client.withdrawal.date", errorMessage,
                     undoWithdrawalDate, client.getWithdrawalDate());
         }
-        client.reOpened(currentUser, undoWithdrawalDate);
+
+        if (isCrbEnabled){
+            Integer crbStatus = client.getCrbVerificationStatus();
+            if (crbStatus.equals(CRBStatus.PENDING.getValue()) || crbStatus.equals(CRBStatus.NOT_STARTED.getValue())){
+                client.setStatus(ClientStatus.CRB_PENDING.getValue());
+                client.setReopenedBy(currentUser);
+                client.setReopenedDate(undoWithdrawalDate);
+            }
+
+        }else {
+            client.reOpened(currentUser, undoWithdrawalDate);
+        }
         this.clientRepository.saveAndFlush(client);
 
         return new CommandProcessingResultBuilder() //
@@ -1555,6 +1445,53 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
         }
     }
 
+    public String validateCardNo(final String cardNumber) {
+        if (cardNumber == null || cardNumber.trim().isEmpty()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.nationalId.validation.failed",
+                    "Card number is required.");
+        }
+
+        final String normalizedCardNumber = cardNumber.trim();
+
+        if (normalizedCardNumber.length() != 9 || !normalizedCardNumber.matches("\\d{9}")) {
+            throw new GeneralPlatformDomainRuleException("error.msg.nationalId.validation.failed",
+                    "Invalid card number. Card number must contain exactly 9 digits.");
+        }
+
+        return normalizedCardNumber;
+    }
+
+    public String validateNin(final String ninNumber) {
+        if (ninNumber == null || ninNumber.trim().isEmpty()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.nationalId.validation.failed", "NIN number is required.");
+        }
+
+        final String normalizedNin = ninNumber.trim().toUpperCase();
+
+        if (normalizedNin.length() < 3 || normalizedNin.length() > 14 || !(normalizedNin.startsWith("CM") || normalizedNin.startsWith("CF"))) {
+            throw new GeneralPlatformDomainRuleException(
+                    "error.msg.nationalId.validation.failed",
+                    "Invalid NIN number format. NIN must start with CM or CF and be between 3 and 14 characters.");
+        }
+
+        return normalizedNin;
+    }
+
+    public void validateDOB(final LocalDate dob) {
+
+        if (dob == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.date.of.birth.required", "Date of birth is required.");
+        }
+
+        if (dob.isAfter(LocalDate.now())) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.date.of.birth.in.future", "Date of birth cannot be in the future.");
+        }
+
+        if (dob.isBefore(LocalDate.of(1900, 1, 1))) {
+            throw new GeneralPlatformDomainRuleException("error.msg.client.date.of.birth.invalid", "Date of birth cannot be earlier than 1 January 1900.");
+        }
+    }
+
     public String validatePhone(final String phone) {
 
         if (phone == null || phone.trim().isEmpty()) {
@@ -1620,5 +1557,341 @@ public class ClientWritePlatformServiceJpaRepositoryImpl implements ClientWriteP
 
         }
 
+    }
+
+    public CommandProcessingResult normalClientCreation(JsonCommand command){
+
+        try {
+            final AppUser currentUser = this.context.authenticatedUser();
+
+            this.fromApiJsonDeserializer.validateForCreate(command.json());
+
+            final Boolean isAddressEnabled = configurationDomainService.isAddressEnabled();
+
+            final Long officeId = command.longValueOfParameterNamed(ClientApiConstants.officeIdParamName);
+
+            final Office clientOffice = this.officeRepositoryWrapper.findOneWithNotFoundDetection(officeId);
+
+            final Long groupId = command.longValueOfParameterNamed(ClientApiConstants.groupIdParamName);
+
+            Group clientParentGroup = null;
+            if (groupId != null) {
+                clientParentGroup = this.groupRepository.findById(groupId).orElseThrow(() -> new GroupNotFoundException(groupId));
+            }
+
+            Staff staff = null;
+            final Long staffId = command.longValueOfParameterNamed(ClientApiConstants.staffIdParamName);
+            if (staffId != null) {
+                staff = this.staffRepository.findByOfficeHierarchyWithNotFoundDetection(staffId, clientOffice.getHierarchy());
+            }
+
+            CodeValue gender = null;
+            final Long genderId = command.longValueOfParameterNamed(ClientApiConstants.genderIdParamName);
+            if (genderId != null) {
+                gender = this.codeValueRepository.findOneByCodeNameAndIdWithNotFoundDetection(ClientApiConstants.GENDER, genderId);
+            }
+
+            CodeValue clientType = null;
+            final Long clientTypeId = command.longValueOfParameterNamed(ClientApiConstants.clientTypeIdParamName);
+            if (clientTypeId != null) {
+                clientType = this.codeValueRepository.findOneByCodeNameAndIdWithNotFoundDetection(ClientApiConstants.CLIENT_TYPE,
+                        clientTypeId);
+            }
+
+            CodeValue clientClassification = null;
+            final Long clientClassificationId = command.longValueOfParameterNamed(ClientApiConstants.clientClassificationIdParamName);
+            if (clientClassificationId != null) {
+                clientClassification = this.codeValueRepository
+                        .findOneByCodeNameAndIdWithNotFoundDetection(ClientApiConstants.CLIENT_CLASSIFICATION, clientClassificationId);
+            }
+
+            final Long savingsProductId = command.longValueOfParameterNamed(ClientApiConstants.savingsProductIdParamName);
+            if (savingsProductId != null) {
+                this.savingsProductRepository.findById(savingsProductId)
+                        .orElseThrow(() -> new SavingsProductNotFoundException(savingsProductId));
+            }
+
+            boolean isEntity = false;
+            LegalForm legalForm = null;
+            final Integer legalFormParamValue = command.integerValueOfParameterNamed(ClientApiConstants.legalFormIdParamName);
+            if (legalFormParamValue != null) {
+                legalForm = LegalForm.fromInt(legalFormParamValue);
+                if (legalForm != null) {
+                    isEntity = legalForm.isEntity();
+                }
+            }
+            if (legalForm == null) {
+                legalForm = LegalForm.PERSON;
+            }
+
+            final String accountNo = command.stringValueOfParameterNamed(ClientApiConstants.accountNoParamName);
+            final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
+            final String emailAddress = command.stringValueOfParameterNamed(ClientApiConstants.emailAddressParamName);
+            final String firstname = command.stringValueOfParameterNamed(ClientApiConstants.firstnameParamName);
+            final String middlename = command.stringValueOfParameterNamed(ClientApiConstants.middlenameParamName);
+            final String lastname = command.stringValueOfParameterNamed(ClientApiConstants.lastnameParamName);
+            final String fullname = command.stringValueOfParameterNamed(ClientApiConstants.fullnameParamName);
+            final boolean isStaff = command.booleanPrimitiveValueOfParameterNamed(ClientApiConstants.isStaffParamName);
+            final LocalDate dataOfBirth = command.localDateValueOfParameterNamed(ClientApiConstants.dateOfBirthParamName);
+            final String ninNumber = command.stringValueOfParameterNamed(ClientApiConstants.ninNoParamName);
+            final String cardNumber = command.stringValueOfParameterNamed(ClientApiConstants.cardNoParamName);
+
+            ClientStatus status = ClientStatus.PENDING;
+            boolean active = false;
+            if (command.hasParameter("active")) {
+                active = command.booleanPrimitiveValueOfParameterNamed(ClientApiConstants.activeParamName);
+            }
+
+            LocalDate activationDate = null;
+            LocalDate officeJoiningDate = null;
+            if (active) {
+                status = ClientStatus.ACTIVE;
+                activationDate = command.localDateValueOfParameterNamed(ClientApiConstants.activationDateParamName);
+                officeJoiningDate = activationDate;
+            }
+
+            LocalDate submittedOnDate = DateUtils.getBusinessLocalDate();
+            if (command.hasParameter(ClientApiConstants.submittedOnDateParamName)) {
+                submittedOnDate = command.localDateValueOfParameterNamed(ClientApiConstants.submittedOnDateParamName);
+            }
+            if (active && DateUtils.isAfter(submittedOnDate, activationDate)) {
+                submittedOnDate = activationDate;
+            }
+            final Long savingsAccountId = null;
+
+            final ExternalId externalId = externalIdFactory.createFromCommand(command, ClientApiConstants.externalIdParamName);
+
+            String phone = validatePhone(mobileNo);
+
+            String validNin = validateNin(ninNumber);
+            String validCard = null;
+
+            if (legalForm.isPerson()) {
+                validCard = validateCardNo(cardNumber);
+                validateDOB(dataOfBirth);
+            }
+
+            final Client newClient = Client.instance(currentUser, status, clientOffice, clientParentGroup, accountNo, firstname, middlename,
+                    lastname, fullname, activationDate, officeJoiningDate, externalId, phone, emailAddress, staff, submittedOnDate,
+                    savingsProductId, savingsAccountId, dataOfBirth, gender, clientType, clientClassification, legalForm.getValue(),
+                    isStaff, validNin, validCard);
+
+            this.clientRepository.saveAndFlush(newClient);
+            boolean rollbackTransaction = false;
+            if (newClient.isActive()) {
+                validateParentGroupRulesBeforeClientActivation(newClient);
+                runEntityDatatableCheck(newClient.getId(), newClient.getLegalForm());
+                final CommandWrapper commandWrapper = new CommandWrapperBuilder().activateClient(null).build();
+                rollbackTransaction = this.commandProcessingService.validateRollbackCommand(commandWrapper, currentUser);
+            }
+
+            this.clientRepository.saveAndFlush(newClient);
+            if (newClient.isAccountNumberRequiresAutoGeneration()) {
+                AccountNumberFormat accountNumberFormat = this.accountNumberFormatRepository.findByAccountType(EntityAccountType.CLIENT);
+                newClient.updateAccountNo(accountNumberGenerator.generate(newClient, accountNumberFormat));
+                this.clientRepository.saveAndFlush(newClient);
+            }
+
+            final Locale locale = command.extractLocale();
+            final DateTimeFormatter fmt = DateTimeFormatter.ofPattern(command.dateFormat()).withLocale(locale);
+            CommandProcessingResult result = openSavingsAccount(newClient, fmt);
+            if (result.getSavingsId() != null) {
+                this.clientRepository.saveAndFlush(newClient);
+            }
+
+            if (isEntity) {
+                extractAndCreateClientNonPerson(newClient, command);
+            }
+
+            if (isAddressEnabled) {
+                this.addressWritePlatformService.addNewClientAddress(newClient, command);
+            }
+
+            if (command.arrayOfParameterNamed("familyMembers") != null) {
+                this.clientFamilyMembersWritePlatformService.addClientFamilyMember(newClient, command);
+            }
+
+            if (command.parameterExists(ClientApiConstants.datatables)) {
+                this.entityDatatableChecksWritePlatformService.saveDatatables(StatusEnum.CREATE.getValue(), EntityTables.CLIENT.getName(),
+                        newClient.getId(), null, command.arrayOfParameterNamed(ClientApiConstants.datatables));
+            }
+
+            legalForm = LegalForm.fromInt(newClient.getLegalForm());
+            entityDatatableChecksWritePlatformService.runTheCheck(newClient.getId(), EntityTables.CLIENT.getName(),
+                    StatusEnum.CREATE.getValue(), EntityTables.CLIENT.getForeignKeyColumnNameOnDatatable(), legalForm.getLabel());
+            businessEventNotifierService.notifyPostBusinessEvent(new ClientCreateBusinessEvent(newClient));
+            if (newClient.isActive()) {
+                businessEventNotifierService.notifyPostBusinessEvent(new ClientActivateBusinessEvent(newClient));
+            }
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityExternalId(newClient.getExternalId()) //
+                    .withOfficeId(clientOffice.getId()) //
+                    .withClientId(newClient.getId()) //
+                    .withGroupId(groupId) //
+                    .withEntityId(newClient.getId()) //
+                    .withSavingsId(result.getSavingsId())//
+                    .setRollbackTransaction(rollbackTransaction)//
+                    .setRollbackTransaction(result.isRollbackTransaction())//
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return CommandProcessingResult.empty();
+        }
+
+    }
+
+    public CommandProcessingResult crbClientCreation(JsonCommand command){
+        try {
+            final AppUser currentUser = this.context.authenticatedUser();
+
+            this.fromApiJsonDeserializer.validateForCreate(command.json());
+
+            final Boolean isAddressEnabled = configurationDomainService.isAddressEnabled();
+
+            final Long officeId = command.longValueOfParameterNamed(ClientApiConstants.officeIdParamName);
+
+            final Office clientOffice = this.officeRepositoryWrapper.findOneWithNotFoundDetection(officeId);
+
+            final Long groupId = command.longValueOfParameterNamed(ClientApiConstants.groupIdParamName);
+
+            Group clientParentGroup = null;
+            if (groupId != null) {
+                clientParentGroup = this.groupRepository.findById(groupId).orElseThrow(() -> new GroupNotFoundException(groupId));
+            }
+
+            Staff staff = null;
+            final Long staffId = command.longValueOfParameterNamed(ClientApiConstants.staffIdParamName);
+            if (staffId != null) {
+                staff = this.staffRepository.findByOfficeHierarchyWithNotFoundDetection(staffId, clientOffice.getHierarchy());
+            }
+
+            CodeValue gender = null;
+            final Long genderId = command.longValueOfParameterNamed(ClientApiConstants.genderIdParamName);
+            if (genderId != null) {
+                gender = this.codeValueRepository.findOneByCodeNameAndIdWithNotFoundDetection(ClientApiConstants.GENDER, genderId);
+            }
+
+            CodeValue clientType = null;
+            final Long clientTypeId = command.longValueOfParameterNamed(ClientApiConstants.clientTypeIdParamName);
+            if (clientTypeId != null) {
+                clientType = this.codeValueRepository.findOneByCodeNameAndIdWithNotFoundDetection(ClientApiConstants.CLIENT_TYPE,
+                        clientTypeId);
+            }
+
+            CodeValue clientClassification = null;
+            final Long clientClassificationId = command.longValueOfParameterNamed(ClientApiConstants.clientClassificationIdParamName);
+            if (clientClassificationId != null) {
+                clientClassification = this.codeValueRepository
+                        .findOneByCodeNameAndIdWithNotFoundDetection(ClientApiConstants.CLIENT_CLASSIFICATION, clientClassificationId);
+            }
+
+            boolean isEntity = false;
+            LegalForm legalForm = null;
+            final Integer legalFormParamValue = command.integerValueOfParameterNamed(ClientApiConstants.legalFormIdParamName);
+            if (legalFormParamValue != null) {
+                legalForm = LegalForm.fromInt(legalFormParamValue);
+                if (legalForm != null) {
+                    isEntity = legalForm.isEntity();
+                }
+            }
+            if (legalForm == null) {
+                legalForm = LegalForm.PERSON;
+            }
+
+            final String accountNo = command.stringValueOfParameterNamed(ClientApiConstants.accountNoParamName);
+            final String mobileNo = command.stringValueOfParameterNamed(ClientApiConstants.mobileNoParamName);
+            final String emailAddress = command.stringValueOfParameterNamed(ClientApiConstants.emailAddressParamName);
+            final String firstname = command.stringValueOfParameterNamed(ClientApiConstants.firstnameParamName);
+            final String middlename = command.stringValueOfParameterNamed(ClientApiConstants.middlenameParamName);
+            final String lastname = command.stringValueOfParameterNamed(ClientApiConstants.lastnameParamName);
+            final String fullname = command.stringValueOfParameterNamed(ClientApiConstants.fullnameParamName);
+            final boolean isStaff = command.booleanPrimitiveValueOfParameterNamed(ClientApiConstants.isStaffParamName);
+            final LocalDate dataOfBirth = command.localDateValueOfParameterNamed(ClientApiConstants.dateOfBirthParamName);
+            final String ninNumber = command.stringValueOfParameterNamed(ClientApiConstants.ninNoParamName);
+            final String cardNumber = command.stringValueOfParameterNamed(ClientApiConstants.cardNoParamName);
+
+            ClientStatus status = null;
+
+            if (legalForm.isPerson()) {
+                status = ClientStatus.CRB_PENDING;
+            }else {
+                status = ClientStatus.PENDING;
+            }
+
+
+            LocalDate submittedOnDate = DateUtils.getBusinessLocalDate();
+            if (command.hasParameter(ClientApiConstants.submittedOnDateParamName)) {
+                submittedOnDate = command.localDateValueOfParameterNamed(ClientApiConstants.submittedOnDateParamName);
+            }
+
+            final ExternalId externalId = externalIdFactory.createFromCommand(command, ClientApiConstants.externalIdParamName);
+
+            String phone = validatePhone(mobileNo);
+
+            String validNin = validateNin(ninNumber);
+            String validCard = null;
+
+            if (legalForm.isPerson()) {
+                validCard = validateCardNo(cardNumber);
+                validateDOB(dataOfBirth);
+            }
+
+            final Client newClient = Client.instance(currentUser, status, clientOffice, clientParentGroup, accountNo, firstname, middlename,
+                    lastname, fullname, null, null, externalId, phone, emailAddress, staff, submittedOnDate,
+                    null, null, dataOfBirth, gender, clientType, clientClassification, legalForm.getValue(),
+                    isStaff, validNin, validCard);
+
+
+            this.clientRepository.saveAndFlush(newClient);
+            if (newClient.isAccountNumberRequiresAutoGeneration()) {
+                AccountNumberFormat accountNumberFormat = this.accountNumberFormatRepository.findByAccountType(EntityAccountType.CLIENT);
+                newClient.updateAccountNo(accountNumberGenerator.generate(newClient, accountNumberFormat));
+                this.clientRepository.saveAndFlush(newClient);
+            }
+
+            if (isEntity) {
+                extractAndCreateClientNonPerson(newClient, command);
+            }
+
+            if (isAddressEnabled) {
+                this.addressWritePlatformService.addNewClientAddress(newClient, command);
+            }
+
+            if (command.arrayOfParameterNamed("familyMembers") != null) {
+                this.clientFamilyMembersWritePlatformService.addClientFamilyMember(newClient, command);
+            }
+
+            if (command.parameterExists(ClientApiConstants.datatables)) {
+                this.entityDatatableChecksWritePlatformService.saveDatatables(StatusEnum.CREATE.getValue(), EntityTables.CLIENT.getName(),
+                        newClient.getId(), null, command.arrayOfParameterNamed(ClientApiConstants.datatables));
+            }
+
+            legalForm = LegalForm.fromInt(newClient.getLegalForm());
+            entityDatatableChecksWritePlatformService.runTheCheck(newClient.getId(), EntityTables.CLIENT.getName(),
+                    StatusEnum.CREATE.getValue(), EntityTables.CLIENT.getForeignKeyColumnNameOnDatatable(), legalForm.getLabel());
+            businessEventNotifierService.notifyPostBusinessEvent(new ClientCreateBusinessEvent(newClient));
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityExternalId(newClient.getExternalId()) //
+                    .withOfficeId(clientOffice.getId()) //
+                    .withClientId(newClient.getId()) //
+                    .withGroupId(groupId) //
+                    .withEntityId(newClient.getId()) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return CommandProcessingResult.empty();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return CommandProcessingResult.empty();
+        }
     }
 }

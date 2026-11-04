@@ -4,8 +4,8 @@ import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRu
 
 public enum CreditEntityType {
 
-    INDIVIDUAL(1, "entityType.Individual", "Individual"),
-    NON_INDIVIDUAL(2, "entityType.nonIndividual", "Non-Individual");
+    INDIVIDUAL(0, "entityType.Individual", "Individual"),
+    NON_INDIVIDUAL(1, "entityType.nonIndividual", "Non-Individual");
 
     private final Integer value;
     private final String code;

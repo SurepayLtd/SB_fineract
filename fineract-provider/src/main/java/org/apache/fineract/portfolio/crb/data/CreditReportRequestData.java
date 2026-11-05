@@ -17,9 +17,9 @@ public class CreditReportRequestData implements Serializable {
 
     private String enquiryId;
 
-    private Long individual_id;
+    private Integer individual_id;
 
-    private Long non_individual_id;
+    private Integer non_individual_id;
 
     private String format;
 }

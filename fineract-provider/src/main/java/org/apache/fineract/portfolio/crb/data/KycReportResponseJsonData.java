@@ -12,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @Accessors(chain = true)
 @AllArgsConstructor
-public class KycResponseJsonData implements Serializable {
+public class KycReportResponseJsonData implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -111,9 +111,9 @@ public class KycResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private List<CreditReportJsonResponseData.PhoneNumberData> Phone_Numbers;
+        private List<PhoneNumberData> Phone_Numbers;
 
-        private List<CreditReportJsonResponseData.EmailData> Emails;
+        private List<EmailData> Emails;
     }
 
     @Data

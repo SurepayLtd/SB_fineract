@@ -15,13 +15,13 @@ public class CreditReportGenerationData implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private String enquiryId;
+    private String enquiry_id;
 
-    private Long individualId;
+    private Integer Individual_id;
 
-    private Long nonIndividualId;
+    private Integer nonindividual_id;
 
-    private String accountId;
+    private String account_id;
 
     private String reference;
 

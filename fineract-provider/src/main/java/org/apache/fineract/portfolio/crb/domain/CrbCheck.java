@@ -67,6 +67,18 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "individual_id")
+    private Integer individualId;
+
+    @Column(name = "non_individual_id")
+    private Integer nonIndividualId;
+
+    @Column(name = "report_token")
+    private String reportToken;
+
+    @Column(name = "report_account_id")
+    private String reportAccountId;
+
 
     @PrePersist()
     public void onCreate(){
@@ -76,7 +88,7 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
     protected CrbCheck(){}
 
     public CrbCheck(Client client, CrbConsent consent, Integer validationType, Integer requestType, String providerValidationId, String providerReference, BigDecimal cost, String currency, String requestPayload, String responsePayload, String errorMessage, String message,
-                    LocalDateTime completedAt) {
+                    LocalDateTime completedAt, Integer individualId, Integer nonIndividualId) {
         this.client = client;
         this.consent = consent;
         this.validationType = validationType;
@@ -91,10 +103,12 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
         this.errorMessage = errorMessage;
         this.message = message;
         this.completedAt = completedAt;
+        this.individualId = individualId;
+        this.nonIndividualId = nonIndividualId;
     }
 
     public static CrbCheck create(final Client client, final CrbConsent consent, final Integer type, final Integer requestType) {
-        return new CrbCheck(client, consent, type, requestType, null, null, null, null, null, null, null, null, null);
+        return new CrbCheck(client, consent, type, requestType, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public void complete(final Integer status, final String validationId, final String reference,
@@ -109,5 +123,20 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
         this.message = message;
         this.errorMessage = errorMessage;
         this.completedAt = completedAt;
+    }
+
+    public void creditCheck(final Integer status, final String validationId, final String reference,
+                         final BigDecimal cost, final String responsePayload, final LocalDateTime completedAt,
+                            final Integer individualId, final Integer nonIndividualId, final String reportToken, final String reportAccountId) {
+        this.status = status;
+        this.providerValidationId = validationId;
+        this.providerReference = reference;
+        this.cost = cost;
+        this.responsePayload = responsePayload;
+        this.completedAt = completedAt;
+        this.individualId = individualId;
+        this.nonIndividualId = nonIndividualId;
+        this.reportToken = reportToken;
+        this.reportAccountId = reportAccountId;
     }
 }

@@ -386,4 +386,13 @@
             <column name="text" value="I consent to the verification of my identity and personal information through the Credit Reference Bureau for the purposes of this application."/>
         </insert>
     </changeSet>
+    
+    <changeSet id="crbcheck_extra" author="victor">
+        <insert tableName="m_crb_check">
+            <column name="individual_id" type="INT"/>
+            <column name="non_individual_id" type="INT"/>
+            <column name="report_token" type="VARCHAR(500)"/>
+            <column name="report_account_id" type="VARCHAR(500)"/>
+        </insert>
+    </changeSet>
 </databaseChangeLog>

@@ -81,7 +81,7 @@ public class CreditEnquiryResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Long individual_id;
+        private Integer individual_id;
         private String image;
         private String surname;
         private String forename1;
@@ -101,7 +101,7 @@ public class CreditEnquiryResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Long non_individual_id;
+        private Integer non_individual_id;
         private String business_name;
         private String trading_name;
         private String business_type;

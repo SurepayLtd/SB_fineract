@@ -597,4 +597,30 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
     public boolean isCRBValidatePhoneEnabled() {
         return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_VALIDATE_PHONE).isEnabled();
     }
+
+
+    @Override
+    public boolean isCrbKycEnquiryEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_KYC_ENQUIRY).isEnabled();
+    }
+
+    @Override
+    public boolean isCrbCreditEnquiryEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_CREDIT_ENQUIRY).isEnabled();
+    }
+
+    @Override
+    public boolean isCrbCreditScoreEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_CREDIT_SCORE).isEnabled();
+    }
+
+    @Override
+    public boolean isCrbKycReportEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_KYC_REPORT).isEnabled();
+    }
+
+    @Override
+    public boolean isCrbCreditReportEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_CREDIT_REPORT).isEnabled();
+    }
 }

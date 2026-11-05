@@ -94,15 +94,47 @@ public final class CrbDataValidator {
 
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
         final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
-                .resource(CrbApiConstants.CRB_RESOURCE_NAME);
+                .resource(CrbApiConstants.CRB_CHECK_RESOURCE_NAME);
 
         final JsonElement element = command.parsedJson();
 
         final Long crbValidationType = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbValidationTypeParamName, element);
         baseDataValidator.reset().parameter(CrbApiConstants.crbValidationTypeParamName).value(crbValidationType).ignoreIfNull().notExceedingLengthOf(5);
 
+
+        throwExceptionIfValidationWarningsExist(dataValidationErrors);
+    }
+
+    public void validateCrbCredit(final JsonCommand command){
+        final String json = command.json();
+
+        if (StringUtils.isBlank(json)) {
+            throw new InvalidJsonException();
+        }
+
+        final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
+        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, CrbApiConstants.CRB_CREDIT_CHECK_REQUEST_DATA_PARAMETERS);
+
+        final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
+                .resource(CrbApiConstants.CRB_CREDIT_RESOURCE_NAME);
+
+        final JsonElement element = command.parsedJson();
+
+        final Long crbCreditFormat = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbCreditFormatParamName, element);
+        baseDataValidator.reset().parameter(CrbApiConstants.crbCreditFormatParamName).value(crbCreditFormat).ignoreIfNull().notExceedingLengthOf(5);
+
         final Long crbRequestType = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbRequestTypeParamName, element);
         baseDataValidator.reset().parameter(CrbApiConstants.crbRequestTypeParamName).value(crbRequestType).ignoreIfNull().notExceedingLengthOf(5);
+
+        final Long crbReportType = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbReportTypeParamName, element);
+        baseDataValidator.reset().parameter(CrbApiConstants.crbReportTypeParamName).value(crbReportType).ignoreIfNull().notExceedingLengthOf(5);
+
+        final Long crbReportFormat = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbReportFormatParamName, element);
+        baseDataValidator.reset().parameter(CrbApiConstants.crbReportFormatParamName).value(crbReportFormat).ignoreIfNull().notExceedingLengthOf(5);
+
+        final Long crbReportAction = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbReportActionFormatParamName, element);
+        baseDataValidator.reset().parameter(CrbApiConstants.crbReportActionFormatParamName).value(crbReportAction).ignoreIfNull().notExceedingLengthOf(5);
 
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
     }

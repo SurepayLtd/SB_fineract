@@ -22,4 +22,10 @@ public class CrbProviderResult {
     private String currency;
     private String responsePayload;
     private String requestPayload;
+    private Integer individualId;
+    private Integer nonIndividualId;
+    private String reportToken;
+    private String reportAccountId;
+    private String reportUrl;
+
 }

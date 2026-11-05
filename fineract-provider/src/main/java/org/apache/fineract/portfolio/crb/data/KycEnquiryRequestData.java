@@ -15,7 +15,7 @@ public class KycEnquiryRequestData implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private String identifier, entity_type_category, identification_type, phone_number, type, client_consented, pi_code;
+    private String identifier, identification_type, reason, client_consented, pi_code;
     private Integer entity_type;
 
 }

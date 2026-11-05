@@ -53,4 +53,57 @@
         </insert>
 
     </changeSet>
+
+    <changeSet id="crb-loan-configs" author="victor">
+
+        <insert tableName="c_configuration">
+            <column name="name" value="enable-surepay-crb-kyc-enquiry"/>
+            <column name="value" valueNumeric="5"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Enables SurePay CRB KYC ENQUIRY."/>
+        </insert>
+
+        <insert tableName="c_configuration">
+            <column name="name" value="enable-surepay-crb-kyc-report"/>
+            <column name="value" valueNumeric="5"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Enables SurePay CRB KYC REPORT."/>
+        </insert>
+
+        <insert tableName="c_configuration">
+            <column name="name" value="enable-surepay-crb-credit-enquiry"/>
+            <column name="value" valueNumeric="5"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Enables SurePay CRB Credit Enquiry."/>
+        </insert>
+
+        <insert tableName="c_configuration">
+            <column name="name" value="enable-surepay-crb-credit-report"/>
+            <column name="value" valueNumeric="5"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Enables SurePay CRB Credit Reports."/>
+        </insert>
+
+        <insert tableName="c_configuration">
+            <column name="name" value="enable-surepay-crb-credit-score"/>
+            <column name="value" valueNumeric="5"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Enables SurePay CRB Credit Scores."/>
+        </insert>
+    </changeSet>
 </databaseChangeLog>

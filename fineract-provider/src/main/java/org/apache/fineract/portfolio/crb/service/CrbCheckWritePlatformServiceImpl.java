@@ -44,9 +44,9 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
         this.fromApiJsonDeserializer.validateCrbCheck(command);
 
-        Integer type = command.integerValueOfParameterNamed("crbValidationType");
+        Integer type = command.integerValueOfParameterNamed(CrbApiConstants.crbValidationTypeParamName);
 
-        Integer request = command.integerValueOfParameterNamed("crbRequestType");
+        Integer request = command.integerValueOfParameterNamed(CrbApiConstants.crbRequestTypeParamName);
 
         final CrbConsent crbConsent = this.crbConsentRepository.findVerifiedClient(client.getId(), ConsentStatus.VERIFIED.getValue());
 
@@ -138,7 +138,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
             }
 
             return new CommandProcessingResultBuilder()
-                    .withEntityId(crbConsent.getId())
+                    .withEntityId(crbCheck.getId())
                     .withClientId(client.getId())
                     .build();
 

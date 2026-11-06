@@ -33,8 +33,10 @@ public class CrbApiConstants {
     public static final String crbRequestTypeParamName= "crbRequestType";
     public static final String crbReportTypeParamName= "crbReportType";
     public static final String crbReportFormatParamName= "crbReportFormat";
-    public static final String crbCreditFormatParamName= "crbCreditFormat";
+    public static final String crbCreditFormatParamName= "crbCreditValidationType";
     public static final String crbReportActionFormatParamName= "crbReportAction";
+    public static final String crbCreditScoreTypeActionFormatParamName= "crbCreditScoreType";
+
 
 
 
@@ -46,6 +48,12 @@ public class CrbApiConstants {
     public static final String CRB_REVOKE_REASON = "CrbRevokeReason";
     public static final String revokeReasonIdParamName = "revokeReasonId";
 
+    public static final String CRB_ENQUIRY_REASON = "CrbEnquiryReason";
+    public static final String enquiryReasonIdParamName = "enquiryReasonId";
+    public static final String entityCategoryIdParamName = "entityCategoryId";
+    public static final String CRB_SCORE_CATEGORY = "Main Business Line";
+
+
 
 
 
@@ -53,7 +61,7 @@ public class CrbApiConstants {
 
     public static final Set<String> CRB_CREATE_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbValidationTypeParamName, crbRequestTypeParamName));
 
-    public static final Set<String> CRB_CREDIT_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbValidationTypeParamName, crbReportTypeParamName, crbReportFormatParamName));
+    public static final Set<String> CRB_CREDIT_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbValidationTypeParamName, crbReportTypeParamName, crbCreditScoreTypeActionFormatParamName, entityCategoryIdParamName, crbReportFormatParamName, enquiryReasonIdParamName));
 
 
     public static final Set<String> VALIDATE_OTP_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, otpCodeParamName));

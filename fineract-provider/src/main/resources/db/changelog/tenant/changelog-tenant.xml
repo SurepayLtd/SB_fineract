@@ -202,4 +202,5 @@
     <include file="parts/mambo_sms_implementation.xml" relativeToChangelogFile="true"/>
     <include file="parts/sms_transactions.xml" relativeToChangelogFile="true"/>
     <include file="parts/Gnugrid.xml" relativeToChangelogFile="true"/>
+    <include file="parts/gnugrid-loans" relativeToChangelogFile="true"/>
 </databaseChangeLog>

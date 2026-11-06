@@ -6,7 +6,7 @@ public enum CreditValidationType {
 
     KYC_ENQUIRY(100, "creditValidationType.kycEnquiry", "KYC Enquiry"),
     CREDIT_ENQUIRY(200, "creditValidationType.creditEnquiry", "Credit Enquiry"),
-    CREDIT_SCORE(300, "creditValidationType.creditReport", "Credit Score");
+    CREDIT_SCORE(300, "creditValidationType.creditScore", "Credit Score");
 
     private final Integer value;
     private final String code;

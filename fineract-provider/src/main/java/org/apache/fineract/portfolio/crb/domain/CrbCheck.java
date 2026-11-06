@@ -76,8 +76,8 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
     @Column(name = "report_token")
     private String reportToken;
 
-    @Column(name = "report_account_id")
-    private String reportAccountId;
+    @Column(name = "report_url")
+    private String reportUrl;
 
 
     @PrePersist()
@@ -127,7 +127,8 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
 
     public void creditCheck(final Integer status, final String validationId, final String reference,
                          final BigDecimal cost, final String responsePayload, final LocalDateTime completedAt,
-                            final Integer individualId, final Integer nonIndividualId, final String reportToken, final String reportAccountId) {
+                            final Integer individualId, final Integer nonIndividualId, final String reportToken,
+                            final String reportUrl) {
         this.status = status;
         this.providerValidationId = validationId;
         this.providerReference = reference;
@@ -137,6 +138,6 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
         this.individualId = individualId;
         this.nonIndividualId = nonIndividualId;
         this.reportToken = reportToken;
-        this.reportAccountId = reportAccountId;
+        this.reportUrl = reportUrl;
     }
 }

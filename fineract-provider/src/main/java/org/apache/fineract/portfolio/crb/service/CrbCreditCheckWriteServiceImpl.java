@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.fineract.infrastructure.codes.domain.CodeValue;
+import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
@@ -14,6 +16,8 @@ import org.apache.fineract.portfolio.crb.data.*;
 import org.apache.fineract.portfolio.crb.domain.*;
 import org.apache.fineract.portfolio.crb.serializer.CrbCheckReasons;
 import org.apache.fineract.portfolio.crb.serializer.CrbDataValidator;
+import org.apache.fineract.portfolio.loanaccount.domain.Loan;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,12 +43,54 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
     private final static String CONSENTED = "Yes";
     private final Environment environment;
     private static final ZoneId TIME_ZONE = ZoneId.of("Africa/Kampala");
+    private final CodeValueRepositoryWrapper codeValueRepository;
+    private final LoanRepositoryWrapper loanRepositoryWrapper;
 
 
     @Transactional
     @Override
-    public CommandProcessingResult crbCredit(Long clientId, JsonCommand command) {
-        final Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
+    public CommandProcessingResult kycCheck(Long clientId, JsonCommand command) {
+        Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
+
+        if (!client.isActive() || !client.isPending()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.client.inactive", "Kyc Check Score enquiry cannot be performed because the client is inactive.");
+        }
+        this.fromApiJsonDeserializer.validateCrbCredit(command);
+
+        final Long reasonId = command.longValueOfParameterNamed(CrbApiConstants.enquiryReasonIdParamName);
+        Integer type = command.integerValueOfParameterNamed(CrbApiConstants.crbCreditFormatParamName);
+        Integer report = command.integerValueOfParameterNamed(CrbApiConstants.crbReportTypeParamName);
+        Integer reportFormat = command.integerValueOfParameterNamed(CrbApiConstants.crbReportFormatParamName);
+
+
+        final CrbConsent crbConsent = this.crbConsentRepository.findVerifiedClient(client.getId(), ConsentStatus.VERIFIED.getValue());
+
+        CodeValue value = this.codeValueRepository.findOneByCodeNameAndIdWithNotFoundDetection(CrbApiConstants.CRB_ENQUIRY_REASON, reasonId);
+        String reason = value.getLabel();
+
+        String clientConsented;
+
+        if (crbConsent == null){
+            throw new GeneralPlatformDomainRuleException("error.msg.client.crb.consent", "Client has not consented to CRB verification.");
+        }else {
+            clientConsented = CONSENTED;
+        }
+        if (report != null || reportFormat != null){
+            return creditReports(client, crbConsent, report, reportFormat, null);
+        }
+        return creditChecks(client, crbConsent, type, clientConsented, reason, null, null);
+    }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult crbCredit(Long loanId, JsonCommand command) {
+
+        final Loan loan = this.loanRepositoryWrapper.findOneWithNotFoundDetection(loanId);
+
+        if (!loan.isSubmittedAndPendingApproval()){
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.loan.not.pending", "Kyc Check Score enquiry cannot be performed because the loan is not pending.");
+        }
+        final Client client = loan.getClient();
 
         this.fromApiJsonDeserializer.validateCrbCredit(command);
 
@@ -52,12 +98,25 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
         Integer report = command.integerValueOfParameterNamed(CrbApiConstants.crbReportTypeParamName);
         Integer reportFormat = command.integerValueOfParameterNamed(CrbApiConstants.crbReportFormatParamName);
         Integer reportAction = command.integerValueOfParameterNamed(CrbApiConstants.crbReportActionFormatParamName);
+        Integer scoreType = command.integerValueOfParameterNamed(CrbApiConstants.crbCreditScoreTypeActionFormatParamName);
+        final Long reasonId = command.longValueOfParameterNamed(CrbApiConstants.enquiryReasonIdParamName);
+        final Long categoryId = command.longValueOfParameterNamed(CrbApiConstants.entityCategoryIdParamName);
 
+        String reason = null;
+        String category = null;
+        CodeValue value;
+        if (reasonId != null) {
+           value = this.codeValueRepository.findOneByCodeNameAndIdWithNotFoundDetection(CrbApiConstants.CRB_ENQUIRY_REASON, reasonId);
+           reason = value.getLabel();
+        } else if (categoryId != null) {
+            value = this.codeValueRepository.findOneByCodeNameAndIdWithNotFoundDetection(CrbApiConstants.CRB_SCORE_CATEGORY, categoryId);
+            category = value.getLabel();
+        }
 
 
         final CrbConsent crbConsent = this.crbConsentRepository.findVerifiedClient(client.getId(), ConsentStatus.VERIFIED.getValue());
 
-        String clientConsented = null;
+        String clientConsented;
 
         if (crbConsent == null){
             throw new GeneralPlatformDomainRuleException("error.msg.client.crb.consent", "Client has not consented to CRB verification.");
@@ -68,11 +127,11 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
         if (report != null || reportFormat != null || reportAction != null){
             return creditReports(client, crbConsent, report, reportFormat, reportAction);
         }
-        return creditChecks(client, crbConsent, type, clientConsented);
+        return creditChecks(client, crbConsent, type, clientConsented, reason, category, scoreType);
     }
 
 
-    private CommandProcessingResult creditChecks(Client client, CrbConsent consent, Integer type, String clientConsented) {
+    private CommandProcessingResult creditChecks(Client client, CrbConsent consent, Integer type, String clientConsented, String reason, String category, Integer scoreType) {
 
         final CrbCheck crbCheck = CrbCheck.create(client, consent, type, CrbRequestType.INITIAL.getValue());
 
@@ -82,7 +141,7 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
 
             CreditValidationType creditValidationType = CreditValidationType.fromInt(type);
 
-            var check = checks(creditValidationType, client, clientConsented);
+            var check = checks(creditValidationType, client, clientConsented, reason, category, scoreType);
 
             var individualId = check != null ? check.getIndividualId() : null;
             var nonIndividualId = check != null ? check.getNonIndividualId() : null;
@@ -128,8 +187,7 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
 
             var reportToken = check != null ? check.getReportToken() : null;
 
-            var reportAccountId = check != null ? check.getReportAccountId() : null;
-
+            var reportUrl = check != null ? check.getReportUrl() : null;
 
             assert check != null;
 
@@ -137,7 +195,7 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
 
             LocalDateTime completedAt = DateUtils.getLocalDateTimeOfTenant();
 
-            crbCheck.creditCheck(status, null, null, null, check.getResponsePayload(), completedAt, null, null, reportToken, reportAccountId);
+            crbCheck.creditCheck(status, null, null, null, check.getResponsePayload(), completedAt, null, null, reportToken, reportUrl);
 
             this.crbCheckRepository.saveAndFlush(crbCheck);
 
@@ -160,12 +218,12 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
 
 
 
-    private CrbProviderResult checks(CreditValidationType type, Client client, String consented) {
+    private CrbProviderResult checks(CreditValidationType type, Client client, String consented, String reason, String category, Integer scoreType) {
 
         return switch (type) {
-            case KYC_ENQUIRY -> validateKyc(client, consented);
-            case CREDIT_ENQUIRY -> validateCreditEnquiry(client, consented);
-            case CREDIT_SCORE -> validateKyc(client, consented);
+            case KYC_ENQUIRY -> validateKyc(client, consented, reason);
+            case CREDIT_ENQUIRY -> validateCreditEnquiry(client, consented, reason);
+            case CREDIT_SCORE -> validateCreditScoreEnquiry(client, consented, category, scoreType);
         };
     }
 
@@ -177,15 +235,91 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
         };
     }
 
-    private CrbProviderResult validateCreditEnquiry(Client client, String consented){
+    private CrbProviderResult validateCreditScoreEnquiry(final Client client, final String consented, final String category, final Integer scoreType) {
+
+        final Integer entity = entityType(client);
+        final String identificationType = identificationType(client);
+        final String identifier = identifier(client);
+
+        if (identifier == null || identifier.isBlank()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.identifier.not.found",
+                    "Client identification number is required for the credit score enquiry."
+            );
+        }
+
+        if (!client.isActive()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.client.inactive", "CRB Credit Score enquiry cannot be performed because the client is inactive.");
+        }
+
+        final LegalForm legalForm = LegalForm.fromInt(client.getLegalForm());
+
+        if (legalForm == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.legal.form.invalid", "Invalid client legal form.");
+        }
+
+        String entityCategory = null;
+        String phone = null;
+
+        if (legalForm.isEntity()) {
+            if (category == null || category.isBlank()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.entity.category.required",
+                        "Entity category is required for a non-individual credit score enquiry."
+                );
+            }
+
+            entityCategory = category;
+        }
+
+        final CreditScore creditScore = CreditScore.fromInt(scoreType);
+
+        if (CreditScore.MNO.getValue().equals(scoreType) || CreditScore.CRB_MNO.getValue().equals(scoreType)) {
+
+            phone = client.mobileNo();
+
+            if (phone == null || phone.isBlank()) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.phone.not.found",
+                        "Client phone number is required for an MNO credit score enquiry."
+                );
+            }
+        }
+
+        final String type = creditScore.getCode();
+
+        var request = new CreditScoreRequestData(identifier, entity, entityCategory, identificationType, phone, consented, type, null);
+
+        final CreditScoreResponseData response = gnugridNotificationWritePlatformService.creditScore(request);
+
+        if (response == null || response.getData() == null || response.getData().getEnquiry() == null) {
+
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.credit.score.invalid.response",
+                    "Invalid credit score response received from CRB."
+            );
+        }
+
+        final var enquiry = response.getData().getEnquiry();
+
+        final boolean verified = identifier.equals(enquiry.getIdentifier());
+
+        return CrbProviderResult.builder()
+                .verified(verified)
+                .validationId(enquiry.getID())
+                .cost(response.getData().getCost().getAmount())
+                .reference(enquiry.getReference())
+                .responsePayload(serializeResponse(response))
+                .build();
+    }
+
+    private CrbProviderResult validateCreditEnquiry(Client client, String consented, String reason){
 
         Integer entity = entityType(client);
         String identificationType = identificationType(client);
         String identifier = identifier(client);
 
-        String format = CrbCheckReasons.CREDIT_ENQUIRY_FORMAT;
+        if (!client.isActive()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.client.inactive", "CRB enquiry cannot be performed because the client is inactive.");
+        }
 
-        var reason = CrbCheckReasons.CREDIT_ENQUIRY_REASON;
+        String format = CrbCheckReasons.CREDIT_ENQUIRY_FORMAT;
 
         var request = new CreditEnquiryRequestData(identifier, identificationType, format, reason, consented, null, entity);
 
@@ -209,13 +343,11 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
                 .build();
     }
 
-    private CrbProviderResult validateKyc(Client client, String consented){
+    private CrbProviderResult validateKyc(Client client, String consented, String reason){
 
         Integer entity = entityType(client);
         String identificationType = identificationType(client);
         String identifier = identifier(client);
-
-        var reason = CrbCheckReasons.KYC_ENQUIRY_REASON;
 
         var request = new KycEnquiryRequestData(identifier, identificationType, reason, consented, null, entity);
 
@@ -225,7 +357,6 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
                 && "1".equalsIgnoreCase(response.getEnquiry().getFormal().getMatches().toString());
 
         var enquiry = response.getEnquiry();
-
 
         return CrbProviderResult.builder()
                 .verified(verified)
@@ -269,6 +400,12 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
 
         final CrbCheck crbCheck = findCreditEnquiryCheck(client, CreditValidationType.CREDIT_ENQUIRY.getValue());
 
+        if (!CRBStatus.VERIFIED.getValue().equals(crbCheck.getStatus())) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.not.verified",
+                    "Credit report cannot be generated because the client's CRB validation has not been verified."
+            );
+        }
+
         final CreditReportRequestData request = creditClientTypeReport(client, crbReportFormat, crbCheck);
 
         if (crbReportFormat.equals(CrbReportFormat.JSON)) {
@@ -276,6 +413,7 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
             final CreditReportJsonResponseData jsonResponseData = gnugridNotificationWritePlatformService.creditReport(request);
 
             //Todo: What Makes the Report verified really???
+            //Todo: I assume that if the first enquiry was successful then we don't need a verification here
             final boolean verified = true;
 
             return CrbProviderResult.builder()
@@ -398,6 +536,12 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
         }
 
         CrbCheck crbCheck = findCreditEnquiryCheck(client, CreditValidationType.KYC_ENQUIRY.getValue());
+
+        if (!CRBStatus.VERIFIED.getValue().equals(crbCheck.getStatus())) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.not.verified",
+                    "KYC report cannot be generated because the client's Kyc validation has not been verified."
+            );
+        }
 
         var providerValidationId = crbCheck.getProviderValidationId();
 

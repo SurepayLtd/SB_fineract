@@ -5,5 +5,6 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 
 public interface CrbCreditCheckWriteService {
 
-    CommandProcessingResult crbCredit(final Long clientId, final JsonCommand command);
+    CommandProcessingResult crbCredit(final Long loanId, final JsonCommand command);
+    CommandProcessingResult kycCheck(final Long clientId, final JsonCommand command);
 }

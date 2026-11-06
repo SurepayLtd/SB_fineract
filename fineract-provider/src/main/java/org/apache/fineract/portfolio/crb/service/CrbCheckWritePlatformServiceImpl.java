@@ -395,6 +395,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
                 .build();
     }
 
+
     private String resolveValidationMessage(final String errorMessage, final String message) {
 
         if (errorMessage != null && !errorMessage.isBlank()) {

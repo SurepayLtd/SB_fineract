@@ -18,17 +18,17 @@ public class CreditScoreRequestData implements Serializable {
 
     private String identifier;
 
-    private Integer entityType;
+    private Integer entity_type;
 
-    private String entityTypeCategory;
+    private String entity_type_category;
 
-    private String identificationType;
+    private String identification_type;
 
-    private String phoneNumber;
+    private String phone_number;
 
-    private String clientConsented;
+    private String client_consented;
 
     private String type;
 
-    private String piCode;
+    private String pi_code;
 }

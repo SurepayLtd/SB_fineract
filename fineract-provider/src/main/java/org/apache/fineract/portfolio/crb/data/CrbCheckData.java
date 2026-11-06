@@ -42,13 +42,25 @@ public final class CrbCheckData {
 
     private final Map<String, Object> responseDetails;
 
+    private final String reportUrl;
+
     private final Collection<EnumOptionData> requestTypes;
 
     private final Collection<EnumOptionData> validationTypes;
 
+    private final Collection<EnumOptionData> creditReportActionTypes;
+
+    private final Collection<EnumOptionData> creditReportFormatTypes;
+
+    private final Collection<EnumOptionData> creditReportTypes;
+
+    private final Collection<EnumOptionData> creditValidationTypes;
+
+
+
 
     private CrbCheckData(Long id, Long clientId, String clientName, EnumOptionData validationType, EnumOptionData requestType, EnumOptionData status, EnumOptionData consentStatus, String providerValidationId,
-                        String providerReference, BigDecimal cost, String currency, String message, String errorMessage, String responsePayload, Map<String, Object> responseDetails, LocalDateTime createdAt, LocalDateTime completedAt) {
+                        String providerReference, BigDecimal cost, String currency, String message, String errorMessage, String responsePayload, Map<String, Object> responseDetails, LocalDateTime createdAt, LocalDateTime completedAt, String reportUrl) {
         this.id = id;
         this.clientId = clientId;
         this.clientName = clientName;
@@ -66,13 +78,24 @@ public final class CrbCheckData {
         this.createdAt = createdAt;
         this.completedAt = completedAt;
         this.responseDetails = responseDetails;
+        this.reportUrl = reportUrl;
         this.requestTypes = null;
         this.validationTypes = null;
+        this.creditReportTypes = null;
+        this.creditValidationTypes = null;
+        this.creditReportActionTypes = null;
+        this.creditReportFormatTypes = null;
+
     }
 
-    public CrbCheckData(Collection<EnumOptionData> requestTypes, Collection<EnumOptionData> validationTypes) {
+    public CrbCheckData(Collection<EnumOptionData> requestTypes, Collection<EnumOptionData> validationTypes, Collection<EnumOptionData> creditReportActionTypes, Collection<EnumOptionData> creditReportFormatTypes,
+                        Collection<EnumOptionData> creditReportTypes, Collection<EnumOptionData> creditValidationTypes) {
         this.requestTypes = requestTypes;
         this.validationTypes = validationTypes;
+        this.creditReportFormatTypes = creditReportFormatTypes;
+        this.creditReportActionTypes = creditReportActionTypes;
+        this.creditValidationTypes = creditValidationTypes;
+        this.creditReportTypes = creditReportTypes;
         this.id = null;
         this.clientId = null;
         this.clientName = null;
@@ -90,16 +113,18 @@ public final class CrbCheckData {
         this.createdAt = null;
         this.completedAt = null;
         this.responseDetails = null;
+        this.reportUrl = null;
     }
 
     public static CrbCheckData display(Long id, Long clientId, String clientName, Integer validationType, Integer requestType, Integer status, Integer consentStatus, String providerValidationId,
-                                       String providerReference, BigDecimal cost, String currency, String message, String errorMessage, String responsePayload, Map<String, Object> responseDetails, LocalDateTime createdAt, LocalDateTime completedAt){
+                                       String providerReference, BigDecimal cost, String currency, String message, String errorMessage, String responsePayload, Map<String, Object> responseDetails, LocalDateTime createdAt, LocalDateTime completedAt, String reportUrl){
         return new CrbCheckData(id, clientId, clientName, getValidationType(validationType), getRequestType(requestType), getStatus(status), getConsentStatus(consentStatus), providerValidationId,
-                providerReference, cost, currency, message, errorMessage, responsePayload, responseDetails, createdAt, completedAt);
+                providerReference, cost, currency, message, errorMessage, responsePayload, responseDetails, createdAt, completedAt, reportUrl);
     }
 
-    public static CrbCheckData dropdown(Collection<EnumOptionData> requestTypes, Collection<EnumOptionData> validationTypes){
-        return new CrbCheckData(requestTypes, validationTypes);
+    public static CrbCheckData dropdown(Collection<EnumOptionData> requestTypes, Collection<EnumOptionData> validationTypes, Collection<EnumOptionData> creditReportActionTypes, Collection<EnumOptionData> creditReportFormatTypes,
+                                        Collection<EnumOptionData> creditReportTypes, Collection<EnumOptionData> creditValidationTypes){
+        return new CrbCheckData(requestTypes, validationTypes, creditReportActionTypes, creditReportFormatTypes, creditReportTypes, creditValidationTypes);
     }
 
     public static EnumOptionData getRequestType(Integer value) {

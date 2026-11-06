@@ -24,6 +24,51 @@ public final class CrbCheckApiResourceSwagger {
         public Integer CrbRequestType;
     }
 
+    @Schema(description = "Create CRB credit check request")
+    public static final class PostCrbCreditRequest {
+
+        private PostCrbCreditRequest() {}
+
+        @Schema(example = "For Loan", description = "For Loan Application")
+        public Long enquiryReasonId;
+
+        @Schema(example = "1", description = "CRB validation type: credit")
+        public Integer crbCreditValidationType;
+
+        @Schema(example = "1", description = "CRB report type: credit report")
+        public Integer crbReportType;
+
+        @Schema(example = "1", description = "CRB report format: json, pdf")
+        public Integer crbReportFormat;
+
+        @Schema(example = "1", description = "CRB report action: view, download")
+        public Integer crbReportAction;
+
+        @Schema(example = "1", description = "CRB score type: CRB, MNO")
+        public Integer crbCreditScoreType;
+
+        @Schema(example = "Agency", description = "Business Type for organisations")
+        public Integer entityCategoryId;
+    }
+
+    @Schema(description = "Create CRB kyc check request")
+    public static final class PostCrbKycRequest {
+
+        private PostCrbKycRequest() {}
+
+        @Schema(example = "1", description = "For Loan")
+        public Long enquiryReasonId;
+
+        @Schema(example = "1", description = "CRB validation type: kyc")
+        public Integer crbCreditValidationType;
+
+        @Schema(example = "1", description = "CRB report type: kyc report")
+        public Integer crbReportType;
+
+        @Schema(example = "1", description = "CRB report format: json, pdf")
+        public Integer crbReportFormat;
+    }
+
     public static final class PostCrbCheckResponse{
         public PostCrbCheckResponse() {
         }
@@ -128,6 +173,10 @@ public final class CrbCheckApiResourceSwagger {
 
         @Schema(example = "CRB validation check created successfully")
         public String message;
+
+        @Schema(example = "https://demo/")
+        public String reportUrl;
+
     }
 
     @Schema(description = "GetCrbCheckTemplateResponse")
@@ -159,7 +208,60 @@ public final class CrbCheckApiResourceSwagger {
             public String description;
         }
 
+        static final class GetCreditReportActionTypes {
+
+            private GetCreditReportActionTypes() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "crbReportAction.View")
+            public String code;
+            @Schema(example = "View")
+            public String description;
+        }
+
+        static final class GetCreditReportFormatTypes {
+
+            private GetCreditReportFormatTypes() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "crbReportFormat.Json")
+            public String code;
+            @Schema(example = "json")
+            public String description;
+        }
+
+        static final class GetCreditReportTypes {
+
+            private GetCreditReportTypes() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "creditReports.kycReport")
+            public String code;
+            @Schema(example = "KYC Report")
+            public String description;
+        }
+
+        static final class GetCreditValidationTypes {
+
+            private GetCreditValidationTypes() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "creditValidationType.creditScore")
+            public String code;
+            @Schema(example = "Credit Score")
+            public String description;
+        }
+
         public Collection<GetRequestType> requestTypes;
         public Collection<GetValidationType> validationTypes;
+        public Collection<GetCreditReportActionTypes> creditReportActionTypes;
+        public Collection<GetCreditReportFormatTypes> creditReportFormatTypes;
+        public Collection<GetCreditReportTypes> creditReportTypes;
+        public Collection<GetCreditValidationTypes> creditValidationTypes;
+
     }
 }

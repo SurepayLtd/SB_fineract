@@ -4,8 +4,9 @@ import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRu
 
 public enum CreditReports {
 
-    KYC_REPORT(400, "creditReports.kycReport", "KYC Report"),
-    CREDIT_REPORT(500, "creditReports.creditReport", "Credit Report");
+    CREDIT_REPORT(500, "creditReports.creditReport", "Credit Report"),
+    KYC_REPORT(600, "crbValidationType.kycReport", "KYC Report");
+
 
     private final Integer value;
     private final String code;

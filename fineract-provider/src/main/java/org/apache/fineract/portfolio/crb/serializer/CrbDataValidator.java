@@ -136,6 +136,12 @@ public final class CrbDataValidator {
         final Long crbReportAction = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbReportActionFormatParamName, element);
         baseDataValidator.reset().parameter(CrbApiConstants.crbReportActionFormatParamName).value(crbReportAction).ignoreIfNull().notExceedingLengthOf(5);
 
+        final Long enquiryReasonId = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.enquiryReasonIdParamName, element);
+        baseDataValidator.reset().parameter(CrbApiConstants.enquiryReasonIdParamName).value(enquiryReasonId).ignoreIfNull().notExceedingLengthOf(5);
+
+        final Long entityCategoryId = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.entityCategoryIdParamName, element);
+        baseDataValidator.reset().parameter(CrbApiConstants.entityCategoryIdParamName).value(entityCategoryId).ignoreIfNull().notExceedingLengthOf(5);
+
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
     }
 

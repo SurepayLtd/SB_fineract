@@ -25,4 +25,6 @@ public interface GnugridNotificationWritePlatformService {
     CreditReportJsonResponseData creditReport(CreditReportRequestData creditReportRequestData);
 
     CreditReportPdfResponseData creditPdfReport(CreditReportRequestData creditReportRequestData);
+
+    CreditScoreResponseData creditScore(CreditScoreRequestData creditScoreRequestData);
 }

@@ -6,22 +6,17 @@ import org.apache.fineract.infrastructure.codes.service.CodeValueReadPlatformSer
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
+import org.apache.fineract.portfolio.client.domain.ClientNonPersonRepositoryWrapper;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.crb.domain.CrbCheckRepository;
 import org.apache.fineract.portfolio.crb.domain.CrbConsentRepository;
 import org.apache.fineract.portfolio.crb.serializer.CrbDataValidator;
-import org.apache.fineract.portfolio.crb.service.CrbCheckWritePlatformService;
-import org.apache.fineract.portfolio.crb.service.CrbConsentWriteService;
-import org.apache.fineract.portfolio.crb.service.CrbConsentReadService;
-import org.apache.fineract.portfolio.crb.service.CrbCheckReadServicePlatformImpl;
-import org.apache.fineract.portfolio.crb.service.CrbCheckReadServicePlatform;
-import org.apache.fineract.portfolio.crb.service.CrbConsentReadServiceImpl;
-import org.apache.fineract.portfolio.crb.service.CrbCheckWritePlatformServiceImpl;
-import org.apache.fineract.portfolio.crb.service.GnugridNotificationWritePlatformService;
-import org.apache.fineract.portfolio.crb.service.CrbConsentWriteServiceImpl;
+import org.apache.fineract.portfolio.crb.service.*;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.security.SecureRandom;
@@ -60,5 +55,12 @@ public class CrbConfiguration {
     public CrbConsentWriteService crbConsentWriteService(CrbConsentRepository crbConsentRepository, ConfigurationDomainService configurationDomainService, ClientRepositoryWrapper clientRepositoryWrapper, PlatformSecurityContext platformSecurityContext,
                                                          SecureRandom secureRandom, CrbDataValidator fromApiJsonDeserializer, SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService, CodeValueRepositoryWrapper codeValueRepository){
         return new CrbConsentWriteServiceImpl(crbConsentRepository, configurationDomainService, clientRepositoryWrapper, platformSecurityContext, secureRandom, fromApiJsonDeserializer, smsNotificationWritePlatformService, codeValueRepository);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public CrbCreditCheckWriteService crbCreditCheckWriteService(ClientRepositoryWrapper clientRepositoryWrapper, ClientNonPersonRepositoryWrapper clientNonPersonRepositoryWrapper, GnugridNotificationWritePlatformService gnugridNotificationWritePlatformService,
+                                                                 CrbCheckRepository crbCheckRepository, ObjectMapper objectMapper, CrbConsentRepository crbConsentRepository, CrbDataValidator fromApiJsonDeserializer, Environment environment, CodeValueRepositoryWrapper codeValueRepository, LoanRepositoryWrapper loanRepositoryWrapper){
+        return new CrbCreditCheckWriteServiceImpl(clientRepositoryWrapper, clientNonPersonRepositoryWrapper, gnugridNotificationWritePlatformService, crbCheckRepository, objectMapper, crbConsentRepository, fromApiJsonDeserializer,environment, codeValueRepository, loanRepositoryWrapper);
     }
 }

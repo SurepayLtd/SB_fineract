@@ -106,4 +106,91 @@
             <column name="description" value="Enables SurePay CRB Credit Scores."/>
         </insert>
     </changeSet>
+
+    <changeSet id="crbcheck_extra" author="victor">
+        <insert tableName="m_crb_check">
+            <column name="individual_id" type="INT"/>
+            <column name="non_individual_id" type="INT"/>
+            <column name="report_token" type="VARCHAR(500)"/>
+            <column name="report_url" type="TEXT"/>
+        </insert>
+
+        <insert tableName="m_code">
+            <column name="code_name" value="CrbEnquiryReason"/>
+            <column name="is_system_defined" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="crb_enquiry_reasons" author="victor">
+        <insert tableName="m_code_value">
+            <column name="code_id" valueComputed="(SELECT id FROM m_code WHERE code_name = 'CrbEnquiryReason')"/>
+            <column name="code_value" value="For Loan Application"/>
+            <column name="order_position" valueNumeric="0"/>
+            <column name="is_active" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="m_code_value">
+            <column name="code_id" valueComputed="(SELECT id FROM m_code WHERE code_name = 'CrbEnquiryReason')"/>
+            <column name="code_value" value="Customer Assessment"/>
+            <column name="order_position" valueNumeric="1"/>
+            <column name="is_active" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="m_code_value">
+            <column name="code_id" valueComputed="(SELECT id FROM m_code WHERE code_name = 'CrbEnquiryReason')"/>
+            <column name="code_value" value="For Credit Assessment"/>
+            <column name="order_position" valueNumeric="2"/>
+            <column name="is_active" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="m_code_value">
+            <column name="code_id" valueComputed="(SELECT id FROM m_code WHERE code_name = 'CrbEnquiryReason')"/>
+            <column name="code_value" value="For Credit Enquiry"/>
+            <column name="order_position" valueNumeric="3"/>
+            <column name="is_active" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="m_code_value">
+            <column name="code_id" valueComputed="(SELECT id FROM m_code WHERE code_name = 'CrbEnquiryReason')"/>
+            <column name="code_value" value="For KYC Assessment"/>
+            <column name="order_position" valueNumeric="4"/>
+            <column name="is_active" valueBoolean="true"/>
+        </insert>
+
+
+    </changeSet>
+
+    <changeSet id="crb-credit-kyc-permissions" author="victor">
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="CREATE_CRBCREDIT" />
+            <column name="entity_name" value="CRBCREDIT" />
+            <column name="action_name" value="CREATE" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="READ_CRBCREDIT" />
+            <column name="entity_name" value="CRBCREDIT" />
+            <column name="action_name" value="READ" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="READ_CRBKYC" />
+            <column name="entity_name" value="CRBKYC" />
+            <column name="action_name" value="READ" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+
+        <insert tableName="m_permission">
+            <column name="grouping" value="portfolio" />
+            <column name="code" value="CREATE_CRBKYC" />
+            <column name="entity_name" value="CRBKYC" />
+            <column name="action_name" value="CREATE" />
+            <column name="can_maker_checker" valueBoolean="false" />
+        </insert>
+    </changeSet>
 </databaseChangeLog>

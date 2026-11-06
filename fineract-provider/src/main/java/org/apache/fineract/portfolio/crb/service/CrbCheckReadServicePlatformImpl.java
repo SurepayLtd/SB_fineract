@@ -7,8 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.crb.data.CrbCheckData;
-import org.apache.fineract.portfolio.crb.domain.CrbRequestType;
-import org.apache.fineract.portfolio.crb.domain.CrbValidationType;
+import org.apache.fineract.portfolio.crb.domain.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
@@ -28,6 +27,18 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
     private final ObjectMapper objectMapper;
 
 
+    @Override
+    public List<CrbCheckData> retrieveCreditChecks(Long clientId, Integer type) {
+        this.context.authenticatedUser();
+        CheckMapper mp = new CheckMapper(objectMapper);
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select ");
+        sb.append(mp.schema());
+        sb.append(" WHERE cc.client_id = ? ");
+        sb.append(" AND cc.validation_type = ? ");
+        sb.append(" ORDER BY cc.created_at DESC, cc.id DESC ");
+        return this.jdbcTemplate.query(sb.toString(), mp, clientId);
+    }
 
     @Override
     public List<CrbCheckData> retrieveChecks(Long clientId) {
@@ -43,7 +54,7 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
 
     @Override
     public CrbCheckData retrieveTypes() {
-        return CrbCheckData.dropdown(getRequestTypes(), getValidationTypes());
+        return CrbCheckData.dropdown(getRequestTypes(), getValidationTypes(), getCreditReportActionTypes(), getCreditReportFormatTypes(), getCreditReportTypes(), getCreditValidationTypes());
     }
 
     protected static class CheckMapper implements RowMapper<CrbCheckData>{
@@ -77,10 +88,11 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
             final LocalDateTime completedAt = rs.getTimestamp("completedAt") != null
                             ? rs.getTimestamp("completedAt").toLocalDateTime()
                             : null;
+            final String reportUrl = rs.getString("reportUrl");
             final Map<String, Object> responseDetails = extractResponseDetails(validationType, responsePayload);
             return CrbCheckData.display(id, clientId, clientName, validationType, requestType, status, consentStatus,
                     providerValidationId, providerReference, cost, currency,
-                    message, errorMessage, responsePayload, responseDetails, createdAt, completedAt);
+                    message, errorMessage, responsePayload, responseDetails, createdAt, completedAt, reportUrl);
         }
 
         public String schema(){
@@ -102,6 +114,7 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
             builder.append("cc.error_message AS errorMessage, ");
             builder.append("cc.response_payload AS responsePayload, ");
             builder.append("cc.created_at AS createdAt, ");
+            builder.append("cc.report_url AS reportUrl, ");
             builder.append("cc.completed_at AS completedAt");
             builder.append(" FROM m_crb_check cc ");
             builder.append(" JOIN m_client c ON c.id = cc.client_id ");
@@ -186,6 +199,52 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
         }
         return data;
     }
+
+    private Collection<EnumOptionData> getCreditReportActionTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CrbReportAction action : CrbReportAction.values()){
+            data.add(new EnumOptionData(
+                    action.getValue().longValue(), action.getCode(), action.getDescription()
+            ));
+        }
+        return data;
+    }
+
+    private Collection<EnumOptionData> getCreditReportFormatTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CrbReportFormat type : CrbReportFormat.values()){
+            data.add(new EnumOptionData(
+                    type.getValue().longValue(), type.getCode(), type.getDescription()
+            ));
+        }
+        return data;
+    }
+
+    private Collection<EnumOptionData> getCreditReportTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CreditReports type : CreditReports.values()){
+            data.add(new EnumOptionData(
+                    type.getValue().longValue(), type.getCode(), type.getDescription()
+            ));
+        }
+        return data;
+    }
+
+    private Collection<EnumOptionData> getCreditValidationTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CreditValidationType type : CreditValidationType.values()){
+            data.add(new EnumOptionData(
+                    type.getValue().longValue(), type.getCode(), type.getDescription()
+            ));
+        }
+        return data;
+    }
+
+
 
 
 }

@@ -32,6 +32,35 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
     private final ConfigurationDomainService configurationDomainService;
 
     @Override
+    public CreditScoreResponseData creditScore(CreditScoreRequestData creditScoreRequestData) {
+
+        boolean isCrbCreditScoreEnquiryEnabled = configurationDomainService.isCrbCreditScoreEnabled();
+
+        if (!isCrbCreditScoreEnquiryEnabled) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.credit.score.disabled", "CRB Credit Score is disabled.");
+        }
+        final String endpoint = "credit-enquiries/credit-scores";
+
+        final String url = baseUrl() + endpoint;
+
+        final var responseData = executeCrbRequest(
+                url,
+                HttpMethod.POST,
+                creditScoreRequestData,
+                CreditScoreResponseData.class,
+                "error.msg.crb.credit.enquiry.invalid.response",
+                "Credit Enquiry returned an invalid personal information validation response..",
+                response -> response.getData() != null,
+                "error.msg.crb.credit.enquiry.request.failed",
+                "error.msg.crb.credit.enquiry.connection.failed"
+        );
+
+        log.info("Credit Score: {}", responseData);
+
+        return responseData;
+    }
+
+    @Override
     public CreditReportJsonResponseData creditReport(CreditReportRequestData creditReportRequestData) {
 
         boolean isCrbReportEnquiryEnabled = configurationDomainService.isCrbCreditReportEnabled();
@@ -39,7 +68,16 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
         if (!isCrbReportEnquiryEnabled) {
             throw new GeneralPlatformDomainRuleException("error.msg.crb.credit.report.disabled", "CRB Credit ENQUIRY is disabled.");
         }
-        final String endpoint = "credit-enquiries/individual/credit-report";
+
+        final boolean hasIndividualId = creditReportRequestData.getIndividual_id() != null;
+
+        final boolean hasNonIndividualId = creditReportRequestData.getNon_individual_id() != null;
+
+        if (hasIndividualId == hasNonIndividualId) {
+            throw new GeneralPlatformDomainRuleException("error.msg.credit.identifier.invalid", "Exactly one identifier must be provided: individual_id or non_individual_id.");
+        }
+
+        final String endpoint = hasIndividualId ? "credit-enquiries/individual/credit-report" : "credit-enquiries/non-individual/credit-report";
 
         final String url = baseUrl() + endpoint;
 
@@ -68,7 +106,16 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
         if (!isCrbReportEnquiryEnabled) {
             throw new GeneralPlatformDomainRuleException("error.msg.crb.credit.report.disabled", "CRB Credit ENQUIRY is disabled.");
         }
-        final String endpoint = "credit-enquiries/individual/credit-report";
+
+        final boolean hasIndividualId = creditReportRequestData.getIndividual_id() != null;
+
+        final boolean hasNonIndividualId = creditReportRequestData.getNon_individual_id() != null;
+
+        if (hasIndividualId == hasNonIndividualId) {
+            throw new GeneralPlatformDomainRuleException("error.msg.credit.identifier.invalid", "Exactly one identifier must be provided: individual_id or non_individual_id.");
+        }
+
+        final String endpoint = hasIndividualId ? "credit-enquiries/individual/credit-report" : "credit-enquiries/non-individual/credit-report";
 
         final String url = baseUrl() + endpoint;
 

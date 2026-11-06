@@ -29,6 +29,8 @@ public class CreditScoreResponseData implements Serializable {
     private CreditScoreData data;
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CreditScoreData implements Serializable {
 
         private static final long serialVersionUID = 1L;
@@ -38,9 +40,13 @@ public class CreditScoreResponseData implements Serializable {
         private MnoScoreData MNO;
 
         private CrbScoreData CRB;
+
+        private Cost Cost;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class EnquiryData implements Serializable {
 
         private static final long serialVersionUID = 1L;
@@ -50,6 +56,8 @@ public class CreditScoreResponseData implements Serializable {
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class MnoScoreData implements Serializable {
 
         private static final long serialVersionUID = 1L;
@@ -68,402 +76,282 @@ public class CreditScoreResponseData implements Serializable {
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class MnoCustomerData {
 
         private String Category, Name, Gender, Date_of_Birth;
 
-        private Integer Age;
+        private Integer Age, Months_Active, Phone_Count;
 
         private List<MnoPhoneNumberData> Phone_Numbers;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class MnoPhoneNumberData {
 
-        @JsonProperty("msisdn")
         private String msisdn;
 
-        @JsonProperty("status")
         private String status;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class MnoScoringData {
 
-        @JsonProperty("Period")
-        private String period;
+        private String Period, Band, Rating, Likelihood_to_Default;
+        private BigDecimal Probability_of_Default_Percent, Previous_Score;
+        private Integer Score;
 
-        // The provider documents this value as a string, e.g. "411.0".
-        @JsonProperty("Score")
-        private String score;
-
-        @JsonProperty("Band")
-        private String band;
-
-        @JsonProperty("Rating")
-        private String rating;
-
-        @JsonProperty("Probability_of_Default_Percent")
-        private BigDecimal probabilityOfDefaultPercent;
-
-        @JsonProperty("Likelihood_to_Default")
-        private String likelihoodToDefault;
-
-        @JsonProperty("Previous_Score")
-        private BigDecimal previousScore;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class MnoCreditAccountsData {
 
-        @JsonProperty("Months_Active")
-        private String monthsActive;
-
-        @JsonProperty("Accounts_12Months")
-        private String accounts12Months;
-
-        @JsonProperty("Total_Loan_Amount_12Months")
-        private String totalLoanAmount12Months;
-
-        @JsonProperty("Closed_Accounts_12Months")
-        private String closedAccounts12Months;
-
-        @JsonProperty("Total_Payment_12Months")
-        private String totalPayment12Months;
+        private String Months_Active, Accounts_12Months,Total_Loan_Amount_12Months, Closed_Accounts_12Months, Total_Payment_12Months, Accounts_6Months, Total_Loan_Amount_6Months, Closed_Accounts_6Months, Total_Payment_6Months;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class MnoIncomeProxyData {
 
         // Individual fields
 
-        @JsonProperty("Total_Turnover_Count_6Months")
-        private BigDecimal totalTurnoverCount6Months;
+        private BigDecimal Total_Turnover_Count_6Months, Monthly_Turnover_Amount, Total_Spend_Count_6Months, Monthly_Spend_Amount,
+                Total_Turnover_Count_3Months, Monthly_Turnover_Amount_3Months, Total_Spend_Count_3Months, Monthly_Spend_Amount_3Months;
 
-        @JsonProperty("Monthly_Turnover_Amount")
-        private BigDecimal monthlyTurnoverAmount;
-
-        @JsonProperty("Total_Spend_Count_6Months")
-        private BigDecimal totalSpendCount6Months;
-
-        @JsonProperty("Monthly_Spend_Amount")
-        private BigDecimal monthlySpendAmount;
-
-        @JsonProperty("Total_Turnover_Count_3Months")
-        private BigDecimal totalTurnoverCount3Months;
-
-        @JsonProperty("Monthly_Turnover_Amount_3Months")
-        private BigDecimal monthlyTurnoverAmount3Months;
-
-        // Field name preserved exactly as documented.
-        @JsonProperty("Total_Spend_Count_6Months_3Months")
-        private BigDecimal totalSpendCount6Months3Months;
-
-        @JsonProperty("Monthly_Spend_Amount_3Months")
-        private BigDecimal monthlySpendAmount3Months;
 
         // Agent fields
 
-        @JsonProperty("Monthly_Float_Purchased")
-        private BigDecimal monthlyFloatPurchased;
+        private BigDecimal Monthly_Float_Purchased, Monthly_Commission_Earned;
 
-        @JsonProperty("Monthly_Commission_Earned")
-        private BigDecimal monthlyCommissionEarned;
 
         // Merchant fields
 
-        @JsonProperty("Total_Inflow_Count_6Months")
-        private BigDecimal totalInflowCount6Months;
+        private BigDecimal Total_Inflow_Count_6Months, Monthly_Inflow_Amount;
 
-        @JsonProperty("Monthly_Inflow_Amount")
-        private BigDecimal monthlyInflowAmount;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CrbScoreData {
 
-        @JsonProperty("Customer")
-        private CrbCustomerData customer;
+        private CrbCustomerData Customer;
 
-        @JsonProperty("Scoring")
-        private CrbScoringData scoring;
+        private CrbScoringData Scoring;
 
-        @JsonProperty("Credit_Applications")
-        private CreditApplicationsData creditApplications;
+        private CreditApplicationsData Credit_Applications;
 
-        @JsonProperty("Credit_Accounts")
-        private CrbCreditAccountsData creditAccounts;
+        private CrbCreditAccountsData Credit_Accounts;
 
-        @JsonProperty("Collateral_Material")
-        private List<CollateralMaterialData> collateralMaterial;
+        private List<CollateralMaterialData> Collateral_Material;
 
-        @JsonProperty("Collateral_Guarantor")
-        private List<CollateralGuarantorData> collateralGuarantor;
+        private List<CollateralGuarantorData> Collateral_Guarantor;
 
-        @JsonProperty("Bounced_Cheques")
-        private List<BouncedChequesData> bouncedCheques;
+        private List<BouncedChequesData> Bounced_Cheques;
 
-        @JsonProperty("Financial_Fraud")
-        private List<FinancialFraudData> financialFraud;
+        private List<FinancialFraudData> Financial_Fraud;
 
-        @JsonProperty("Cost")
-        private CostData cost;
+        private CostData Cost;
 
-        @JsonProperty("Errors")
-        private ErrorData errors;
+        private ErrorData Errors;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CrbCustomerData {
 
-        @JsonProperty("Disputed")
-        private String disputed;
-
-        @JsonProperty("Name")
-        private String name;
-
-        @JsonProperty("Gender")
-        private String gender;
-
-        @JsonProperty("Date_of_Birth")
-        private String dateOfBirth;
-
-        @JsonProperty("Age")
-        private Integer age;
+        private String Disputed, Name, Gender, Date_of_Birth;
+        private Integer Age;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CrbScoringData {
 
-        @JsonProperty("Period")
-        private String period;
+        private String Period, Band, Rating, Likelihood_to_Default;
 
-        @JsonProperty("Score")
-        private BigDecimal score;
+        private BigDecimal Score, Probability_of_Default_Percent;
 
-        @JsonProperty("Band")
-        private String band;
-
-        @JsonProperty("Rating")
-        private String rating;
-
-        @JsonProperty("Probability_of_Default_Percent")
-        private BigDecimal probabilityOfDefaultPercent;
-
-        @JsonProperty("Likelihood_to_Default")
-        private String likelihoodToDefault;
-
-        // Keys are dynamic month-year values, e.g. "2023-11".
-        @JsonProperty("History_Max_12Months")
-        private Map<String, BigDecimal> historyMax12Months;
+        private Map<String, BigDecimal> History_Max_12Months;
     }
 
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CreditApplicationsData {
 
-        @JsonProperty("Total_Applications")
-        private List<CreditApplicationSummaryData> totalApplications;
+        private List<CreditApplicationSummaryData> Total_Applications;
 
-        @JsonProperty("Applications_12Months")
-        private List<CreditApplicationSummaryData> applications12Months;
+        private List<CreditApplicationSummaryData> Applications_12Months;
 
-        @JsonProperty("Pending_Applications")
-        private List<CreditApplicationSummaryData> pendingApplications;
+        private List<CreditApplicationSummaryData> Pending_Applications;
 
-        @JsonProperty("Approved_Applications")
-        private List<CreditApplicationSummaryData> approvedApplications;
+        private List<CreditApplicationSummaryData> Approved_Applications;
 
-        @JsonProperty("Rejected_Applications")
-        private List<CreditApplicationSummaryData> rejectedApplications;
+        private List<CreditApplicationSummaryData> Rejected_Applications;
 
-        @JsonProperty("Cancelled_Applications")
-        private List<CreditApplicationSummaryData> cancelledApplications;
+        private List<CreditApplicationSummaryData> Cancelled_Applications;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CreditApplicationSummaryData {
 
-        @JsonProperty("Currency")
-        private String currency;
+        private String Currency;
 
-        @JsonProperty("Count")
-        private Integer count;
+        private Integer Count;
 
-        @JsonProperty("Value")
-        private BigDecimal value;
+        private BigDecimal Value;
     }
 
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CrbCreditAccountsData {
 
-        @JsonProperty("Total_Accounts")
-        private Integer totalAccounts;
+        private Integer Total_Accounts, Total_Accounts_12Months, Open_Accounts, Open_Accounts_12Months, Closed_Accounts, Closed_Accounts_12Months, Adverse_Accounts,
+                Adverse_Accounts_12Months, Worst_Active_Days_in_arrears, Worst_Days_in_Arrears, Worst_Days_in_arrears_12Months;
 
-        @JsonProperty("Total_Accounts_12Months")
-        private Integer totalAccounts12Months;
 
-        @JsonProperty("Open_Accounts")
-        private Integer openAccounts;
+        private List<CreditAccountValueData> Total_Value;
 
-        @JsonProperty("Open_Accounts_12Months")
-        private Integer openAccounts12Months;
+        private List<CreditAccountValue12MonthsData> Value_12Months;
 
-        @JsonProperty("Closed_Accounts")
-        private Integer closedAccounts;
-
-        @JsonProperty("Closed_Accounts_12Months")
-        private Integer closedAccounts12Months;
-
-        @JsonProperty("Adverse_Accounts")
-        private Integer adverseAccounts;
-
-        @JsonProperty("Adverse_Accounts_12Months")
-        private Integer adverseAccounts12Months;
-
-        @JsonProperty("Worst_Active_Days_in_arrears")
-        private Integer worstActiveDaysInArrears;
-
-        @JsonProperty("Worst_Days_in_Arreas")
-        private Integer worstDaysInArrears;
-
-        @JsonProperty("Worst_Days_in_arrears_12Months")
-        private Integer worstDaysInArrears12Months;
-
-        @JsonProperty("Total_Value")
-        private List<CreditAccountValueData> totalValue;
-
-        @JsonProperty("Value_12Months")
-        private List<CreditAccountValue12MonthsData> value12Months;
-
-        @JsonProperty("Monthly_Installment")
-        private List<MonthlyInstallmentData> monthlyInstallment;
+        private List<MonthlyInstallmentData> Monthly_Installment;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CreditAccountValueData {
 
-        @JsonProperty("Currency")
-        private String currency;
+        private String Currency;
 
-        @JsonProperty("Loan_Amount")
-        private BigDecimal loanAmount;
+        private BigDecimal Loan_Amount, Loan_Balance, Amount_Overdue;
 
-        @JsonProperty("Loan_Balance")
-        private BigDecimal loanBalance;
-
-        @JsonProperty("Amount_Overdue")
-        private BigDecimal amountOverdue;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CreditAccountValue12MonthsData {
 
-        @JsonProperty("Currency")
-        private String currency;
+        private String Currency;
 
-        @JsonProperty("Loan_Amount_12Months")
-        private BigDecimal loanAmount12Months;
+        private BigDecimal Loan_Amount_12Months, Payment_12Months, Loan_Balance_12Months, Amount_Overdue_12Months;
 
-        @JsonProperty("Payment_12Months")
-        private BigDecimal payment12Months;
-
-        @JsonProperty("Loan_Balance_12Months")
-        private BigDecimal loanBalance12Months;
-
-        @JsonProperty("Amount_Overdue_12Months")
-        private BigDecimal amountOverdue12Months;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class MonthlyInstallmentData {
 
-        @JsonProperty("Currency")
-        private String currency;
+        private String Currency;
 
-        @JsonProperty("Amount")
-        private BigDecimal amount;
+        private Integer Count;
+
+        private BigDecimal Amount;
     }
 
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CollateralMaterialData {
 
-        @JsonProperty("Currency")
-        private String currency;
+        private String Currency;
 
-        @JsonProperty("Items")
-        private Integer items;
+        private Integer Items;
 
-        @JsonProperty("Value")
-        private BigDecimal value;
+        private BigDecimal Value;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CollateralGuarantorData {
 
-        @JsonProperty("Currency")
-        private String currency;
+        private String Currency;
 
-        @JsonProperty("Accounts")
-        private Integer accounts;
+        private Integer Accounts;
 
-        @JsonProperty("Loan_Amount")
-        private BigDecimal loanAmount;
+        private BigDecimal Loan_Amount, Loan_Balance;
 
-        @JsonProperty("Loan_Balance")
-        private BigDecimal loanBalance;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class BouncedChequesData {
 
-        @JsonProperty("Currency")
-        private String currency;
+        private String Currency;
 
-        @JsonProperty("Cheques")
-        private Integer cheques;
+        private Integer Cheques;
 
-        @JsonProperty("Value")
-        private BigDecimal value;
+        private BigDecimal Value;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class FinancialFraudData {
 
-        @JsonProperty("Currency")
-        private String currency;
+        private String Currency;
 
-        @JsonProperty("Cases")
-        private Integer cases;
+        private Integer Cases;
 
-        @JsonProperty("Loss_Amount")
-        private BigDecimal lossAmount;
+        private BigDecimal Loss_Amount;
     }
 
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CostData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        @JsonProperty("Currency")
-        private String currency;
+        private String Currency;
 
-        @JsonProperty("Amount")
-        private Object amount;
+        private BigDecimal Amount;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ErrorData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        @JsonProperty("Code")
-        private String code;
+        private String Code;
 
-        @JsonProperty("Message")
-        private String message;
+        private String Message;
+    }
+
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Cost implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        private String Currency;
+
+        private BigDecimal Amount, Charge, VAT;
     }
 }

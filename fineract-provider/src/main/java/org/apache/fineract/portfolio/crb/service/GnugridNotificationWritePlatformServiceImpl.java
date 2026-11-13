@@ -1,12 +1,15 @@
 package org.apache.fineract.portfolio.crb.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
+import org.apache.fineract.infrastructure.creditbureau.domain.CRBProviders;
+import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauRepository;
 import org.apache.fineract.portfolio.crb.data.*;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
@@ -30,6 +33,14 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
     private final Environment env;
     private final ConfigurationDomainService configurationDomainService;
+    private final ObjectMapper objectMapper;
+
+
+
+    @Override
+    public String getImplementationKey() {
+        return CRBProviders.GNUGRID.getDescription();
+    }
 
     @Override
     public CreditScoreResponseData creditScore(CreditScoreRequestData creditScoreRequestData) {
@@ -544,9 +555,16 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
         final HttpEntity<?> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            final ResponseEntity<T> response = restTemplate.exchange(url, method, entity, responseType);
+            final ResponseEntity<String> response = restTemplate.exchange(url, method, entity, String.class);
 
-            final T responseData = response.getBody();
+            final String responseBody = response.getBody();
+
+            log.info("Gnugrid HTTP Status: {}", response.getStatusCode());
+
+            final T responseData = objectMapper.readValue( responseBody, responseType);
+
+            log.debug("Gnugrid raw response: {}", responseData);
+
 
             if (!response.getStatusCode().is2xxSuccessful() || responseData == null || !responseValidator.test(responseData)) {
 
@@ -561,6 +579,13 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
         } catch (final RestClientException exception) {
 
             throw new GeneralPlatformDomainRuleException(connectionFailedCode, "Unable to communicate with the CRB service.");
+        } catch (JsonProcessingException e) {
+            log.error("Unable to deserialize Gnugrid response", e);
+
+            throw new GeneralPlatformDomainRuleException(
+                    invalidResponseCode,
+                    invalidResponseMessage
+            );
         }
     }
 

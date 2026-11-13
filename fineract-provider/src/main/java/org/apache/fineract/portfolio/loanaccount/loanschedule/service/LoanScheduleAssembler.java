@@ -47,9 +47,12 @@ import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDoma
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
+import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauLoanProductMapping;
+import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauLoanProductMappingRepository;
 import org.apache.fineract.organisation.holiday.domain.Holiday;
 import org.apache.fineract.organisation.holiday.domain.HolidayRepository;
 import org.apache.fineract.organisation.holiday.domain.HolidayStatusType;
@@ -80,6 +83,10 @@ import org.apache.fineract.portfolio.common.domain.DaysInMonthType;
 import org.apache.fineract.portfolio.common.domain.DaysInYearType;
 import org.apache.fineract.portfolio.common.domain.NthDayType;
 import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
+import org.apache.fineract.portfolio.crb.domain.CrbCheck;
+import org.apache.fineract.portfolio.crb.domain.CrbCheckRepository;
+import org.apache.fineract.portfolio.crb.domain.CrbRequestType;
+import org.apache.fineract.portfolio.crb.domain.CreditValidationType;
 import org.apache.fineract.portfolio.floatingrates.data.FloatingRateDTO;
 import org.apache.fineract.portfolio.floatingrates.data.FloatingRatePeriodData;
 import org.apache.fineract.portfolio.floatingrates.exception.FloatingRateNotFoundException;
@@ -164,6 +171,10 @@ public class LoanScheduleAssembler {
     private final LoanDisbursementService loanDisbursementService;
     private final LoanChargeService loanChargeService;
     private final LoanScheduleService loanScheduleService;
+    private final CreditBureauLoanProductMappingRepository creditBureauLoanProductMappingRepository;
+    private final CrbCheckRepository crbCheckRepository;
+
+
 
     public LoanApplicationTerms assembleLoanTerms(final JsonElement element) {
         final Long loanProductId = this.fromApiJsonHelper.extractLongNamed("productId", element);
@@ -1471,6 +1482,29 @@ public class LoanScheduleAssembler {
     public Pair<Loan, Map<String, Object>> assembleLoanApproval(AppUser currentUser, JsonCommand command, Long loanId) {
         final JsonArray disbursementDataArray = command.arrayOfParameterNamed(LoanApiConstants.disbursementDataParameterName);
         final Loan loan = this.loanRepositoryWrapper.findOneWithNotFoundDetection(loanId, true);
+
+        final boolean isCrbEnabled = this.configurationDomainService.isCRBEnabled();
+
+        if (isCrbEnabled) {
+
+            final LoanProduct loanProduct = loan.loanProduct();
+
+            final CreditBureauLoanProductMapping mapping = this.creditBureauLoanProductMappingRepository.findOneByLoanProduct(loanProduct);
+
+            if (mapping != null && mapping.isActive() && mapping.isCreditCheckMandatory() ) {
+
+                final Long clientId = loan.getClient().getId();
+
+                final List<CrbCheck> initialCreditChecks = this.crbCheckRepository.findInitialCreditEnquiryOrScore(
+                        clientId, List.of(CreditValidationType.CREDIT_ENQUIRY.getValue(), CreditValidationType.CREDIT_SCORE.getValue()),
+                        CrbRequestType.INITIAL.getValue());
+
+                if (initialCreditChecks.isEmpty()) {
+                    throw new GeneralPlatformDomainRuleException("error.msg.loan.approval.crb.check.required",
+                            "A Credit Bureau Enquiry or Credit Score check is required before approving this loan.", "loanId", loanId);
+                }
+            }
+        }
 
         final Map<String, Object> actualChanges = new HashMap<>();
         defaultLoanLifecycleStateMachine.transition(LoanEvent.LOAN_APPROVED, loan);

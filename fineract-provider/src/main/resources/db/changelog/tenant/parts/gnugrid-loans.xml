@@ -108,12 +108,12 @@
     </changeSet>
 
     <changeSet id="crbcheck_extra" author="victor">
-        <insert tableName="m_crb_check">
+        <addColumn tableName="m_crb_check">
             <column name="individual_id" type="INT"/>
             <column name="non_individual_id" type="INT"/>
             <column name="report_token" type="VARCHAR(500)"/>
             <column name="report_url" type="TEXT"/>
-        </insert>
+        </addColumn>
 
         <insert tableName="m_code">
             <column name="code_name" value="CrbEnquiryReason"/>
@@ -193,4 +193,41 @@
             <column name="can_maker_checker" valueBoolean="false" />
         </insert>
     </changeSet>
+
+    <changeSet id="add-gnugrid-credit-bureau" author="victor">
+        <insert tableName="m_creditbureau">
+            <column name="name" value="Gnugrid"/>
+            <column name="product" value="1"/>
+            <column name="country" value="Uganda"/>
+            <column name="implementation_key" value="GNUGRID"/>
+        </insert>
+
+        <sql>
+            UPDATE m_creditbureau SET implementation_key = 'THITSAWORKS' where name = 'THITSAWORKS';
+        </sql>
+    </changeSet>
+    
+    <changeSet id="organisation-bureau" author="victor">
+        <insert tableName="m_organisation_creditbureau">
+            <column name="alias" value="Gnugrid Uganda"/>
+            <column name="is_active" valueBoolean="true"/>
+            <column name="creditbureau_id" valueComputed="(SELECT id FROM m_creditbureau WHERE implementation_key = 'GNUGRID')"/>
+        </insert>
+    </changeSet>
+    <changeSet id="add-loan-crb-check" author="victor">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="m_crb_check" columnName="loan_id"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="m_crb_check">
+            <column name="loan_id" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+    <changeSet id="loan-crb-check-constraint" author="victor">
+        <addForeignKeyConstraint baseTableName="m_crb_check" baseColumnNames="loan_id" constraintName="fk_m_crb_check_loan" referencedTableName="m_loan"
+                                 referencedColumnNames="id"/>
+    </changeSet>
+
+
 </databaseChangeLog>

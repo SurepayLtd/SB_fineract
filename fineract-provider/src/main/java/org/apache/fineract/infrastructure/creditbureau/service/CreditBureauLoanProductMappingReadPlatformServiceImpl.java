@@ -47,8 +47,10 @@ public class CreditBureauLoanProductMappingReadPlatformServiceImpl implements Cr
                     + "orgcb.alias as alias,concat( cb.product,' - ' ,cb.name,' - ',cb.country) as creditbureau,"
                     + "cblp.loan_product_id as lpId,lp.name as loan_product_name,cblp.is_creditcheck_mandatory as crCheck,cblp.skip_creditcheck_in_failure as skipcheck,"
                     + "cblp.stale_period as staleperiod,cblp.is_active as isActive from"
-                    + " m_creditbureau_loanproduct_mapping cblp, m_organisation_creditbureau orgcb,m_product_loan lp,m_creditbureau cb"
-                    + " where cblp.organisation_creditbureau_id=orgcb.id and cblp.loan_product_id=lp.id and orgcb.creditbureau_id=cb.id";
+                    + " m_creditbureau_loanproduct_mapping cblp "
+                    + " left join m_organisation_creditbureau orgcb on cblp.organisation_creditbureau_id=orgcb.id "
+                    + " left join m_product_loan lp on cblp.loan_product_id=lp.id "
+                    + " left join m_creditbureau cb on orgcb.creditbureau_id=cb.id ";
         }
 
         @Override
@@ -88,13 +90,13 @@ public class CreditBureauLoanProductMappingReadPlatformServiceImpl implements Cr
     }
 
     @Override
-    public Collection<CreditBureauLoanProductMappingData> readCreditBureauLoanProductMapping() {
+    public Collection<CreditBureauLoanProductMappingData> readCreditBureauLoanProductMapping(Long orgId) {
         this.context.authenticatedUser();
 
         final CreditBureauLoanProductMapper rm = new CreditBureauLoanProductMapper();
-        final String sql = "select " + rm.schema() + " order by cblp.id";
+        final String sql = "select " + rm.schema() + " where orgcb.id =? " +" order by cblp.id";
 
-        return this.jdbcTemplate.query(sql, rm); // NOSONAR
+        return this.jdbcTemplate.query(sql, rm, orgId); // NOSONAR
     }
 
     @Override
@@ -102,7 +104,7 @@ public class CreditBureauLoanProductMappingReadPlatformServiceImpl implements Cr
         this.context.authenticatedUser();
 
         final CreditBureauLoanProductMapper rm = new CreditBureauLoanProductMapper();
-        final String sql = "select " + rm.schema() + " and cblp.loan_product_id=?";
+        final String sql = "select " + rm.schema() + " where cblp.loan_product_id=?";
 
         return this.jdbcTemplate.queryForObject(sql, rm, new Object[] { loanProductId }); // NOSONAR
     }

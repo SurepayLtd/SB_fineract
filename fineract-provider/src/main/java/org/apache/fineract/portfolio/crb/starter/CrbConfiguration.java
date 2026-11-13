@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrapper;
 import org.apache.fineract.infrastructure.codes.service.CodeValueReadPlatformService;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
+import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauLoanProductMappingRepository;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
 import org.apache.fineract.portfolio.client.domain.ClientNonPersonRepositoryWrapper;
@@ -46,8 +47,8 @@ public class CrbConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public CrbCheckWritePlatformService crbCheckWritePlatformService(ClientRepositoryWrapper clientRepositoryWrapper, GnugridNotificationWritePlatformService gnugridNotificationWritePlatformService,
-                                                                     CrbCheckRepository crbCheckRepository, ObjectMapper objectMapper, CrbConsentRepository crbConsentRepository, CrbDataValidator fromApiJsonDeserializer){
-        return new CrbCheckWritePlatformServiceImpl(clientRepositoryWrapper, gnugridNotificationWritePlatformService, crbCheckRepository, objectMapper, crbConsentRepository, fromApiJsonDeserializer);
+                                                                     CrbCheckRepository crbCheckRepository, ObjectMapper objectMapper, CrbConsentRepository crbConsentRepository, CrbDataValidator fromApiJsonDeserializer, ConfigurationDomainService configurationDomainService){
+        return new CrbCheckWritePlatformServiceImpl(clientRepositoryWrapper, gnugridNotificationWritePlatformService, crbCheckRepository, objectMapper, crbConsentRepository, fromApiJsonDeserializer, configurationDomainService);
     }
 
     @Bean
@@ -60,7 +61,22 @@ public class CrbConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public CrbCreditCheckWriteService crbCreditCheckWriteService(ClientRepositoryWrapper clientRepositoryWrapper, ClientNonPersonRepositoryWrapper clientNonPersonRepositoryWrapper, GnugridNotificationWritePlatformService gnugridNotificationWritePlatformService,
-                                                                 CrbCheckRepository crbCheckRepository, ObjectMapper objectMapper, CrbConsentRepository crbConsentRepository, CrbDataValidator fromApiJsonDeserializer, Environment environment, CodeValueRepositoryWrapper codeValueRepository, LoanRepositoryWrapper loanRepositoryWrapper){
-        return new CrbCreditCheckWriteServiceImpl(clientRepositoryWrapper, clientNonPersonRepositoryWrapper, gnugridNotificationWritePlatformService, crbCheckRepository, objectMapper, crbConsentRepository, fromApiJsonDeserializer,environment, codeValueRepository, loanRepositoryWrapper);
+                                                                 CrbCheckRepository crbCheckRepository, ObjectMapper objectMapper, CrbConsentRepository crbConsentRepository, CrbDataValidator fromApiJsonDeserializer, CodeValueRepositoryWrapper codeValueRepository,
+                                                                 LoanRepositoryWrapper loanRepositoryWrapper, CreditBureauLoanProductMappingRepository creditBureauLoanProductMappingRepository, ConfigurationDomainService configurationDomainService){
+        return new CrbCreditCheckWriteServiceImpl(clientRepositoryWrapper, clientNonPersonRepositoryWrapper, gnugridNotificationWritePlatformService, crbCheckRepository, objectMapper, crbConsentRepository, fromApiJsonDeserializer, codeValueRepository, loanRepositoryWrapper, creditBureauLoanProductMappingRepository, configurationDomainService);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public GnugridKycReportIntegrationWritePlatformService gnugridKycReportIntegrationWritePlatformService(ClientRepositoryWrapper clientRepositoryWrapper, CrbDataValidator fromApiJsonDeserializer, CrbConsentRepository crbConsentRepository,
+                                                                 CrbCheckRepository crbCheckRepository, ObjectMapper objectMapper, GnugridNotificationWritePlatformService gnugridNotificationWritePlatformService){
+        return new GnugridKycReportIntegrationWritePlatformServiceImpl(clientRepositoryWrapper, fromApiJsonDeserializer, crbConsentRepository, crbCheckRepository, objectMapper, gnugridNotificationWritePlatformService);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public GnugridCreditReportIntegrationWritePlatformService gnugridCreditReportIntegrationWritePlatformService(GnugridNotificationWritePlatformService gnugridService, CrbCheckRepository crbCheckRepository, ObjectMapper objectMapper, Environment environment, CrbDataValidator fromApiJsonDeserializer,
+                                                                                                                 LoanRepositoryWrapper loanRepositoryWrapper, CrbConsentRepository crbConsentRepository, CreditBureauLoanProductMappingRepository creditBureauLoanProductMappingRepository, ConfigurationDomainService configurationDomainService){
+        return new GnugridCreditReportIntegrationWritePlatformServiceImpl(gnugridService, crbCheckRepository, objectMapper, environment, fromApiJsonDeserializer, loanRepositoryWrapper, crbConsentRepository, creditBureauLoanProductMappingRepository, configurationDomainService);
     }
 }

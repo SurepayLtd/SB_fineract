@@ -54,7 +54,7 @@ public class CreditBureauReadPlatformServiceImpl implements CreditBureauReadPlat
             final String product = rs.getString("creditBureauProduct");
             final String country = rs.getString("country");
             final String cbSummary = rs.getString("cbSummary");
-            final long implementationKey = rs.getLong("implementationKey");
+            final String implementationKey = rs.getString("implementationKey");
 
             return CreditBureauData.instance(id, name, country, product, cbSummary, implementationKey);
 

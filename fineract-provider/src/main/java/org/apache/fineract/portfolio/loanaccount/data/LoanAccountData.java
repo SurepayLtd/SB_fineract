@@ -88,6 +88,7 @@ public class LoanAccountData {
     private Long loanProductId;
     private String loanProductName;
     private String loanProductDescription;
+    private boolean isLoanProductCrbEnabled;
     // TODO: avoid prefix "is"
     private boolean isLoanProductLinkedToFloatingRate;
     private Long fundId;
@@ -400,7 +401,7 @@ public class LoanAccountData {
         }
 
         return this.setProductId(product.getId()).setLoanProductName(product.getName()).setLoanProductDescription(product.getDescription())
-                .setLoanProductLinkedToFloatingRate(product.isLinkedToFloatingInterestRates()).setFundId(product.getFundId())
+                .setLoanProductLinkedToFloatingRate(product.isLinkedToFloatingInterestRates()).setLoanProductCrbEnabled(product.getCreditBureauLoanProductMappingData().isActive()).setFundId(product.getFundId())
                 .setFundName(product.getFundName()).setCurrency(product.getCurrency()).setProposedPrincipal(proposedPrincipal)
                 .setPrincipal(principal).setApprovedPrincipal(principal).setNetDisbursalAmount(netDisbursalAmount)
                 .setInArrearsTolerance(product.getInArrearsTolerance()).setTermFrequency(numberOfRepayments * product.getRepaymentEvery())
@@ -467,14 +468,14 @@ public class LoanAccountData {
             final BigDecimal disbursedAmountPercentageForDownPayment, final boolean enableAutoRepaymentForDownPayment,
             final boolean enableInstallmentLevelDelinquency, final EnumOptionData loanScheduleType,
             final EnumOptionData loanScheduleProcessingType, final Integer fixedLength, final StringEnumOptionData chargeOffBehaviour,
-            final boolean isInterestRecognitionOnDisbursementDate, final EnumOptionData loanChannel) {
+            final boolean isInterestRecognitionOnDisbursementDate, final EnumOptionData loanChannel, Boolean isLoanProductCrbEnabled) {
 
         final CollectionData delinquent = CollectionData.template();
 
         return new LoanAccountData().setId(id).setAccountNo(accountNo).setStatus(status).setExternalId(externalId).setClientId(clientId)
                 .setClientAccountNo(clientAccountNo).setClientName(clientName).setClientOfficeId(clientOfficeId)
                 .setClientExternalId(clientExternalId).setGroup(group).setLoanType(loanType).setLoanProductId(loanProductId)
-                .setLoanProductName(loanProductName).setLoanProductDescription(loanProductDescription)
+                .setLoanProductName(loanProductName).setLoanProductDescription(loanProductDescription).setLoanProductCrbEnabled(isLoanProductCrbEnabled)
                 .setLoanProductLinkedToFloatingRate(isLoanProductLinkedToFloatingRate).setFundId(fundId).setFundName(fundName)
                 .setLoanPurposeId(loanPurposeId).setLoanPurposeName(loanPurposeName).setLoanOfficerId(loanOfficerId)
                 .setLoanOfficerName(loanOfficerName).setCurrency(currencyData).setProposedPrincipal(proposedPrincipal)

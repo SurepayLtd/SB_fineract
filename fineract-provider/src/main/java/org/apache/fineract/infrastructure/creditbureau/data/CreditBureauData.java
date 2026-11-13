@@ -37,10 +37,10 @@ public final class CreditBureauData {
 
     private String creditBureauSummary;
 
-    private long implementationKey;
+    private String implementationKey;
 
     public static CreditBureauData instance(final long creditBureauId, final String creditBureauName, final String country,
-            final String productName, final String creditBureauSummary, final long implementationKey) {
+            final String productName, final String creditBureauSummary, final String implementationKey) {
 
         return new CreditBureauData().setCreditBureauId(creditBureauId).setCreditBureauName(creditBureauName).setCountry(country)
                 .setProductName(productName).setCreditBureauSummary(creditBureauSummary).setImplementationKey(implementationKey);

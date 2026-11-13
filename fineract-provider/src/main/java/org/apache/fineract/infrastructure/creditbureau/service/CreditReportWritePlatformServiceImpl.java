@@ -41,6 +41,8 @@ import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauReposi
 import org.apache.fineract.infrastructure.creditbureau.domain.CreditReport;
 import org.apache.fineract.infrastructure.creditbureau.domain.CreditReportRepository;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.portfolio.crb.service.GnugridCreditReportIntegrationWritePlatformService;
+import org.apache.fineract.portfolio.crb.service.GnugridKycReportIntegrationWritePlatformService;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -57,16 +59,15 @@ public class CreditReportWritePlatformServiceImpl implements CreditReportWritePl
 
     private final CreditBureauRepository creditBureauRepository;
     private final CreditReportRepository creditReportRepository;
-    private final ThitsaWorksCreditBureauIntegrationWritePlatformService thitsaWorksCreditBureauIntegrationWritePlatformService;
+    private final CreditBureauIntegrationFactory creditBureauIntegrationFactory;
 
     @Autowired
     public CreditReportWritePlatformServiceImpl(final PlatformSecurityContext context, final CreditBureauRepository creditBureauRepository,
-            final CreditReportRepository creditReportRepository,
-            final ThitsaWorksCreditBureauIntegrationWritePlatformService thitsaWorksCreditBureauIntegrationWritePlatformService) {
+            final CreditReportRepository creditReportRepository, final CreditBureauIntegrationFactory creditBureauIntegrationFactory) {
         this.context = context;
         this.creditBureauRepository = creditBureauRepository;
         this.creditReportRepository = creditReportRepository;
-        this.thitsaWorksCreditBureauIntegrationWritePlatformService = thitsaWorksCreditBureauIntegrationWritePlatformService;
+        this.creditBureauIntegrationFactory = creditBureauIntegrationFactory;
     }
 
     @Override
@@ -77,18 +78,29 @@ public class CreditReportWritePlatformServiceImpl implements CreditReportWritePl
         try {
             Long creditBureauID = command.longValueOfParameterNamed("creditBureauID");
 
-            String creditBureauName = getCreditBureauName(creditBureauID);
+            CreditBureau creditBureau = getCreditBureau(creditBureauID);
 
-            if (Objects.equals(creditBureauName, CreditBureauConfigurations.THITSAWORKS.toString())) {
+            CreditBureauIntegrationWritePlatformService integration = creditBureauIntegrationFactory.getIntegration(creditBureau.getImplementationKey());
 
-                CreditBureauReportData reportobj = this.thitsaWorksCreditBureauIntegrationWritePlatformService
-                        .getCreditReportFromThitsaWorks(command);
+            if (integration instanceof ThitsaWorksCreditBureauIntegrationWritePlatformService thitsaWorksIntegration) {
+
+                CreditBureauReportData reportobj = thitsaWorksIntegration.getCreditReportFromThitsaWorks(command);
 
                 Map<String, Object> reportMap = Map.of("name", reportobj.getName(), "gender", reportobj.getGender(), "address",
                         reportobj.getAddress(), "creditScore", reportobj.getCreditScore(), "borrowerInfo", reportobj.getBorrowerInfo(),
                         "openAccounts", reportobj.getOpenAccounts(), "closedAccounts", reportobj.getClosedAccounts());
 
                 return new CommandProcessingResultBuilder().withCreditReport(reportMap).build();
+            }else if (integration instanceof GnugridCreditReportIntegrationWritePlatformService gnugridIntegration) {
+
+                Long loanId = command.longValueOfParameterNamed("loanId");
+
+                return gnugridIntegration.creditReports(loanId, command);
+            }else if (integration instanceof GnugridKycReportIntegrationWritePlatformService gnugridKycReport) {
+
+                Long clientId = command.longValueOfParameterNamed("clientId");
+
+                return gnugridKycReport.kycReports(clientId, command);
             }
 
             baseDataValidator.reset().failWithCode(CREDIT_BUREAU_HAS_NOT_BEEN_INTEGRATED);
@@ -111,33 +123,28 @@ public class CreditReportWritePlatformServiceImpl implements CreditReportWritePl
     public String addCreditReport(Long bureauId, File creditReport, FormDataContentDisposition fileDetail) {
         List<ApiParameterError> dataValidationErrors = new ArrayList<>();
         DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource(CREDIT_BUREAU_INTEGRATION);
-        String creditBureauName = getCreditBureauName(bureauId);
-        String responseMessage = null;
+        CreditBureau creditBureau = getCreditBureau(bureauId);
+        CreditBureauIntegrationWritePlatformService integration = creditBureauIntegrationFactory.getIntegration(creditBureau.getImplementationKey());
 
-        if (Objects.equals(creditBureauName, CreditBureauConfigurations.THITSAWORKS.toString())) {
-            responseMessage = this.thitsaWorksCreditBureauIntegrationWritePlatformService.addCreditReport(bureauId, creditReport,
-                    fileDetail);
-        } else {
+        if (integration instanceof ThitsaWorksCreditBureauIntegrationWritePlatformService thitsaWorksIntegration) {
 
-            baseDataValidator.reset().failWithCode(CREDIT_BUREAU_HAS_NOT_BEEN_INTEGRATED);
-            throw new PlatformApiDataValidationException(CREDIT_BUREAU_HAS_NOT_BEEN_INTEGRATED, CREDIT_BUREAU_HAS_NOT_BEEN_INTEGRATED,
-                    dataValidationErrors);
-
+            return thitsaWorksIntegration.addCreditReport(bureauId, creditReport, fileDetail);
         }
 
-        return responseMessage;
-
+        baseDataValidator.reset().failWithCode(CREDIT_BUREAU_HAS_NOT_BEEN_INTEGRATED);
+        throw new PlatformApiDataValidationException(CREDIT_BUREAU_HAS_NOT_BEEN_INTEGRATED, CREDIT_BUREAU_HAS_NOT_BEEN_INTEGRATED,
+                dataValidationErrors);
     }
 
-    private String getCreditBureauName(Long creditBureauID) {
+    private CreditBureau getCreditBureau(Long creditBureauID) {
         List<ApiParameterError> dataValidationErrors = new ArrayList<>();
         DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource(CREDIT_BUREAU_INTEGRATION);
         if (creditBureauID != null) {
-            Optional<CreditBureau> creditBureau = this.creditBureauRepository.findById(creditBureauID);
-
-            if (!creditBureau.isEmpty()) {
-                return creditBureau.get().getName();
-            }
+            return creditBureauRepository.findById(creditBureauID).orElseThrow(() -> new PlatformApiDataValidationException(
+                            CREDIT_BUREAU_HAS_NOT_BEEN_INTEGRATED,
+                            CREDIT_BUREAU_HAS_NOT_BEEN_INTEGRATED,
+                            List.of()
+                    ));
         }
 
         baseDataValidator.reset().failWithCode(CREDIT_BUREAU_HAS_NOT_BEEN_INTEGRATED);
@@ -153,14 +160,14 @@ public class CreditReportWritePlatformServiceImpl implements CreditReportWritePl
         try {
             this.context.authenticatedUser();
 
-            String creditBureauName = getCreditBureauName(creditBureauId);
-            CreditReport creditReport = null;
+            CreditBureau creditBureau = getCreditBureau(creditBureauId);
+            CreditBureauIntegrationWritePlatformService integration = creditBureauIntegrationFactory.getIntegration(creditBureau.getImplementationKey());            CreditReport creditReport = null;
 
-            if (Objects.equals(creditBureauName, CreditBureauConfigurations.THITSAWORKS.toString())) {
+            if (integration instanceof ThitsaWorksCreditBureauIntegrationWritePlatformService thitsaWorksIntegration) {
 
                 // checks whether creditReport for same nationalId was saved before. if yes, then deletes it & replaces
                 // with new one.
-                creditReport = creditReportRepository.getThitsaWorksCreditReport(creditBureauId, nationalId);
+                creditReport = creditReportRepository.getCreditReport(creditBureauId, nationalId);
 
                 if (creditReport != null) {
                     this.creditReportRepository.delete(creditReport);
@@ -172,6 +179,36 @@ public class CreditReportWritePlatformServiceImpl implements CreditReportWritePl
                 creditReport = CreditReport.instance(creditBureauId, nationalId, creditReportArray);
                 this.creditReportRepository.saveAndFlush(creditReport);
 
+            } else if (integration instanceof GnugridCreditReportIntegrationWritePlatformService gnugridIntegration) {
+
+                Long loanId = command.longValueOfParameterNamed("loanId");
+
+                String reportData = gnugridIntegration.getCreditReportPayload(loanId);
+
+                creditReport = creditReportRepository.getCreditReport(creditBureauId, nationalId);
+
+                if (creditReport != null) {
+                    creditReportRepository.delete(creditReport);
+                }
+
+                creditReport = CreditReport.instance(creditBureauId, nationalId, reportData.getBytes(StandardCharsets.UTF_8));
+
+                creditReportRepository.saveAndFlush(creditReport);
+            } else if (integration instanceof GnugridKycReportIntegrationWritePlatformService gnugridKycReport) {
+
+                Long clientId = command.longValueOfParameterNamed("clientId");
+
+                String reportData = gnugridKycReport.getKycReportPayload(clientId);
+
+                creditReport = creditReportRepository.getCreditReport(creditBureauId, nationalId);
+
+                if (creditReport != null) {
+                    creditReportRepository.delete(creditReport);
+                }
+
+                creditReport = CreditReport.instance(creditBureauId, nationalId, reportData.getBytes(StandardCharsets.UTF_8));
+
+                creditReportRepository.saveAndFlush(creditReport);
             }
 
             return new CommandProcessingResultBuilder().withEntityId(creditReport.getId()).build();
@@ -191,21 +228,18 @@ public class CreditReportWritePlatformServiceImpl implements CreditReportWritePl
 
         this.context.authenticatedUser();
 
-        String creditBureauName = getCreditBureauName(creditBureauId);
-        CreditReport creditReport = null;
+        getCreditBureau(creditBureauId);
 
-        if (Objects.equals(creditBureauName, CreditBureauConfigurations.THITSAWORKS.toString())) {
+        String nationalId = command.stringValueOfParameterNamed("nationalId");
 
-            String nationalId = command.stringValueOfParameterNamed("nationalId");
-
-            creditReport = creditReportRepository.getThitsaWorksCreditReport(creditBureauId, nationalId);
-            try {
-                this.creditReportRepository.delete(creditReport);
-            } catch (final JpaSystemException | DataIntegrityViolationException dve) {
-                throw ErrorHandler.getMappable(dve, "error.msg.cund.unknown.data.integrity.issue",
-                        "Unknown data integrity issue with resource: " + dve.getMostSpecificCause().getMessage());
-            }
+        var creditReport = creditReportRepository.getCreditReport(creditBureauId, nationalId);
+        try {
+            this.creditReportRepository.delete(creditReport);
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            throw ErrorHandler.getMappable(dve, "error.msg.cund.unknown.data.integrity.issue",
+                    "Unknown data integrity issue with resource: " + dve.getMostSpecificCause().getMessage());
         }
+
         return new CommandProcessingResultBuilder().withEntityId(creditReport.getId()).build();
     }
 

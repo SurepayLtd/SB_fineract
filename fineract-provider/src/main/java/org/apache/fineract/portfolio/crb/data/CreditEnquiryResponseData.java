@@ -1,5 +1,6 @@
 package org.apache.fineract.portfolio.crb.data;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -34,6 +35,7 @@ public class CreditEnquiryResponseData implements Serializable {
 
         private String id;
         private String entity;
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime timestamp;
         private String reference;
         private String criteria;
@@ -58,6 +60,7 @@ public class CreditEnquiryResponseData implements Serializable {
 
         private String id;
         private String entity;
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime timestamp;
         private String reference;
         private String criteria;

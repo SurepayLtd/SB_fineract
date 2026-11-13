@@ -13,6 +13,7 @@ import lombok.Setter;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 import org.apache.fineract.portfolio.client.domain.CRBStatus;
 import org.apache.fineract.portfolio.client.domain.Client;
+import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 
 @Entity
 @Table(name = "m_crb_check")
@@ -23,6 +24,10 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "loan_id")
+    private Loan loan;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "consent_id", nullable = false)
@@ -87,9 +92,10 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
 
     protected CrbCheck(){}
 
-    public CrbCheck(Client client, CrbConsent consent, Integer validationType, Integer requestType, String providerValidationId, String providerReference, BigDecimal cost, String currency, String requestPayload, String responsePayload, String errorMessage, String message,
+    public CrbCheck(Client client, Loan loan, CrbConsent consent, Integer validationType, Integer requestType, String providerValidationId, String providerReference, BigDecimal cost, String currency, String requestPayload, String responsePayload, String errorMessage, String message,
                     LocalDateTime completedAt, Integer individualId, Integer nonIndividualId) {
         this.client = client;
+        this.loan = loan;
         this.consent = consent;
         this.validationType = validationType;
         this.requestType = requestType;
@@ -107,8 +113,8 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
         this.nonIndividualId = nonIndividualId;
     }
 
-    public static CrbCheck create(final Client client, final CrbConsent consent, final Integer type, final Integer requestType) {
-        return new CrbCheck(client, consent, type, requestType, null, null, null, null, null, null, null, null, null, null, null);
+    public static CrbCheck create(final Client client, final Loan loan, final CrbConsent consent, final Integer type, final Integer requestType) {
+        return new CrbCheck(client, loan, consent, type, requestType, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public void complete(final Integer status, final String validationId, final String reference,

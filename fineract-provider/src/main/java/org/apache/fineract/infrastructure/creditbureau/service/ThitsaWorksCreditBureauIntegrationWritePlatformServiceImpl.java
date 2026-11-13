@@ -60,9 +60,10 @@ import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.creditbureau.data.CreditBureauConfigurations;
 import org.apache.fineract.infrastructure.creditbureau.data.CreditBureauReportData;
+import org.apache.fineract.infrastructure.creditbureau.domain.CRBProviders;
+import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauToken;
 import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauConfiguration;
 import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauConfigurationRepositoryWrapper;
-import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauToken;
 import org.apache.fineract.infrastructure.creditbureau.domain.TokenRepositoryWrapper;
 import org.apache.fineract.infrastructure.creditbureau.serialization.CreditBureauTokenCommandFromApiJsonDeserializer;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
@@ -142,6 +143,11 @@ public class ThitsaWorksCreditBureauIntegrationWritePlatformServiceImpl implemen
         }
         return responseMessage;
 
+    }
+
+    @Override
+    public String getImplementationKey() {
+        return CRBProviders.THITSAWORKS.getDescription();
     }
 
     /**

@@ -28,33 +28,45 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
 
 
     @Override
-    public List<CrbCheckData> retrieveCreditChecks(Long clientId, Integer type) {
+    public List<CrbCheckData> retrieveCreditChecks(Long loanId, Integer type) {
+        this.context.authenticatedUser();
+        CheckMapper mp = new CheckMapper(objectMapper);
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select ");
+        sb.append(mp.schema());
+        sb.append(" WHERE cc.loan_id = ? ");
+        sb.append(" AND cc.validation_type = ? ");
+        sb.append(" ORDER BY cc.created_at DESC, cc.id DESC ");
+        return this.jdbcTemplate.query(sb.toString(), mp, loanId, type);
+    }
+
+    @Override
+    public List<CrbCheckData> retrieveClientChecks(Long clientId) {
         this.context.authenticatedUser();
         CheckMapper mp = new CheckMapper(objectMapper);
         StringBuilder sb = new StringBuilder();
         sb.append(" Select ");
         sb.append(mp.schema());
         sb.append(" WHERE cc.client_id = ? ");
-        sb.append(" AND cc.validation_type = ? ");
         sb.append(" ORDER BY cc.created_at DESC, cc.id DESC ");
         return this.jdbcTemplate.query(sb.toString(), mp, clientId);
     }
 
     @Override
-    public List<CrbCheckData> retrieveChecks(Long clientId) {
+    public List<CrbCheckData> retrieveKycChecks(Long clientId) {
         this.context.authenticatedUser();
         CheckMapper mp = new CheckMapper(objectMapper);
         StringBuilder sb = new StringBuilder();
         sb.append(" Select ");
         sb.append(mp.schema());
-        sb.append(" WHERE cc.client_id = ? ");
+        sb.append(" WHERE cc.client_id = ? AND cc.validation_type = 100");
         sb.append(" ORDER BY cc.created_at DESC, cc.id DESC ");
         return this.jdbcTemplate.query(sb.toString(), mp, clientId);
     }
 
     @Override
     public CrbCheckData retrieveTypes() {
-        return CrbCheckData.dropdown(getRequestTypes(), getValidationTypes(), getCreditReportActionTypes(), getCreditReportFormatTypes(), getCreditReportTypes(), getCreditValidationTypes());
+        return CrbCheckData.dropdown(getRequestTypes(), getValidationTypes(), getCreditReportActionTypes(), getCreditReportFormatTypes(), getCreditReportTypes(), getCreditValidationTypes(), getCreditScoreTypes());
     }
 
     protected static class CheckMapper implements RowMapper<CrbCheckData>{
@@ -71,6 +83,11 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
             final Long id = rs.getLong("id");
             final Long clientId = rs.getLong("clientId");
             final String clientName = rs.getString("clientName");
+            final String clientAccount = rs.getString("clientAccount");
+            final Long loanId = rs.getLong("loanId");
+            final String loanProductName = rs.getString("loanProductName");
+            final String loanAccount = rs.getString("loanAccount");
+            final BigDecimal proposedPrincipal = rs.getBigDecimal("proposedPrincipal");
             final Integer validationType = rs.getInt("validationType");
             final Integer requestType = rs.getInt("requestType");
             final Integer status = rs.getInt("status");
@@ -90,7 +107,7 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
                             : null;
             final String reportUrl = rs.getString("reportUrl");
             final Map<String, Object> responseDetails = extractResponseDetails(validationType, responsePayload);
-            return CrbCheckData.display(id, clientId, clientName, validationType, requestType, status, consentStatus,
+            return CrbCheckData.display(id, clientId, clientName, clientAccount, loanId, loanProductName, loanAccount, proposedPrincipal, validationType, requestType, status, consentStatus,
                     providerValidationId, providerReference, cost, currency,
                     message, errorMessage, responsePayload, responseDetails, createdAt, completedAt, reportUrl);
         }
@@ -102,6 +119,11 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
             builder.append("cc.id AS id, ");
             builder.append("cc.client_id AS clientId, ");
             builder.append("c.display_name AS clientName, ");
+            builder.append("c.account_no AS clientAccount, ");
+            builder.append("l.account_no AS loanAccount, ");
+            builder.append("l.id AS loanId, ");
+            builder.append("lp.name AS loanProductName, ");
+            builder.append("l.principal_amount_proposed AS proposedPrincipal, ");
             builder.append("cc.validation_type AS validationType, ");
             builder.append("cc.request_type AS requestType, ");
             builder.append("cc.check_status AS status, ");
@@ -117,22 +139,39 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
             builder.append("cc.report_url AS reportUrl, ");
             builder.append("cc.completed_at AS completedAt");
             builder.append(" FROM m_crb_check cc ");
-            builder.append(" JOIN m_client c ON c.id = cc.client_id ");
-            builder.append(" JOIN m_crb_consent cr ON cr.id = cc.consent_id ");
+            builder.append(" LEFT JOIN m_client c ON c.id = cc.client_id ");
+            builder.append(" LEFT JOIN m_crb_consent cr ON cr.id = cc.consent_id ");
+            builder.append(" LEFT JOIN m_loan l ON l.id = cc.loan_id ");
+            builder.append(" LEFT JOIN m_product_loan lp ON lp.id = l.product_id ");
 
             return builder.toString();
         }
 
-        private Map<String, Object> extractResponseDetails(Integer validationType, String responsePayload) {
+        private Map<String, Object> extractResponseDetails(final Integer validationType, final String responsePayload) {
 
             if (responsePayload == null || responsePayload.isBlank()) {
+                return Map.of();
+            }
+
+            if (validationType == null) {
                 return Map.of();
             }
 
             try {
                 JsonNode root = objectMapper.readTree(responsePayload);
 
-                CrbValidationType type = CrbValidationType.fromInt(validationType);
+                CrbValidationType type = null;
+
+                for (CrbValidationType validation : CrbValidationType.values()) {
+                    if (validation.getValue().equals(validationType)) {
+                        type = validation;
+                        break;
+                    }
+                }
+
+                if (type == null) {
+                    return Map.of();
+                }
 
                 return switch (type) {
                     case DETAILS -> extractClientDetails(root);
@@ -237,6 +276,17 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
 
         Collection<EnumOptionData> data = new ArrayList<>();
         for (CreditValidationType type : CreditValidationType.values()){
+            data.add(new EnumOptionData(
+                    type.getValue().longValue(), type.getCode(), type.getDescription()
+            ));
+        }
+        return data;
+    }
+
+    private Collection<EnumOptionData> getCreditScoreTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CreditScore type : CreditScore.values()){
             data.add(new EnumOptionData(
                     type.getValue().longValue(), type.getCode(), type.getDescription()
             ));

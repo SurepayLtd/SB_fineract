@@ -3953,7 +3953,7 @@ public class CommandWrapperBuilder {
 
     public CommandWrapperBuilder createCrbKycCheck(final Long clientId) {
         this.actionName = "CREATE";
-        this.entityName = "CRBCREDIT";
+        this.entityName = "CRBKYC";
         this.clientId = clientId;
         this.json = "{}";
         this.href = "/crbchecks/" + clientId  + "/kyc/ " ;

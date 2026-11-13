@@ -146,6 +146,19 @@ public class CreditBureauLoanProductCommandFromApiJsonDeserializer {
             baseDataValidator.reset().parameter(IS_ACTIVE).value(isActive).notNull().notBlank().trueOrFalseRequired(isActive);
         }
 
+        if (this.fromApiJsonHelper.parameterExists(STALE_PERIOD, element)) {
+            final long stalePeriod = this.fromApiJsonHelper.extractLongNamed(STALE_PERIOD, element);
+            baseDataValidator.reset().parameter(STALE_PERIOD).value(stalePeriod).notNull().notBlank().integerGreaterThanZero();
+        }
+        if (this.fromApiJsonHelper.parameterExists(IS_CREDITCHECK_MANDATORY, element)) {
+            final boolean creditCheckMandatory = this.fromApiJsonHelper.extractBooleanNamed(IS_CREDITCHECK_MANDATORY, element);
+            baseDataValidator.reset().parameter(IS_CREDITCHECK_MANDATORY).value(creditCheckMandatory).notNull().notBlank().trueOrFalseRequired(creditCheckMandatory);
+        }
+        if (this.fromApiJsonHelper.parameterExists(SKIP_CREDITCHECK_IN_FAILURE, element)) {
+            final boolean skipCreditcheckInFailure = this.fromApiJsonHelper.extractBooleanNamed(SKIP_CREDITCHECK_IN_FAILURE, element);
+            baseDataValidator.reset().parameter(SKIP_CREDITCHECK_IN_FAILURE).value(skipCreditcheckInFailure).notNull().notBlank().trueOrFalseRequired(skipCreditcheckInFailure);
+        }
+
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
 
     }

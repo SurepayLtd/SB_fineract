@@ -26,6 +26,6 @@ import org.springframework.data.repository.query.Param;
 public interface CreditReportRepository extends JpaRepository<CreditReport, Long>, JpaSpecificationExecutor<CreditReport> {
 
     @Query("SELECT creditBureauReport from CreditReport creditBureauReport where creditBureauReport.nationalId = :nationalId and creditBureauReport.creditBureauId = :creditBureauId ")
-    CreditReport getThitsaWorksCreditReport(@Param("creditBureauId") Long creditBureauId, @Param("nationalId") String nationalId);
+    CreditReport getCreditReport(@Param("creditBureauId") Long creditBureauId, @Param("nationalId") String nationalId);
 
 }

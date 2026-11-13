@@ -24,7 +24,7 @@ import org.apache.fineract.infrastructure.creditbureau.data.CreditBureauReportDa
 import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauToken;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 
-public interface ThitsaWorksCreditBureauIntegrationWritePlatformService {
+public interface ThitsaWorksCreditBureauIntegrationWritePlatformService extends CreditBureauIntegrationWritePlatformService{
 
     CreditBureauToken createToken(Long creditBureauID);
 

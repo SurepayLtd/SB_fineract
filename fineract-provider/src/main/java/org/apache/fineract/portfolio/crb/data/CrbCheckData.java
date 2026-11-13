@@ -4,10 +4,9 @@ package org.apache.fineract.portfolio.crb.data;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.portfolio.client.domain.CRBStatus;
-import org.apache.fineract.portfolio.crb.domain.ConsentStatus;
-import org.apache.fineract.portfolio.crb.domain.CrbRequestType;
-import org.apache.fineract.portfolio.crb.domain.CrbValidationType;
+import org.apache.fineract.portfolio.crb.domain.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -20,6 +19,12 @@ public final class CrbCheckData {
     private final Long id;
     private final Long clientId;
     private final String clientName;
+    private final String clientAccount;
+
+    private final Long loanId;
+    private final String loanProductName;
+    private final String loanAccount;
+    private final BigDecimal proposedPrincipal;
 
     private final EnumOptionData validationType;
     private final EnumOptionData requestType;
@@ -56,14 +61,22 @@ public final class CrbCheckData {
 
     private final Collection<EnumOptionData> creditValidationTypes;
 
+    private final Collection<EnumOptionData> creditScoreTypes;
 
 
 
-    private CrbCheckData(Long id, Long clientId, String clientName, EnumOptionData validationType, EnumOptionData requestType, EnumOptionData status, EnumOptionData consentStatus, String providerValidationId,
+
+
+    private CrbCheckData(Long id, Long clientId, String clientName, String clientAccount, Long loanId, String loanProductName, String loanAccount, BigDecimal proposedPrincipal, EnumOptionData validationType, EnumOptionData requestType, EnumOptionData status, EnumOptionData consentStatus, String providerValidationId,
                         String providerReference, BigDecimal cost, String currency, String message, String errorMessage, String responsePayload, Map<String, Object> responseDetails, LocalDateTime createdAt, LocalDateTime completedAt, String reportUrl) {
         this.id = id;
         this.clientId = clientId;
         this.clientName = clientName;
+        this.clientAccount = clientAccount;
+        this.loanId = loanId;
+        this.loanProductName = loanProductName;
+        this.loanAccount = loanAccount;
+        this.proposedPrincipal = proposedPrincipal;
         this.validationType = validationType;
         this.requestType = requestType;
         this.status = status;
@@ -85,20 +98,27 @@ public final class CrbCheckData {
         this.creditValidationTypes = null;
         this.creditReportActionTypes = null;
         this.creditReportFormatTypes = null;
+        this.creditScoreTypes = null;
 
     }
 
-    public CrbCheckData(Collection<EnumOptionData> requestTypes, Collection<EnumOptionData> validationTypes, Collection<EnumOptionData> creditReportActionTypes, Collection<EnumOptionData> creditReportFormatTypes,
-                        Collection<EnumOptionData> creditReportTypes, Collection<EnumOptionData> creditValidationTypes) {
+    private CrbCheckData(Collection<EnumOptionData> requestTypes, Collection<EnumOptionData> validationTypes, Collection<EnumOptionData> creditReportActionTypes, Collection<EnumOptionData> creditReportFormatTypes,
+                        Collection<EnumOptionData> creditReportTypes, Collection<EnumOptionData> creditValidationTypes, Collection<EnumOptionData> creditScoreTypes) {
         this.requestTypes = requestTypes;
         this.validationTypes = validationTypes;
         this.creditReportFormatTypes = creditReportFormatTypes;
         this.creditReportActionTypes = creditReportActionTypes;
         this.creditValidationTypes = creditValidationTypes;
         this.creditReportTypes = creditReportTypes;
+        this.creditScoreTypes = creditScoreTypes;
         this.id = null;
         this.clientId = null;
         this.clientName = null;
+        this.clientAccount = null;
+        this.loanId = null;
+        this.loanAccount = null;
+        this.loanProductName = null;
+        this.proposedPrincipal = null;
         this.validationType = null;
         this.requestType = null;
         this.status = null;
@@ -116,15 +136,15 @@ public final class CrbCheckData {
         this.reportUrl = null;
     }
 
-    public static CrbCheckData display(Long id, Long clientId, String clientName, Integer validationType, Integer requestType, Integer status, Integer consentStatus, String providerValidationId,
+    public static CrbCheckData display(Long id, Long clientId, String clientName, String clientAccount, Long loanId, String loanProductName, String loanAccount, BigDecimal proposedPrincipal, Integer validationType, Integer requestType, Integer status, Integer consentStatus, String providerValidationId,
                                        String providerReference, BigDecimal cost, String currency, String message, String errorMessage, String responsePayload, Map<String, Object> responseDetails, LocalDateTime createdAt, LocalDateTime completedAt, String reportUrl){
-        return new CrbCheckData(id, clientId, clientName, getValidationType(validationType), getRequestType(requestType), getStatus(status), getConsentStatus(consentStatus), providerValidationId,
+        return new CrbCheckData(id, clientId, clientName, clientAccount, loanId, loanProductName, loanAccount, proposedPrincipal, getValidationType(validationType), getRequestType(requestType), getStatus(status), getConsentStatus(consentStatus), providerValidationId,
                 providerReference, cost, currency, message, errorMessage, responsePayload, responseDetails, createdAt, completedAt, reportUrl);
     }
 
     public static CrbCheckData dropdown(Collection<EnumOptionData> requestTypes, Collection<EnumOptionData> validationTypes, Collection<EnumOptionData> creditReportActionTypes, Collection<EnumOptionData> creditReportFormatTypes,
-                                        Collection<EnumOptionData> creditReportTypes, Collection<EnumOptionData> creditValidationTypes){
-        return new CrbCheckData(requestTypes, validationTypes, creditReportActionTypes, creditReportFormatTypes, creditReportTypes, creditValidationTypes);
+                                        Collection<EnumOptionData> creditReportTypes, Collection<EnumOptionData> creditValidationTypes, Collection<EnumOptionData> creditScoreTypes){
+        return new CrbCheckData(requestTypes, validationTypes, creditReportActionTypes, creditReportFormatTypes, creditReportTypes, creditValidationTypes, creditScoreTypes);
     }
 
     public static EnumOptionData getRequestType(Integer value) {
@@ -143,8 +163,32 @@ public final class CrbCheckData {
     }
 
     public static EnumOptionData getValidationType(Integer value) {
-        CrbValidationType type = CrbValidationType.fromInt(value);
-        return new EnumOptionData(type.getValue().longValue(), type.getCode(), type.getDescription());
+
+        if (value == null) {
+            return null;
+        }
+
+        for (CrbValidationType type : CrbValidationType.values()) {
+            if (type.getValue().equals(value)) {
+                return new EnumOptionData(type.getValue().longValue(), type.getCode(), type.getDescription());
+            }
+        }
+
+        for (CreditValidationType type : CreditValidationType.values()) {
+            if (type.getValue().equals(value)) {
+                return new EnumOptionData(type.getValue().longValue(), type.getCode(), type.getDescription());
+            }
+        }
+
+        for (CreditReports type : CreditReports.values()) {
+            if (type.getValue().equals(value)) {
+                return new EnumOptionData(type.getValue().longValue(), type.getCode(), type.getDescription());
+            }
+        }
+
+        throw new GeneralPlatformDomainRuleException("error.msg.invalid.crb.validation.value",
+                "Invalid CRB validation value: " + value
+        );
     }
 
 }

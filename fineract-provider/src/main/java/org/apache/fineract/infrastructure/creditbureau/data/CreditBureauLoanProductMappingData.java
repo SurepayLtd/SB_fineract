@@ -58,9 +58,7 @@ public final class CreditBureauLoanProductMappingData {
     }
 
     public static CreditBureauLoanProductMappingData instance1(final String loanProductName, final long loanProductId) {
-        return new CreditBureauLoanProductMappingData().setCreditbureauLoanProductMappingId(0).setOrganisationCreditBureauId(0).setAlias("")
-                .setCreditbureauSummary("").setLoanProductName(loanProductName).setLoanProductId(loanProductId)
-                .setCreditCheckMandatory(false).setSkipCrediCheckInFailure(false).setStalePeriod(0).setActive(false);
+        return new CreditBureauLoanProductMappingData().setLoanProductName(loanProductName).setLoanProductId(loanProductId);
     }
 
 }

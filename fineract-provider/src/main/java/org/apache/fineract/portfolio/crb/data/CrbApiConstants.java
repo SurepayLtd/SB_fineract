@@ -12,6 +12,9 @@ public class CrbApiConstants {
 
     public static final String CRB_CREDIT_RESOURCE_NAME = "CRBCREDIT";
 
+    public static final String CRB_KYC_RESOURCE_NAME = "CRBKYC";
+
+
 
     public static final String localeParamName = "locale";
     public static final String dateFormatParamName = "dateFormat";
@@ -61,7 +64,7 @@ public class CrbApiConstants {
 
     public static final Set<String> CRB_CREATE_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbValidationTypeParamName, crbRequestTypeParamName));
 
-    public static final Set<String> CRB_CREDIT_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbValidationTypeParamName, crbReportTypeParamName, crbCreditScoreTypeActionFormatParamName, entityCategoryIdParamName, crbReportFormatParamName, enquiryReasonIdParamName));
+    public static final Set<String> CRB_CREDIT_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbCreditFormatParamName, crbReportTypeParamName, crbCreditScoreTypeActionFormatParamName, entityCategoryIdParamName, crbReportFormatParamName, enquiryReasonIdParamName));
 
 
     public static final Set<String> VALIDATE_OTP_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, otpCodeParamName));

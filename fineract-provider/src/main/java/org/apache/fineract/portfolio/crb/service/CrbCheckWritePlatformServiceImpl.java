@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
@@ -36,10 +37,18 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
     private final ObjectMapper objectMapper;
     private final CrbConsentRepository crbConsentRepository;
     private final CrbDataValidator fromApiJsonDeserializer;
+    private final ConfigurationDomainService configurationDomainService;
 
     @Transactional
     @Override
     public CommandProcessingResult crbCheck(Long clientId, JsonCommand command) {
+
+        boolean isCrbEnabled = this.configurationDomainService.isCRBEnabled();
+
+        if (!isCrbEnabled){
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.not.enabled", "CRB not enabled for this Tenant.");
+        }
+
         final Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
 
         this.fromApiJsonDeserializer.validateCrbCheck(command);
@@ -69,7 +78,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
 
 
-        final CrbCheck crbCheck = CrbCheck.create(client, crbConsent, type, CrbRequestType.INITIAL.getValue());
+        final CrbCheck crbCheck = CrbCheck.create(client, null, crbConsent, type, CrbRequestType.INITIAL.getValue());
 
         this.crbCheckRepository.saveAndFlush(crbCheck);
 
@@ -113,7 +122,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
     private CommandProcessingResult reCheck(Client client, Integer type, CrbConsent crbConsent) {
 
-        final CrbCheck crbCheck = CrbCheck.create(client, crbConsent, type, CrbRequestType.REVALIDATION.getValue());
+        final CrbCheck crbCheck = CrbCheck.create(client, null, crbConsent, type, CrbRequestType.REVALIDATION.getValue());
 
         this.crbCheckRepository.saveAndFlush(crbCheck);
 

@@ -51,7 +51,7 @@ public class CrbCheckApiResource {
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Retrieve CRB Checks", description = "Retrieves the saved CRB validation checks for a client, including their statuses and provider results.")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.GetCrbChecksResponse.class)))})
-    public String retrieveChecks(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId, @Context final UriInfo uriInfo) {
+    public String retrieveClientChecks(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId, @Context final UriInfo uriInfo) {
 
         context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_CHECK_RESOURCE_NAME);
 
@@ -59,7 +59,7 @@ public class CrbCheckApiResource {
             throw new IllegalArgumentException("clientId is required");
         }
 
-        final List<CrbCheckData> checks = crbCheckReadService.retrieveChecks(clientId);
+        final List<CrbCheckData> checks = crbCheckReadService.retrieveClientChecks(clientId);
 
         final ApiRequestJsonSerializationSettings settings = apiRequestParameterHelper.process(uriInfo.getQueryParameters());
 
@@ -67,20 +67,41 @@ public class CrbCheckApiResource {
     }
 
     @GET
-    @Path("{clientId}/credit/{type}")
+    @Path("{clientId}/kyc")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Retrieve Kyc Checks", description = "Retrieves the saved CRB kyc checks for a client, including their statuses and provider results.")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.GetCrbChecksResponse.class)))})
+    public String retrieveKycChecks(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId, @Context final UriInfo uriInfo) {
+
+        context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_KYC_RESOURCE_NAME);
+
+        if (clientId == null) {
+            throw new IllegalArgumentException("clientId is required");
+        }
+
+        final List<CrbCheckData> checks = crbCheckReadService.retrieveKycChecks(clientId);
+
+        final ApiRequestJsonSerializationSettings settings = apiRequestParameterHelper.process(uriInfo.getQueryParameters());
+
+        return toApiJsonSerializer.serialize(settings, checks);
+    }
+
+    @GET
+    @Path("{loanId}/credit")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Retrieve CRB Credit Checks", description = "Retrieves the saved CRB credit validation checks for a client, including their statuses and provider results.")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.GetCrbChecksResponse.class)))})
-    public String retrieveCreditChecks(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId, @PathParam("type") @Parameter(description = "Validation Type", required = true) final Integer type, @Context final UriInfo uriInfo) {
+    public String retrieveCreditChecks(@PathParam("loanId") @Parameter(description = "Loan ID", required = true) final Long loanId, @QueryParam("type") @Parameter(description = "Validation Type", required = true) final Integer type, @Context final UriInfo uriInfo) {
 
         context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_CREDIT_RESOURCE_NAME);
 
-        if (clientId == null && type == null) {
-            throw new IllegalArgumentException("clientId/Type is required");
+        if (loanId == null || type == null) {
+            throw new IllegalArgumentException("loanId/Type is required");
         }
 
-        final List<CrbCheckData> checks = crbCheckReadService.retrieveCreditChecks(clientId, type);
+        final List<CrbCheckData> checks = crbCheckReadService.retrieveCreditChecks(loanId, type);
 
         final ApiRequestJsonSerializationSettings settings = apiRequestParameterHelper.process(uriInfo.getQueryParameters());
 

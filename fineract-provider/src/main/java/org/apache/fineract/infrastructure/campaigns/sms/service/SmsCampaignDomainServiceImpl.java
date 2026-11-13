@@ -19,10 +19,7 @@
 
 package org.apache.fineract.infrastructure.campaigns.sms.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
-import java.io.IOException;
 import java.security.InvalidParameterException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -69,6 +66,9 @@ import org.apache.fineract.portfolio.loanaccount.exception.InvalidLoanTypeExcept
 import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccountTransaction;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 @Slf4j
@@ -104,7 +104,7 @@ public class SmsCampaignDomainServiceImpl implements SmsCampaignDomainService {
 
     private void notifyRejectedLoanOwner(Loan loan) {
         List<SmsCampaign> smsCampaigns = retrieveSmsCampaigns("Loan Rejected");
-        if (smsCampaigns.size() > 0) {
+        if (!smsCampaigns.isEmpty()) {
             for (SmsCampaign campaign : smsCampaigns) {
                 if (campaign.isActive()) {
                     SmsCampaignDomainServiceImpl.this.smsCampaignWritePlatformCommandHandler.insertDirectCampaignIntoSmsOutboundTable(loan,
@@ -116,7 +116,7 @@ public class SmsCampaignDomainServiceImpl implements SmsCampaignDomainService {
 
     private void notifyAcceptedLoanOwner(Loan loan) {
         List<SmsCampaign> smsCampaigns = retrieveSmsCampaigns("Loan Approved");
-        if (smsCampaigns.size() > 0) {
+        if (!smsCampaigns.isEmpty()) {
             for (SmsCampaign campaign : smsCampaigns) {
                 this.smsCampaignWritePlatformCommandHandler.insertDirectCampaignIntoSmsOutboundTable(loan, campaign);
             }
@@ -125,7 +125,7 @@ public class SmsCampaignDomainServiceImpl implements SmsCampaignDomainService {
 
     private void notifyClientActivated(final Client client) {
         List<SmsCampaign> smsCampaigns = retrieveSmsCampaigns("Client Activated");
-        if (smsCampaigns.size() > 0) {
+        if (!smsCampaigns.isEmpty()) {
             for (SmsCampaign campaign : smsCampaigns) {
                 this.smsCampaignWritePlatformCommandHandler.insertDirectCampaignIntoSmsOutboundTable(client, campaign);
             }
@@ -135,7 +135,7 @@ public class SmsCampaignDomainServiceImpl implements SmsCampaignDomainService {
 
     private void notifyClientRejected(final Client client) {
         List<SmsCampaign> smsCampaigns = retrieveSmsCampaigns("Client Rejected");
-        if (smsCampaigns.size() > 0) {
+        if (!smsCampaigns.isEmpty()) {
             for (SmsCampaign campaign : smsCampaigns) {
                 this.smsCampaignWritePlatformCommandHandler.insertDirectCampaignIntoSmsOutboundTable(client, campaign);
             }
@@ -145,7 +145,7 @@ public class SmsCampaignDomainServiceImpl implements SmsCampaignDomainService {
 
     private void notifySavingsAccountActivated(final SavingsAccount savingsAccount) {
         List<SmsCampaign> smsCampaigns = retrieveSmsCampaigns("Savings Activated");
-        if (smsCampaigns.size() > 0) {
+        if (!smsCampaigns.isEmpty()) {
             for (SmsCampaign campaign : smsCampaigns) {
                 this.smsCampaignWritePlatformCommandHandler.insertDirectCampaignIntoSmsOutboundTable(savingsAccount, campaign);
             }
@@ -155,7 +155,7 @@ public class SmsCampaignDomainServiceImpl implements SmsCampaignDomainService {
 
     private void notifySavingsAccountRejected(final SavingsAccount savingsAccount) {
         List<SmsCampaign> smsCampaigns = retrieveSmsCampaigns("Savings Rejected");
-        if (smsCampaigns.size() > 0) {
+        if (!smsCampaigns.isEmpty()) {
             for (SmsCampaign campaign : smsCampaigns) {
                 this.smsCampaignWritePlatformCommandHandler.insertDirectCampaignIntoSmsOutboundTable(savingsAccount, campaign);
             }
@@ -165,7 +165,7 @@ public class SmsCampaignDomainServiceImpl implements SmsCampaignDomainService {
 
     private void sendSmsForLoanRepayment(LoanTransaction loanTransaction) {
         List<SmsCampaign> smsCampaigns = retrieveSmsCampaigns("Loan Repayment");
-        if (smsCampaigns.size() > 0) {
+        if (!smsCampaigns.isEmpty()) {
             for (SmsCampaign smsCampaign : smsCampaigns) {
                 try {
                     Loan loan = loanTransaction.getLoan();
@@ -224,7 +224,7 @@ public class SmsCampaignDomainServiceImpl implements SmsCampaignDomainService {
                             }
                         }
                     }
-                } catch (final IOException e) {
+                } catch (final JacksonException e) {
                     log.error("smsParams does not contain the key: ", e);
                 } catch (final RuntimeException e) {
                     log.debug("Client Office Id and SMS Campaign Office id doesn't match ", e);
@@ -236,7 +236,7 @@ public class SmsCampaignDomainServiceImpl implements SmsCampaignDomainService {
     private void sendSmsForSavingsTransaction(final SavingsAccountTransaction savingsTransaction, boolean isDeposit) {
         String campaignName = isDeposit ? "Savings Deposit" : "Savings Withdrawal";
         List<SmsCampaign> smsCampaigns = retrieveSmsCampaigns(campaignName);
-        if (smsCampaigns.size() > 0) {
+        if (!smsCampaigns.isEmpty()) {
             for (SmsCampaign smsCampaign : smsCampaigns) {
                 try {
                     final SavingsAccount savingsAccount = savingsTransaction.getSavingsAccount();
@@ -283,7 +283,7 @@ public class SmsCampaignDomainServiceImpl implements SmsCampaignDomainService {
                         smsDataMap.put(smsCampaign, messages);
                         this.smsMessageScheduledJobService.sendTriggeredMessages(smsDataMap);
                     }
-                } catch (final IOException e) {
+                } catch (final JacksonException e) {
                     log.error("smsParams does not contain the key: ", e);
                 } catch (final RuntimeException e) {
                     log.debug("Client Office Id and SMS Campaign Office id doesn't match ", e);
@@ -293,9 +293,7 @@ public class SmsCampaignDomainServiceImpl implements SmsCampaignDomainService {
     }
 
     private List<SmsCampaign> retrieveSmsCampaigns(String paramValue) {
-        List<SmsCampaign> smsCampaigns = smsCampaignRepository.findActiveSmsCampaigns("%" + paramValue + "%",
-                SmsCampaignTriggerType.TRIGGERED.getValue());
-        return smsCampaigns;
+        return smsCampaignRepository.findActiveSmsCampaigns("%" + paramValue + "%", SmsCampaignTriggerType.TRIGGERED.getValue());
     }
 
     private HashMap<String, Object> processRepaymentDataForSms(final LoanTransaction loanTransaction, Client groupClient) {

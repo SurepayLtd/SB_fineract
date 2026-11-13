@@ -52,7 +52,25 @@ final class SearchApiResourceSwagger {
         public Long parentId;
         @Schema(example = "Head Office")
         public String parentName;
+        @Schema(example = "client")
+        public String parentType;
+        @Schema(example = "depositAccountType.savingsDeposit")
+        public String subEntityType;
         public EnumOptionData entityStatus;
+        @Schema(example = "7253")
+        public Long transactionId;
+        @Schema(example = "deposit")
+        public String transactionType;
+        @Schema(example = "txn-external-id-1")
+        public String transactionExternalId;
+        @Schema(example = "69da9027-653d-45e0-9a5a-cbd7c8507237")
+        public String transactionRefNo;
+        @Schema(example = "42")
+        public Long accountId;
+        @Schema(example = "000000042")
+        public String accountNo;
+        @Schema(example = "savings")
+        public String accountType;
     }
 
     @Schema(description = "PostAdhocQuerySearchRequest")
@@ -88,20 +106,4 @@ final class SearchApiResourceSwagger {
         public Long maxOutstandingAmount;
     }
 
-    @Schema(description = "PostAdhocQuerySearchResponse")
-    public static final class PostAdhocQuerySearchResponse {
-
-        private PostAdhocQuerySearchResponse() {
-
-        }
-
-        @Schema(example = "HFC")
-        public String officeName;
-        @Schema(example = "01 BC3M")
-        public String loanProductName;
-        @Schema(example = " 5692.41")
-        public Long loanOutStanding;
-        @Schema(example = "76.4")
-        public Long percentage;
-    }
 }

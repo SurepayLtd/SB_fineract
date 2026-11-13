@@ -43,7 +43,7 @@ import org.apache.fineract.infrastructure.campaigns.sms.domain.SmsProvider;
 import org.apache.fineract.infrastructure.campaigns.sms.domain.SmsTransaction;
 import org.apache.fineract.infrastructure.campaigns.sms.domain.SmsTransactionRepository;
 import org.apache.fineract.infrastructure.configuration.api.GlobalConfigurationConstants;
-import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationProperty;
+import org.apache.fineract.infrastructure.configuration.data.GlobalConfigurationPropertyData;
 import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
@@ -94,7 +94,8 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
     private Environment env;
     @Autowired
     private final GlobalConfigurationRepositoryWrapper configurationRepositoryWrapper;
-    @Autowired
+    // only present when fineract.security.2fa.enabled=true
+    @Autowired(required = false)
     private TwoFactorConfigurationService twoFactorConfigurationService;
     public static final String FORM_URL_CONTENT_TYPE = "application/json";
 
@@ -148,7 +149,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
 
     private void sendSurePaySms(SmsNotificationData smsNotificationData){
 
-        final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
+        final GlobalConfigurationPropertyData property = this.configurationRepositoryWrapper
                 .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS);
 
         if (property.isEnabled()) {
@@ -216,7 +217,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
 
         MamboSmsResponse smsResponse = new MamboSmsResponse();
 
-        final GlobalConfigurationProperty property = configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_MAMBO_SMS_NOTIFICATIONS);
+        final GlobalConfigurationPropertyData property = configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_MAMBO_SMS_NOTIFICATIONS);
 
         if (property.isEnabled()) {
 
@@ -329,7 +330,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
 
         switch (smsType) {
             case LOAN_SUBMISSION:
-                final GlobalConfigurationProperty submitLoan = this.configurationRepositoryWrapper
+                final GlobalConfigurationPropertyData submitLoan = this.configurationRepositoryWrapper
                         .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_CREATED);
                 if (submitLoan.isEnabled() || isMandatory) {
                     message = String.format(
@@ -339,7 +340,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 }
             break;
             case USSD_LOAN_APPLICATION:
-                final GlobalConfigurationProperty submitUssdLoan = this.configurationRepositoryWrapper
+                final GlobalConfigurationPropertyData submitUssdLoan = this.configurationRepositoryWrapper
                         .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_ON_USSD_LOAN_APPLICATION);
                 if (submitUssdLoan.isEnabled() || isMandatory) {
                     message = String.format(
@@ -349,7 +350,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 }
             break;
             case LOAN_APPROVAL:
-                final GlobalConfigurationProperty approvedLoan = this.configurationRepositoryWrapper
+                final GlobalConfigurationPropertyData approvedLoan = this.configurationRepositoryWrapper
                         .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_APPROVED);
                 if (approvedLoan.isEnabled() || isMandatory) {
                     message = String.format(
@@ -359,7 +360,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 }
             break;
             case LOAN_DISBURSEMENT:
-                final GlobalConfigurationProperty disburseLoan = this.configurationRepositoryWrapper
+                final GlobalConfigurationPropertyData disburseLoan = this.configurationRepositoryWrapper
                         .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_DISBURSED);
                 if (disburseLoan.isEnabled() || isMandatory) {
                     message = String.format(
@@ -369,7 +370,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 }
             break;
             case LOAN_REJECTED:
-                final GlobalConfigurationProperty rejectedLoan = this.configurationRepositoryWrapper
+                final GlobalConfigurationPropertyData rejectedLoan = this.configurationRepositoryWrapper
                         .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_REJECTED);
                 if (rejectedLoan.isEnabled() || isMandatory) {
                     message = String.format(
@@ -379,7 +380,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 }
             break;
             case LOAN_REPAYMENT:
-                final GlobalConfigurationProperty repaymentLoan = this.configurationRepositoryWrapper
+                final GlobalConfigurationPropertyData repaymentLoan = this.configurationRepositoryWrapper
                         .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_REPAYMENT);
                 if (repaymentLoan.isEnabled() || isMandatory) {
                     message = String.format(
@@ -389,7 +390,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 }
             break;
             case LOAN_CLOSED:
-                final GlobalConfigurationProperty closeLoan = this.configurationRepositoryWrapper
+                final GlobalConfigurationPropertyData closeLoan = this.configurationRepositoryWrapper
                         .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_LOAN_CLOSED);
                 if (closeLoan.isEnabled() || isMandatory) {
                     message = String.format(
@@ -457,7 +458,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
 
         switch (smsType) {
             case SAVINGS_DEPOSIT:
-                final GlobalConfigurationProperty deposit = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                final GlobalConfigurationPropertyData deposit = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
                         GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_DEPOSIT);
                 if (deposit.isEnabled() || isMandatory) {
                     message = String.format("Dear %s, %s %s has been deposited into account %s. New balance: UGX %s. Ref: %s.", clientName,
@@ -467,7 +468,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 }
             break;
             case SAVINGS_WITHDRAW:
-                final GlobalConfigurationProperty withdrawal = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                final GlobalConfigurationPropertyData withdrawal = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
                         GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_WITHDRAW);
                 if (withdrawal.isEnabled() || isMandatory) {
                     message = String.format("Dear %s, %s %s has been withdrawn from account %s. New balance: UGX %s. Ref: %s.", clientName,
@@ -477,7 +478,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 }
             break;
             case SAVINGS_CREATION:
-                final GlobalConfigurationProperty creation = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                final GlobalConfigurationPropertyData creation = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
                         GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_CREATION);
                 if (creation.isEnabled() || isMandatory) {
 
@@ -487,7 +488,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 }
             break;
             case SAVINGS_ACTIVATED:
-                final GlobalConfigurationProperty approval = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                final GlobalConfigurationPropertyData approval = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
                         GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_SAVINGS_ACCOUNT_ACTIVATED);
                 if (approval.isEnabled() || isMandatory) {
                     message = String.format("Dear %s, your account has been successfully Activated. Welcome to %s ! ", clientName,
@@ -496,7 +497,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 }
             break;
             case SAVINGS_INTEREST_POSTED:
-                final GlobalConfigurationProperty interest = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                final GlobalConfigurationPropertyData interest = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
                         GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_INTEREST_CREDITED);
                 if (interest.isEnabled() || isMandatory) {
                     message = String.format("Dear %s, interest of %s %s has been credited to your account %s.", clientName,
@@ -548,12 +549,15 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
             return;
         }
 
-        String mobileNo = user.getStaff().mobileNo();
+        String mobileNo = user.getStaff().getMobileNo();
         if (mobileNo == null) {
             log.warn("User {} staff does not have mobile number, cannot send OTP SMS", user.getUsername());
             return;
         }
 
+        if (twoFactorConfigurationService == null) {
+            throw new IllegalStateException("Two-factor authentication is disabled (fineract.security.2fa.enabled=false); cannot send OTP SMS");
+        }
         String message = twoFactorConfigurationService.getFormattedSmsTextFor(user, request);
         log.info("Message: {}", message);
         String messageId = String.format("OTP-TOKEN-%s", user.getId());
@@ -986,7 +990,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
 
         switch (smsTypeEnum) {
             case LOAN_CHARGE_WAIVED:
-                final GlobalConfigurationProperty loan = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                final GlobalConfigurationPropertyData loan = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
                         GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_CHARGE_WAIVED);
                 if (loan.isEnabled() || isMandatory) {
                     message = String.format("Dear %s, a charge of %s %s on your loan account %s has been waived.", clientName,
@@ -997,7 +1001,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
             break;
 
             case SAVINGS_CHARGE_WAIVED:
-                final GlobalConfigurationProperty savings = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                final GlobalConfigurationPropertyData savings = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
                         GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_CHARGE_WAIVED);
                 if (savings.isEnabled() || isMandatory) {
                     message = String.format("Dear %s, a charge of %s %s on your saving account %s has been waived.", clientName,
@@ -1008,7 +1012,7 @@ public class SMSNotificationWritePlatformServiceImpl implements SmsNotificationW
                 break;
 
             case CLIENT_CHARGE_WAIVED:
-                final GlobalConfigurationProperty charge = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
+                final GlobalConfigurationPropertyData charge = this.configurationRepositoryWrapper.findOneByNameWithNotFoundDetection(
                         GlobalConfigurationConstants.SEND_SMS_NOTIFICATION_WHEN_CHARGE_WAIVED);
                 if (charge.isEnabled() || isMandatory) {
                     message = String.format("Dear %s, a charge of %s %s on your client account %s has been waived.", clientName,

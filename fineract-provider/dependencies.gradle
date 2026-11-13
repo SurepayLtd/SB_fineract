@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
+ext['spring-modulith.version'] = '1.4.11'
 dependencies {
     modules {
         module("io.swagger.core.v3:swagger-annotations") {
@@ -25,20 +25,31 @@ dependencies {
     }
 
     implementation(project(path: ':fineract-core'))
+    implementation(project(path: ':fineract-cob'))
+    implementation(project(path: ':fineract-command'))
+    implementation(project(path: ':fineract-command-audit'))
+    implementation(project(path: ':fineract-command-jdbc'))
+    implementation(project(path: ':fineract-validation'))
     implementation(project(path: ':fineract-accounting'))
     implementation(project(path: ':fineract-investor'))
     implementation(project(path: ':fineract-rates'))
     implementation(project(path: ':fineract-charge'))
     implementation(project(path: ':fineract-loan'))
     implementation(project(path: ':fineract-savings'))
+    implementation(project(path: ':fineract-shares'))
+    implementation(project(path: ':fineract-account-transfer'))
     implementation(project(path: ':fineract-branch'))
     implementation(project(path: ':fineract-document'))
     implementation(project(path: ':fineract-progressive-loan'))
     implementation(project(path: ':fineract-report'))
     implementation(project(path: ':fineract-tax'))
+    implementation(project(path: ':fineract-loan-origination'))
+    implementation(project(path: ':fineract-security'))
+    implementation(project(path: ':fineract-working-capital-loan'))
+    implementation(project(path: ':fineract-querydsl'))
     runtimeOnly(project(path: ':fineract-selfservice'))
 
-    providedRuntime("org.springframework.boot:spring-boot-starter-tomcat")
+    providedRuntime("org.springframework.boot:spring-boot-starter-tomcat-runtime")
 
     // Never use "compile" scope, but make all dependencies either 'implementation', 'runtimeOnly' or 'testCompile'.
     // Note that we never use 'api', because Fineract at least currently is a simple monolithic application ("WAR"), not a library.
@@ -50,12 +61,17 @@ dependencies {
             project(path: ':fineract-avro-schemas')
             )
     implementation(
-            'org.springframework.boot:spring-boot-starter-web',
+            'org.springframework.boot:spring-boot-starter-webmvc',
+            'org.springframework.boot:spring-boot-starter-validation',
             'org.springframework.boot:spring-boot-starter-security',
+            'org.springframework.boot:spring-boot-starter-security-oauth2-authorization-server',
+            'org.springframework.boot:spring-boot-starter-security-oauth2-client',
             'org.springframework.boot:spring-boot-starter-cache',
-            'org.springframework.boot:spring-boot-starter-oauth2-resource-server',
+            'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server',
             'org.springframework.boot:spring-boot-starter-actuator',
-            'org.springframework.boot:spring-boot-starter-batch',
+            'org.springframework.boot:spring-boot-starter-batch-jdbc',
+            'org.springframework.boot:spring-boot-liquibase',
+            'org.springframework.boot:spring-boot-gson',
             'org.springframework.batch:spring-batch-integration',
             'org.springframework.boot:spring-boot-starter-integration',
             'org.springframework.integration:spring-integration-event',
@@ -89,10 +105,11 @@ dependencies {
             'org.apache.commons:commons-lang3',
             'commons-io:commons-io',
             'org.apache.poi:poi',
-            'org.apache.poi:poi-ooxml',
             'org.apache.tika:tika-core',
             'org.apache.tika:tika-parser-microsoft-module',
             'org.apache.tika:tika-parser-miscoffice-module',
+
+            'io.github.openfeign.querydsl:querydsl-sql-spring',
 
             'org.liquibase:liquibase-core',
 
@@ -102,10 +119,7 @@ dependencies {
 
             'javax.cache:cache-api',
 
-            'com.github.spotbugs:spotbugs-annotations',
             'io.swagger.core.v3:swagger-annotations-jakarta',
-
-            'com.google.cloud.sql:mysql-socket-factory-connector-j-8',
             'com.squareup.retrofit2:converter-gson',
             'com.sun.activation:jakarta.activation',
             'com.sun.mail:jakarta.mail',
@@ -113,7 +127,8 @@ dependencies {
             'org.springdoc:springdoc-openapi-starter-webmvc-ui',
             'org.mapstruct:mapstruct',
 
-            'io.github.resilience4j:resilience4j-spring-boot3',
+            'io.github.resilience4j:resilience4j-spring-boot4',
+            'org.reflections:reflections',
             )
 
     implementation 'software.amazon.msk:aws-msk-iam-auth'
@@ -131,6 +146,8 @@ dependencies {
         exclude group: 'org.hibernate.validator', module: 'hibernate-validator'
         exclude group: 'jakarta.activation', module: 'jakarta.activation-api'
     }
+    // Spring Boot 4 defaults to Jackson 3; re-enable Jackson 2 so the Jersey REST layer (Jackson-2 island) keeps working
+    implementation 'org.springframework.boot:spring-boot-jackson2'
     implementation('org.dom4j:dom4j') {
         exclude group: 'javax.xml.bind'
     }
@@ -151,6 +168,9 @@ dependencies {
         exclude group: 'com.zaxxer', module: 'HikariCP-java7'
     }
     implementation('org.apache.commons:commons-csv'){}
+    implementation('org.apache.poi:poi-ooxml') {
+        exclude group: 'org.apache.poi', module: 'poi-ooxml-lite'
+    }
     implementation ('software.amazon.awssdk:s3') {
     }
     implementation ('software.amazon.awssdk:auth') {
@@ -180,15 +200,10 @@ dependencies {
         exclude group: 'com.sun.activation'
     }
 
-    // runtimeOnly dependencies are things that Fineract code has no direct compile time dependency on, but which must be present at run-time
-    runtimeOnly(
-            'org.apache.bval:org.apache.bval.bundle',
+    implementation('org.apache.httpcomponents:httpclient')
 
-            // Although fineract (at the time of writing) doesn't have any compile time dep. on httpclient,
-            // it's useful to have this for the Spring Boot TestRestTemplate http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#boot-features-rest-templates-test-utility
-            'org.apache.httpcomponents:httpclient'
-            )
-
+    compileOnly 'com.github.spotbugs:spotbugs-annotations'
+    testCompileOnly 'com.github.spotbugs:spotbugs-annotations'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.mapstruct:mapstruct-processor'
@@ -200,6 +215,7 @@ dependencies {
     implementation 'org.apache.commons:commons-math3'
 
     implementation 'io.github.classgraph:classgraph'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 
     // testCompile dependencies are ONLY used in src/test, not src/main.
     // Do NOT repeat dependencies which are ALREADY in implementation or runtimeOnly!
@@ -218,7 +234,13 @@ dependencies {
         exclude group: 'javax.activation'
         exclude group: 'org.skyscreamer'
     }
-    testImplementation ('org.mockito:mockito-inline')
+    testImplementation 'org.springframework.modulith:spring-modulith-api'
+    testImplementation 'org.springframework.modulith:spring-modulith-core'
+
+    testRuntimeOnly(
+            'org.mariadb.jdbc:mariadb-java-client',
+            'com.mysql:mysql-connector-j',
+            )
 
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'

@@ -20,18 +20,28 @@ package org.apache.fineract.infrastructure.core.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonParser;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.MonthDay;
 import java.time.OffsetDateTime;
+import java.time.OffsetTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
 import org.apache.fineract.infrastructure.businessdate.domain.BusinessDateType;
+import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.domain.FineractPlatformTenant;
+import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
+import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
+import org.apache.fineract.infrastructure.core.serialization.GoogleGsonSerializerHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,5 +100,155 @@ public class DateUtilsTest {
     @Test
     public void getBusinesLocalDate() {
         assertTrue(DateUtils.isEqualBusinessDate(LocalDate.of(2022, 6, 12)));
+    }
+
+    @Test
+    public void localDateParameterStillAcceptsDateOnlyRequest() {
+        final JsonCommand command = commandFromJson("""
+                {"transactionDate":"27 July 2026","dateFormat":"dd MMMM yyyy","locale":"en"}
+                """);
+
+        assertEquals(LocalDate.of(2026, 7, 27), command.localDateValueOfParameterNamed("transactionDate"));
+    }
+
+    @Test
+    public void offsetTimeParameterPreservesPositiveOffset() {
+        final JsonCommand command = commandFromJson("""
+                {"transactionTime":"14:30:00+05:30"}
+                """);
+
+        assertEquals(OffsetTime.of(14, 30, 0, 0, ZoneOffset.ofHoursMinutes(5, 30)),
+                command.offsetTimeValueOfParameterNamed("transactionTime"));
+    }
+
+    @Test
+    public void offsetTimeParameterPreservesNegativeOffset() {
+        final JsonCommand command = commandFromJson("""
+                {"transactionTime":"04:15:30-04:00"}
+                """);
+
+        assertEquals(OffsetTime.of(4, 15, 30, 0, ZoneOffset.ofHours(-4)), command.offsetTimeValueOfParameterNamed("transactionTime"));
+    }
+
+    @Test
+    public void offsetTimeParameterAcceptsUtcTime() {
+        final JsonCommand command = commandFromJson("""
+                {"transactionTime":"09:00:00Z"}
+                """);
+
+        assertEquals(OffsetTime.of(9, 0, 0, 0, ZoneOffset.UTC), command.offsetTimeValueOfParameterNamed("transactionTime"));
+    }
+
+    @Test
+    public void offsetTimeParameterReturnsNullWhenOmitted() {
+        final JsonCommand command = commandFromJson("""
+                {"transactionDate":"27 July 2026","dateFormat":"dd MMMM yyyy","locale":"en"}
+                """);
+
+        assertNull(command.offsetTimeValueOfParameterNamed("transactionTime"));
+    }
+
+    @Test
+    public void offsetTimeParameterReturnsNullWhenJsonNull() {
+        final JsonCommand command = commandFromJson("""
+                {"transactionTime":null}
+                """);
+
+        assertNull(command.offsetTimeValueOfParameterNamed("transactionTime"));
+    }
+
+    @Test
+    public void offsetTimeParameterRejectsOffsetlessTime() {
+        final JsonCommand command = commandFromJson("""
+                {"transactionTime":"14:30:00"}
+                """);
+
+        assertThrows(PlatformApiDataValidationException.class, () -> command.offsetTimeValueOfParameterNamed("transactionTime"));
+    }
+
+    @Test
+    public void offsetTimeParameterRejectsInvalidTime() {
+        final JsonCommand command = commandFromJson("""
+                {"transactionTime":"invalid"}
+                """);
+
+        assertThrows(PlatformApiDataValidationException.class, () -> command.offsetTimeValueOfParameterNamed("transactionTime"));
+    }
+
+    @Test
+    public void offsetTimeSerializesAsIsoOffsetTimeString() {
+        final String json = GoogleGsonSerializerHelper.createSimpleGson()
+                .toJson(Map.of("transactionTime", OffsetTime.of(9, 0, 0, 0, ZoneOffset.UTC)));
+
+        assertEquals("{\"transactionTime\":\"09:00:00Z\"}", json);
+    }
+
+    private JsonCommand commandFromJson(final String json) {
+        return JsonCommand.fromJsonElement(null, JsonParser.parseString(json), new FromJsonHelper());
+    }
+
+    // --- safeMonthDay (clamps day to last valid day of month for current business year) ---
+
+    @Test
+    public void safeMonthDay_validDay_returnsSameMonthDay() {
+        assertEquals(MonthDay.of(1, 15), DateUtils.safeMonthDay(1, 15));
+        assertEquals(MonthDay.of(3, 31), DateUtils.safeMonthDay(3, 31));
+        assertEquals(MonthDay.of(4, 30), DateUtils.safeMonthDay(4, 30));
+        assertEquals(MonthDay.of(12, 31), DateUtils.safeMonthDay(12, 31));
+    }
+
+    @Test
+    public void safeMonthDay_february29_inNonLeapYear_clampedTo28() {
+        // business date initialized to 2022-06-12 (non-leap year) in @BeforeEach
+        assertEquals(MonthDay.of(2, 28), DateUtils.safeMonthDay(2, 29));
+    }
+
+    @Test
+    public void safeMonthDay_february30_inNonLeapYear_clampedTo28() {
+        assertEquals(MonthDay.of(2, 28), DateUtils.safeMonthDay(2, 30));
+    }
+
+    @Test
+    public void safeMonthDay_february31_inNonLeapYear_clampedTo28() {
+        assertEquals(MonthDay.of(2, 28), DateUtils.safeMonthDay(2, 31));
+    }
+
+    @Test
+    public void safeMonthDay_february29_inLeapYear_preserved() {
+        ThreadLocalContextUtil.setBusinessDates(new HashMap<>(Map.of(BusinessDateType.BUSINESS_DATE, LocalDate.of(2024, 6, 12))));
+        assertEquals(MonthDay.of(2, 29), DateUtils.safeMonthDay(2, 29));
+    }
+
+    @Test
+    public void safeMonthDay_february30_inLeapYear_clampedTo29() {
+        ThreadLocalContextUtil.setBusinessDates(new HashMap<>(Map.of(BusinessDateType.BUSINESS_DATE, LocalDate.of(2024, 6, 12))));
+        assertEquals(MonthDay.of(2, 29), DateUtils.safeMonthDay(2, 30));
+    }
+
+    @Test
+    public void safeMonthDay_february31_inLeapYear_clampedTo29() {
+        ThreadLocalContextUtil.setBusinessDates(new HashMap<>(Map.of(BusinessDateType.BUSINESS_DATE, LocalDate.of(2024, 6, 12))));
+        assertEquals(MonthDay.of(2, 29), DateUtils.safeMonthDay(2, 31));
+    }
+
+    @Test
+    public void safeMonthDay_april31_clampedTo30() {
+        assertEquals(MonthDay.of(4, 30), DateUtils.safeMonthDay(4, 31));
+    }
+
+    @Test
+    public void safeMonthDay_june31_clampedTo30() {
+        assertEquals(MonthDay.of(6, 30), DateUtils.safeMonthDay(6, 31));
+    }
+
+    @Test
+    public void safeMonthDay_november31_clampedTo30() {
+        assertEquals(MonthDay.of(11, 30), DateUtils.safeMonthDay(11, 31));
+    }
+
+    @Test
+    public void safeMonthDay_firstDayOfMonth_preserved() {
+        assertEquals(MonthDay.of(2, 1), DateUtils.safeMonthDay(2, 1));
+        assertEquals(MonthDay.of(7, 1), DateUtils.safeMonthDay(7, 1));
     }
 }

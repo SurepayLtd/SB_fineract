@@ -15,3 +15,6 @@
 - To override any of the default value, just add new value with the same key as environment variable
 - Example:
   - `BACKEND_PROTOCOL=http`
+
+## Writing tests
+The tests call the server through the generated Feign client (`fineract-client-feign`). See the Feign Integration Tests chapter of the documentation (`fineract-doc/src/docs/en/chapters/testing/integration-feign.adoc`).

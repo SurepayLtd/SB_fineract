@@ -21,7 +21,7 @@ dependencies {
     if (System.getProperty("idea.sync.active") == "true" || System.getProperty("idea.active") == "true" || Boolean.getBoolean("idea.active")) {
         implementation project(':fineract-provider')
     } else {
-        implementation project(':fineract-provider').sourceSets.main.output
+        implementation files(rootProject.project(':fineract-provider').sourceSets.main.output)
     }
     implementation project(':fineract-loan')
     implementation project(':fineract-savings')
@@ -34,6 +34,10 @@ dependencies {
     implementation project(':fineract-tax')
     implementation project(':fineract-report')
     implementation project(':fineract-progressive-loan')
+    implementation project(':fineract-security')
+    implementation project(':fineract-account-transfer')
+    implementation project(':fineract-shares')
+    implementation project(':fineract-loan-origination')
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.apache.commons:commons-lang3'
@@ -62,11 +66,13 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.mapstruct:mapstruct-processor'
 
-    testImplementation ('io.rest-assured:rest-assured') {
+    testImplementation ('io.rest-assured:rest-assured:5.5.7') {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.codehaus.groovy'
     }
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
+    testImplementation project(':fineract-working-capital-loan')
     testImplementation 'org.testcontainers:testcontainers:1.21.4'
     testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
     testImplementation 'org.testcontainers:postgresql:1.21.4'

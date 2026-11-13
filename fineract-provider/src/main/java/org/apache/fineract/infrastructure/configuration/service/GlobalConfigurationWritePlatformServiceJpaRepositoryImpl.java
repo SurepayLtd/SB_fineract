@@ -22,6 +22,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.configuration.api.GlobalConfigurationConstants;
 import org.apache.fineract.infrastructure.configuration.data.GlobalConfigurationDataValidator;
+import org.apache.fineract.infrastructure.configuration.data.GlobalConfigurationPropertyData;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationProperty;
 import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationRepositoryWrapper;
@@ -50,6 +51,7 @@ public class GlobalConfigurationWritePlatformServiceJpaRepositoryImpl implements
     private final GlobalConfigurationRepositoryWrapper repository;
     private final GlobalConfigurationDataValidator globalConfigurationDataValidator;
     private final ConfigurationDomainService configurationDomainService;
+    private final GlobalConfigurationPropertyUpdateService globalConfigurationPropertyUpdateService;
 
     @Transactional
     @Override
@@ -65,17 +67,14 @@ public class GlobalConfigurationWritePlatformServiceJpaRepositoryImpl implements
 
             String smsProvider = null;
 
-            if (enabled) {
+            if (Boolean.TRUE.equals(enabled)) {
 
                 final String tenant = ThreadLocalContextUtil.getTenant().getTenantIdentifier();
-                //LOG.info("Tenant: {}", tenant);
 
                 if (name.equalsIgnoreCase(GlobalConfigurationConstants.ENABLE_MAMBO_SMS_NOTIFICATIONS)) {
-                    if (!tenant.equalsIgnoreCase("Twekembe")){
-                        throw new GeneralPlatformDomainRuleException(
-                                "error.msg.sms.provider.not.supported.for.tenant",
-                                "Mambo SMS is only available for the Twekembe tenant. Please enable SurePay SMS for this tenant instead."
-                        );
+                    if (!tenant.equalsIgnoreCase("Twekembe")) {
+                        throw new GeneralPlatformDomainRuleException("error.msg.sms.provider.not.supported.for.tenant",
+                                "Mambo SMS is only available for the Twekembe tenant. Please enable SurePay SMS for this tenant instead.");
                     }
                     smsProvider = GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS;
                 } else if (name.equalsIgnoreCase(GlobalConfigurationConstants.ENABLE_SMS_NOTIFICATIONS)) {
@@ -83,24 +82,27 @@ public class GlobalConfigurationWritePlatformServiceJpaRepositoryImpl implements
                 }
 
                 if (smsProvider != null) {
-                    GlobalConfigurationProperty otherConfig = repository.findOneByNameWithNotFoundDetection(smsProvider);
+                    final GlobalConfigurationPropertyData otherConfig = repository.findOneByNameWithNotFoundDetection(smsProvider);
 
                     if (otherConfig != null && otherConfig.isEnabled()) {
-                        throw new GeneralPlatformDomainRuleException("error.msg.sms.provider.already.enabled", "Only one SMS provider can be enabled at a time. Disable " +
-                                        otherConfig.getName() + " first."
-                        );
+                        throw new GeneralPlatformDomainRuleException("error.msg.sms.provider.already.enabled",
+                                "Only one SMS provider can be enabled at a time. Disable " + otherConfig.getName() + " first.");
                     }
                 }
             }
 
-            final Map<String, Object> changes = configItemForUpdate.update(command);
+            final Map<String, Object> changes = globalConfigurationPropertyUpdateService.update(configItemForUpdate, command);
 
             if (!changes.isEmpty()) {
-                this.configurationDomainService.removeGlobalConfigurationPropertyDataFromCache(configItemForUpdate.getName());
+                this.configurationDomainService.removeGlobalConfigurationPropertyDataFromCache();
                 this.repository.save(configItemForUpdate);
             }
 
-            return new CommandProcessingResultBuilder().withCommandId(command.commandId()).withEntityId(configId).with(changes).build();
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityId(configId) //
+                    .with(changes) //
+                    .build();
 
         } catch (final JpaSystemException | DataIntegrityViolationException dve) {
             final Throwable throwable = dve.getMostSpecificCause();
@@ -116,6 +118,8 @@ public class GlobalConfigurationWritePlatformServiceJpaRepositoryImpl implements
         try {
             final GlobalConfigurationProperty ppi = GlobalConfigurationProperty.newSurveyConfiguration(name);
             this.repository.save(ppi);
+            // The cached snapshot of all properties must not outlive a newly created one.
+            this.repository.removeFromCache();
         } catch (final JpaSystemException | DataIntegrityViolationException dve) {
             final Throwable throwable = dve.getMostSpecificCause();
             handleDataIntegrityIssues(throwable, dve);
@@ -127,7 +131,7 @@ public class GlobalConfigurationWritePlatformServiceJpaRepositoryImpl implements
      * Guaranteed to throw an exception no matter what the data integrity issue is.
      */
     private void handleDataIntegrityIssues(final Throwable realCause, final NonTransientDataAccessException dve) {
-        LOG.error("Error occured.", dve);
+        LOG.error("Error occurred.", dve);
         throw ErrorHandler.getMappable(dve, "error.msg.globalConfiguration.unknown.data.integrity.issue",
                 "Unknown data integrity issue with resource: " + realCause.getMessage());
     }

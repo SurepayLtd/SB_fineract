@@ -19,8 +19,12 @@
 package org.apache.fineract.portfolio.savings.domain;
 
 import jakarta.persistence.LockModeType;
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import org.apache.fineract.cob.data.COBIdAndLastClosedBusinessDate;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
+import org.apache.fineract.portfolio.savings.data.SavingsAccrualData;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -38,6 +42,16 @@ public interface SavingsAccountRepository extends JpaRepository<SavingsAccount, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select sa from SavingsAccount sa where sa.id = :savingsId")
     SavingsAccount findOneLocked(@Param("savingsId") Long id);
+
+    // the rows are locked in ascending id order, see SavingsAccountRepositoryWrapper#lockInIdOrder
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select sa from SavingsAccount sa where sa.id in :ids order by sa.id")
+    List<SavingsAccount> findAllLockedOrderedById(@Param("ids") Collection<Long> ids);
+
+    // a plain read, so it answers from the snapshot of the transaction, see
+    // SavingsAccountRepositoryWrapper#lockInIdOrder
+    @Query("select sa.id, sa.version from SavingsAccount sa where sa.id in :ids")
+    List<Object[]> findVersionsById(@Param("ids") Collection<Long> ids);
 
     @Query("select s_acc from SavingsAccount s_acc where s_acc.gsim.id = :gsimId")
     List<SavingsAccount> findSavingAccountByGsimId(@Param("gsimId") Long gsimId);
@@ -71,6 +85,81 @@ public interface SavingsAccountRepository extends JpaRepository<SavingsAccount, 
     @Query("SELECT sa.id FROM SavingsAccount sa WHERE sa.externalId = :externalId")
     Long findIdByExternalId(@Param("externalId") ExternalId externalId);
 
+    @Query("""
+            SELECT new org.apache.fineract.portfolio.savings.data.SavingsAccrualData(
+                savings.id,
+                savings.accountNumber,
+                savings.accruedTillDate,
+                CASE WHEN apm.financialAccountType = 18 THEN TRUE ELSE FALSE END,
+                msp.allowOverdraft,
+                savings.depositType
+            )
+            FROM SavingsAccount savings
+            LEFT JOIN SavingsProduct msp ON msp = savings.product
+            LEFT JOIN ProductToGLAccountMapping apm ON apm.productId = msp.id and (apm.financialAccountType = 18 or apm.financialAccountType IS NULL)
+            WHERE savings.status = :status
+              AND (savings.nominalAnnualInterestRate IS NOT NULL AND savings.nominalAnnualInterestRate > 0)
+              AND msp.accountingRule = :accountingRule
+              AND ( savings.closedOnDate <= :tillDate OR savings.closedOnDate IS NULL)
+              AND ( savings.accruedTillDate <= :tillDate OR savings.accruedTillDate IS NULL )
+            ORDER BY savings.id
+            """)
+    List<SavingsAccrualData> findAccrualData(@Param("tillDate") LocalDate tillDate, @Param("savingsId") Long savingsId,
+            @Param("status") Integer status, @Param("accountingRule") Integer accountingRule);
+
+    @Query("SELECT sa.id FROM SavingsAccount sa WHERE sa.status = :status")
+    List<Long> findSavingsAccountIdsByStatusId(Integer status);
+
+    // COB related queries
+    @Query("""
+            SELECT sa.id FROM SavingsAccount sa
+            WHERE sa.id BETWEEN :minSavingsId AND :maxSavingsId
+            AND sa.status IN :savingsStatuses
+            AND (:cobBusinessDate = sa.lastClosedBusinessDate OR sa.lastClosedBusinessDate IS NULL)
+            """)
+    List<Long> findAllSavingsByLastClosedBusinessDateAndMinAndMaxSavingsIdAndStatuses(@Param("minSavingsId") Long minSavingsId,
+            @Param("maxSavingsId") Long maxSavingsId, @Param("cobBusinessDate") LocalDate cobBusinessDate,
+            @Param("savingsStatuses") Collection<Integer> savingsStatuses);
+
+    @Query("""
+            SELECT sa.id FROM SavingsAccount sa
+            WHERE sa.id BETWEEN :minSavingsId AND :maxSavingsId
+            AND sa.status IN :savingsStatuses
+            AND sa.lastClosedBusinessDate = :cobBusinessDate
+            """)
+    List<Long> findAllSavingsByLastClosedBusinessDateNotNullAndMinAndMaxSavingsIdAndStatuses(@Param("minSavingsId") Long minSavingsId,
+            @Param("maxSavingsId") Long maxSavingsId, @Param("cobBusinessDate") LocalDate cobBusinessDate,
+            @Param("savingsStatuses") Collection<Integer> savingsStatuses);
+
+    @Query("""
+            SELECT sa.id, sa.lastClosedBusinessDate
+            FROM SavingsAccount sa
+            WHERE sa.id IN :savingsIds
+            AND (sa.lastClosedBusinessDate < :businessDate OR sa.lastClosedBusinessDate IS NULL)
+            """)
+    List<COBIdAndLastClosedBusinessDate> findAllSavingsIdsBehindDateOrNull(@Param("businessDate") LocalDate businessDate,
+            @Param("savingsIds") List<Long> savingsIds);
+
+    @Query("""
+            SELECT sa.id, sa.lastClosedBusinessDate
+            FROM SavingsAccount sa
+            WHERE sa.id IN :savingsIds
+            AND sa.lastClosedBusinessDate < :businessDate
+            """)
+    List<COBIdAndLastClosedBusinessDate> findAllSavingsIdsBehindDate(@Param("businessDate") LocalDate businessDate,
+            @Param("savingsIds") List<Long> savingsIds);
+
+    @Query("""
+            SELECT sa.id, sa.lastClosedBusinessDate
+            FROM SavingsAccount sa
+            WHERE sa.status IN (100, 200, 300, 303, 304)
+            AND sa.lastClosedBusinessDate IS NOT NULL
+            ORDER BY sa.lastClosedBusinessDate ASC
+            """)
+    List<COBIdAndLastClosedBusinessDate> findAllSavingsIdsOldestCobProcessed();
+
+    @Query("select coalesce(co.id, go.id) from SavingsAccount sa left join sa.client c left join c.office co left join sa.group g left join g.office go where sa.id = :savingsAccountId")
+    Long findOfficeIdBySavingsAccountId(@Param("savingsAccountId") Long savingsAccountId);
 
     @Query(" SELECT sa.id FROM SavingsAccount sa JOIN sa.product p WHERE p.isDormancyTrackingActive = false AND sa.status = 300 AND sa.sub_status = 0 ")
     List<Long> findAccountsForDormancyTracking();

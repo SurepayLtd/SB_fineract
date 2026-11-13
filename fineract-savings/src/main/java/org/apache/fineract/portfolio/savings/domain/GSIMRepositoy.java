@@ -26,9 +26,10 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 public interface GSIMRepositoy
         extends JpaRepository<GroupSavingsIndividualMonitoring, Long>, JpaSpecificationExecutor<GroupSavingsIndividualMonitoring> {
 
-    GroupSavingsIndividualMonitoring findOneByIsAcceptingChild(boolean acceptingChild);
-
     GroupSavingsIndividualMonitoring findOneByIsAcceptingChildAndApplicationId(boolean acceptingChild, BigDecimal applicationId);
 
     GroupSavingsIndividualMonitoring findOneByAccountNumber(String accountNumber);
+
+    GroupSavingsIndividualMonitoring findOneByIsAcceptingChildAndApplicationIdAndGroupId(boolean acceptingChild, BigDecimal applicationId,
+            Long groupId);
 }

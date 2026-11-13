@@ -7,7 +7,7 @@ import org.apache.fineract.infrastructure.springbatch.PropertyService;
 import org.apache.fineract.notification.service.SmsNotificationWritePlatformService;
 import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentReminderData;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.BatchSmSReadService;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.integration.partition.RemotePartitioningWorkerStepBuilderFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,7 +59,7 @@ public class ExecuteLoanInstallmentWorkerConfig {
                 .retry(TransientDataAccessException.class)//
                 .retry(ConcurrencyFailureException.class) //
                 .retry(AbstractPlatformServiceUnavailableException.class) //
-                .retryLimit(propertyService.getRetryLimit(ExecuteBatchJobConstant.LOAN_INSTALLMENT_JOB_NAME)) //
+                .retryLimit(5) //
                 .skipPolicy(new LoanInstallmentSkipPolicy()) //
                 .build();
     }

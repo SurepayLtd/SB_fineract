@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -41,7 +42,6 @@ import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrappe
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.configuration.service.TemporaryConfigurationServiceContainer;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
-import org.apache.fineract.infrastructure.core.api.JsonQuery;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.apache.fineract.infrastructure.core.service.ExternalIdFactory;
@@ -61,6 +61,8 @@ import org.apache.fineract.portfolio.charge.domain.Charge;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.collateralmanagement.service.LoanCollateralAssembler;
+import org.apache.fineract.portfolio.common.domain.MonthEndDueDateStrategy;
+import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
 import org.apache.fineract.portfolio.fund.domain.Fund;
 import org.apache.fineract.portfolio.fund.domain.FundRepository;
 import org.apache.fineract.portfolio.fund.exception.FundNotFoundException;
@@ -68,6 +70,7 @@ import org.apache.fineract.portfolio.group.domain.Group;
 import org.apache.fineract.portfolio.group.domain.GroupRepositoryWrapper;
 import org.apache.fineract.portfolio.loanaccount.api.LoanApiConstants;
 import org.apache.fineract.portfolio.loanaccount.data.LoanChargeData;
+import org.apache.fineract.portfolio.loanaccount.data.ScheduleGeneratorDTO;
 import org.apache.fineract.portfolio.loanaccount.domain.GLIMAccountInfoRepository;
 import org.apache.fineract.portfolio.loanaccount.domain.GroupLoanIndividualMonitoringAccount;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
@@ -75,7 +78,6 @@ import org.apache.fineract.portfolio.loanaccount.domain.LoanCharge;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanCollateralManagement;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanCreditAllocationRule;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanDisbursementDetails;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanLifecycleStateMachine;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanPaymentAllocationRule;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleTransactionProcessorFactory;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
@@ -89,9 +91,9 @@ import org.apache.fineract.portfolio.loanaccount.exception.MultiDisbursementData
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanApplicationTerms;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleModel;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanScheduleAssembler;
-import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanScheduleCalculationPlatformService;
 import org.apache.fineract.portfolio.loanaccount.mapper.LoanChargeMapper;
 import org.apache.fineract.portfolio.loanaccount.mapper.LoanCollateralManagementMapper;
+import org.apache.fineract.portfolio.loanaccount.service.schedule.LoanScheduleComponent;
 import org.apache.fineract.portfolio.loanproduct.LoanProductConstants;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProductRelatedDetail;
@@ -121,14 +123,12 @@ public class LoanAssemblerImpl implements LoanAssembler {
     private final ConfigurationDomainService configurationDomainService;
     private final WorkingDaysRepositoryWrapper workingDaysRepository;
     private final RateAssembler rateAssembler;
-    private final LoanLifecycleStateMachine defaultLoanLifecycleStateMachine;
     private final ExternalIdFactory externalIdFactory;
     private final AccountNumberFormatRepositoryWrapper accountNumberFormatRepository;
     private final GLIMAccountInfoRepository glimRepository;
     private final AccountNumberGenerator accountNumberGenerator;
     private final GLIMAccountInfoWritePlatformService glimAccountInfoWritePlatformService;
     private final LoanCollateralAssembler loanCollateralAssembler;
-    private final LoanScheduleCalculationPlatformService calculationPlatformService;
     private final LoanDisbursementDetailsAssembler loanDisbursementDetailsAssembler;
     private final LoanChargeMapper loanChargeMapper;
     private final LoanCollateralManagementMapper loanCollateralManagementMapper;
@@ -136,6 +136,10 @@ public class LoanAssemblerImpl implements LoanAssembler {
     private final LoanDisbursementService loanDisbursementService;
     private final LoanChargeService loanChargeService;
     private final LoanOfficerService loanOfficerService;
+    private final LoanScheduleComponent loanSchedule;
+    // FINERACT-2665: recalculate the schedule from the loan's own state (same as approval/reschedule/holidays).
+    private final LoanScheduleService loanScheduleService;
+    private final LoanUtilService loanUtilService;
 
     @Override
     public Loan assembleFrom(final Long accountId) {
@@ -144,31 +148,22 @@ public class LoanAssemblerImpl implements LoanAssembler {
 
     @Override
     public Loan assembleFrom(final Long accountId, final boolean loadLazyCollections) {
-        final Loan loanAccount = loanRepository.findOneWithNotFoundDetection(accountId, loadLazyCollections);
-        setHelpers(loanAccount);
+        return loanRepository.findOneWithNotFoundDetection(accountId, loadLazyCollections);
+    }
 
-        return loanAccount;
+    @Override
+    public Loan assembleFromInUserScope(final Long accountId) {
+        return loanRepository.findOneInUserScope(accountId, true);
     }
 
     @Override
     public Loan assembleFrom(final ExternalId externalId) {
-        final Loan loanAccount = loanRepository.findOneWithNotFoundDetection(externalId, true);
-        setHelpers(loanAccount);
-
-        return loanAccount;
+        return loanRepository.findOneWithNotFoundDetection(externalId, true);
     }
 
     @Override
     public Loan assembleFrom(final ExternalId externalId, final boolean loadLazyCollections) {
-        final Loan loanAccount = loanRepository.findOneWithNotFoundDetection(externalId, loadLazyCollections);
-        setHelpers(loanAccount);
-
-        return loanAccount;
-    }
-
-    @Override
-    public void setHelpers(final Loan loanAccount) {
-        loanAccount.setHelpers(defaultLoanLifecycleStateMachine, loanRepaymentScheduleTransactionProcessorFactory);
+        return loanRepository.findOneWithNotFoundDetection(externalId, loadLazyCollections);
     }
 
     @Override
@@ -234,8 +229,9 @@ public class LoanAssemblerImpl implements LoanAssembler {
         // Here we add Rates to LoanApplication
         final List<Rate> rates = this.rateAssembler.fromParsedJson(element);
 
-        final LoanProductRelatedDetail loanProductRelatedDetail = this.loanScheduleAssembler.assembleLoanProductRelatedDetail(element,
-                loanProduct);
+        final LoanApplicationTerms loanApplicationTerms = this.loanScheduleAssembler.assembleLoanTerms(element);
+        final LoanProductRelatedDetail loanProductRelatedDetail = this.loanScheduleAssembler
+                .assembleLoanProductRelatedDetail(loanApplicationTerms, element);
 
         final BigDecimal interestRateDifferential = this.fromApiJsonHelper
                 .extractBigDecimalWithLocaleNamed(LoanApiConstants.interestRateDifferentialParameterName, element);
@@ -260,7 +256,12 @@ public class LoanAssemblerImpl implements LoanAssembler {
             isEnableInstallmentLevelDelinquency = loanProduct.isEnableInstallmentLevelDelinquency();
         }
 
-        final LoanApplicationTerms loanApplicationTerms = this.loanScheduleAssembler.assembleLoanTerms(element);
+        Boolean allowFullTermForTranche = this.fromApiJsonHelper
+                .extractBooleanNamed(LoanProductConstants.ALLOW_FULL_TERM_FOR_TRANCHE_PARAM_NAME, element);
+        if (allowFullTermForTranche == null) {
+            allowFullTermForTranche = loanProduct.isAllowFullTermForTranche();
+        }
+
         final boolean isHolidayEnabled = this.configurationDomainService.isRescheduleRepaymentsOnHolidaysEnabled();
         Long officeId = client != null ? client.getOffice().getId() : group.getOffice().getId();
         final List<Holiday> holidays = this.holidayRepository.findByOfficeIdAndGreaterThanDate(officeId,
@@ -274,106 +275,111 @@ public class LoanAssemblerImpl implements LoanAssembler {
                     loanOfficer, loanPurpose, transactionProcessingStrategy, loanProductRelatedDetail, loanCharges,
                     syncDisbursementWithMeeting, fixedEmiAmount, disbursementDetails, maxOutstandingLoanBalance,
                     createStandingInstructionAtDisbursement, isFloatingInterestRate, interestRateDifferential, rates,
-                    fixedPrincipalPercentagePerInstallment, externalId, loanApplicationTerms, loanScheduleModel,
-                    isEnableInstallmentLevelDelinquency, submittedOnDate);
+                    fixedPrincipalPercentagePerInstallment, externalId, loanApplicationTerms, isEnableInstallmentLevelDelinquency,
+                    submittedOnDate, allowFullTermForTranche);
         } else if (group != null) {
             loanApplication = Loan.newGroupLoanApplication(accountNo, group, loanAccountType, loanProduct, fund, loanOfficer, loanPurpose,
                     transactionProcessingStrategy, loanProductRelatedDetail, loanCharges, syncDisbursementWithMeeting, fixedEmiAmount,
                     disbursementDetails, maxOutstandingLoanBalance, createStandingInstructionAtDisbursement, isFloatingInterestRate,
                     interestRateDifferential, rates, fixedPrincipalPercentagePerInstallment, externalId, loanApplicationTerms,
-                    loanScheduleModel, isEnableInstallmentLevelDelinquency, submittedOnDate);
+                    isEnableInstallmentLevelDelinquency, submittedOnDate, allowFullTermForTranche);
         } else if (client != null) {
             loanApplication = Loan.newIndividualLoanApplication(accountNo, client, loanAccountType, loanProduct, fund, loanOfficer,
                     loanPurpose, transactionProcessingStrategy, loanProductRelatedDetail, loanCharges, collateral, fixedEmiAmount,
                     disbursementDetails, maxOutstandingLoanBalance, createStandingInstructionAtDisbursement, isFloatingInterestRate,
                     interestRateDifferential, rates, fixedPrincipalPercentagePerInstallment, externalId, loanApplicationTerms,
-                    loanScheduleModel, isEnableInstallmentLevelDelinquency, submittedOnDate);
+                    isEnableInstallmentLevelDelinquency, submittedOnDate, allowFullTermForTranche);
         } else {
             throw new IllegalStateException("No loan application exists for either a client or group (or both).");
         }
 
+        loanSchedule.updateLoanSchedule(loanApplication, loanScheduleModel);
+
         copyAdvancedPaymentRulesIfApplicable(transactionProcessingStrategyCode, loanProduct, loanApplication);
-        loanApplication.setHelpers(defaultLoanLifecycleStateMachine, this.loanRepaymentScheduleTransactionProcessorFactory);
         // TODO: review
         loanChargeService.recalculateAllCharges(loanApplication);
         topUpLoanConfiguration(element, loanApplication);
-        loanAccrualsProcessingService.reprocessExistingAccruals(loanApplication);
+        loanAccrualsProcessingService.reprocessExistingAccruals(loanApplication, false);
         return loanApplication;
     }
 
     // TODO: Review... it might be better somewhere else and rethink due to the account number generation logic is
     // intertwined with GLIM logic
     @Override
-    public void accountNumberGeneration(JsonCommand command, Loan loan) {
-        if (loan.isAccountNumberRequiresAutoGeneration()) {
-            JsonElement element = command.parsedJson();
-            final AccountNumberFormat accountNumberFormat = this.accountNumberFormatRepository.findByAccountType(EntityAccountType.LOAN);
-            // TODO: It is really weird to set GLIM info only if account number was not provided
-            // if application is of GLIM type
-            if (loan.getLoanType().isGLIMAccount()) {
-                Group group = loan.getGroup();
-                String accountNumber = "";
-                BigDecimal applicationId = BigDecimal.ZERO;
-                Boolean isLastChildApplication = false;
-                // GLIM specific parameters
-                final Locale locale = this.fromApiJsonHelper.extractLocaleParameter(element.getAsJsonObject());
-                BigDecimal applicationIdFromParam = this.fromApiJsonHelper.extractBigDecimalNamed("applicationId", element, locale);
-                BigDecimal totalLoan = this.fromApiJsonHelper.extractBigDecimalNamed("totalLoan", element, locale);
-                if (applicationIdFromParam != null) {
-                    applicationId = applicationIdFromParam;
-                }
+    public void accountNumberGeneration(final JsonCommand command, final Loan loan) {
+        final JsonElement element = command.parsedJson();
 
-                Boolean isLastChildApplicationFromParam = this.fromApiJsonHelper.extractBooleanNamed("lastApplication", element);
-                if (isLastChildApplicationFromParam != null) {
-                    isLastChildApplication = isLastChildApplicationFromParam;
-                }
+        final String accountNo = this.fromApiJsonHelper.extractStringNamed("accountNo", element);
+        final boolean isAccountNumberRequiresAutoGeneration = StringUtils.isBlank(accountNo);
+        if (!isAccountNumberRequiresAutoGeneration) {
+            return;
+        }
 
-                if (this.fromApiJsonHelper.extractBooleanNamed("isParentAccount", element) != null) {
-                    // empty table check
-                    // TODO: This count here is weird... and seems parent-empty and parent not empty looks the same
-                    if (glimRepository.count() != 0) {
-                        // **************Parent-Not an empty
-                        // table********************
-                        createAndSetGLIMAccount(totalLoan, loan, accountNumberFormat, group, applicationId);
-                    } else {
-                        // ************** Parent-empty
-                        // table********************
-                        createAndSetGLIMAccount(totalLoan, loan, accountNumberFormat, group, applicationId);
-                    }
-                } else {
-                    // TODO: This count here is weird...
-                    if (glimRepository.count() != 0) {
-                        // Child-Not an empty table
-                        GroupLoanIndividualMonitoringAccount glimAccount = glimRepository.findOneByIsAcceptingChildAndApplicationId(true,
-                                applicationId);
-                        accountNumber = glimAccount.getAccountNumber() + (glimAccount.getChildAccountsCount() + 1);
-                        loan.updateAccountNo(accountNumber);
-                        this.glimAccountInfoWritePlatformService.incrementChildAccountCount(glimAccount);
-                        loan.setGlim(glimAccount);
-                    } else {
-                        // **************Child-empty
-                        // table********************
-                        // if the glim info is empty set the current account
-                        // as parent
-                        createAndSetGLIMAccount(totalLoan, loan, accountNumberFormat, group, applicationId);
-                    }
-                    // reset in cases of last child application of glim
-                    if (isLastChildApplication) {
-                        this.glimAccountInfoWritePlatformService
-                                .resetIsAcceptingChild(glimRepository.findOneByIsAcceptingChildAndApplicationId(true, applicationId));
-                    }
-                }
-            } else { // for applications other than GLIM
-                loan.updateAccountNo(this.accountNumberGenerator.generate(loan, accountNumberFormat));
+        final AccountNumberFormat accountNumberFormat = this.accountNumberFormatRepository.findByAccountType(EntityAccountType.LOAN);
+        // TODO: It is really weird to set GLIM info only if account number was not provided
+        // if application is of GLIM type
+        if (loan.getLoanType().isGLIMAccount()) {
+            Group group = loan.getGroup();
+            String accountNumber;
+            BigDecimal applicationId = BigDecimal.ZERO;
+            // GLIM specific parameters
+            final Locale locale = this.fromApiJsonHelper.extractLocaleParameter(element.getAsJsonObject());
+            BigDecimal applicationIdFromParam = this.fromApiJsonHelper.extractBigDecimalNamed("applicationId", element, locale);
+            BigDecimal totalLoan = this.fromApiJsonHelper.extractBigDecimalNamed("totalLoan", element, locale);
+            if (applicationIdFromParam != null) {
+                applicationId = applicationIdFromParam;
             }
+
+            Boolean isLastChildApplicationFromParam = this.fromApiJsonHelper.extractBooleanNamed("lastApplication", element);
+            boolean isLastChildApplication = false;
+            if (isLastChildApplicationFromParam != null) {
+                isLastChildApplication = isLastChildApplicationFromParam;
+            }
+
+            if (this.fromApiJsonHelper.extractBooleanNamed("isParentAccount", element) != null) {
+                // empty table check
+                // TODO: This count here is weird... and seems parent-empty and parent not empty looks the same
+                if (glimRepository.count() != 0) {
+                    // **************Parent-Not an empty
+                    // table********************
+                    createAndSetGLIMAccount(totalLoan, loan, accountNumberFormat, group, applicationId);
+                } else {
+                    // ************** Parent-empty
+                    // table********************
+                    createAndSetGLIMAccount(totalLoan, loan, accountNumberFormat, group, applicationId);
+                }
+            } else {
+                // TODO: This count here is weird...
+                if (glimRepository.count() != 0) {
+                    // Child-Not an empty table
+                    GroupLoanIndividualMonitoringAccount glimAccount = glimRepository.findOneByIsAcceptingChildAndApplicationId(true,
+                            applicationId);
+                    accountNumber = glimAccount.getAccountNumber() + (glimAccount.getChildAccountsCount() + 1);
+                    loan.setAccountNumber(accountNumber);
+                    this.glimAccountInfoWritePlatformService.incrementChildAccountCount(glimAccount);
+                    loan.setGlim(glimAccount);
+                } else {
+                    // **************Child-empty
+                    // table********************
+                    // if the glim info is empty set the current account
+                    // as parent
+                    createAndSetGLIMAccount(totalLoan, loan, accountNumberFormat, group, applicationId);
+                }
+                // reset in cases of last child application of glim
+                if (isLastChildApplication) {
+                    this.glimAccountInfoWritePlatformService
+                            .resetIsAcceptingChild(glimRepository.findOneByIsAcceptingChildAndApplicationId(true, applicationId));
+                }
+            }
+        } else { // for applications other than GLIM
+            loan.setAccountNumber(this.accountNumberGenerator.generate(loan, accountNumberFormat));
         }
     }
 
     private void createAndSetGLIMAccount(BigDecimal totalLoan, Loan loan, AccountNumberFormat accountNumberFormat, Group group,
             BigDecimal applicationId) {
-        String accountNumber;
-        accountNumber = this.accountNumberGenerator.generate(loan, accountNumberFormat);
-        loan.updateAccountNo(accountNumber + "1");
+        final String accountNumber = this.accountNumberGenerator.generate(loan, accountNumberFormat);
+        loan.setAccountNumber(accountNumber + "1");
         GroupLoanIndividualMonitoringAccount glimAccount = glimAccountInfoWritePlatformService.createGLIMAccount(accountNumber, group,
                 totalLoan, 1L, true, LoanStatus.SUBMITTED_AND_PENDING_APPROVAL.getValue(), applicationId);
         loan.setGlim(glimAccount);
@@ -417,7 +423,7 @@ public class LoanAssemblerImpl implements LoanAssembler {
         Staff staff = null;
         if (loanOfficerId != null) {
             staff = this.staffRepository.findById(loanOfficerId).orElseThrow(() -> new StaffNotFoundException(loanOfficerId));
-            if (staff.isNotLoanOfficer()) {
+            if (!staff.isLoanOfficer()) {
                 throw new StaffRoleException(loanOfficerId, StaffRoleException.StaffRole.LOAN_OFFICER);
             }
         }
@@ -437,7 +443,9 @@ public class LoanAssemblerImpl implements LoanAssembler {
 
             if (loanProduct.getCreditAllocationRules() != null && !loanProduct.getCreditAllocationRules().isEmpty()) {
                 List<LoanCreditAllocationRule> loanCreditAllocationRules = loanProduct.getCreditAllocationRules().stream()
-                        .map(r -> new LoanCreditAllocationRule(loanApplication, r.getTransactionType(), r.getAllocationTypes())).toList();
+                        .map(r -> new LoanCreditAllocationRule(loanApplication, r.getTransactionType(), r.getAllocationTypes(),
+                                r.getAllocationStrategy()))
+                        .toList();
                 List<LoanCreditAllocationRule> creditAllocationRules = loanApplication.getCreditAllocationRules();
                 creditAllocationRules.clear();
                 creditAllocationRules.addAll(loanCreditAllocationRules);
@@ -459,6 +467,7 @@ public class LoanAssemblerImpl implements LoanAssembler {
         }
 
         final Set<LoanCharge> existingCharges = loan.getActiveCharges();
+        final List<Long> chargeIdsBeforeUpdate = loan.getLoanCharges().stream().map(LoanCharge::getId).toList();
         Map<Long, LoanChargeData> chargesMap = new HashMap<>();
         for (LoanCharge charge : existingCharges) {
             LoanChargeData chargeData = new LoanChargeData(charge.getId(), charge.getDueLocalDate(), charge.amountOrPercentage());
@@ -498,7 +507,7 @@ public class LoanAssemblerImpl implements LoanAssembler {
                 isChargeModified = true;
             } else {
                 LoanChargeData chargeData = chargesMap.get(loanCharge.getId());
-                if (loanCharge.amountOrPercentage().compareTo(chargeData.getAmountOrPercentage()) != 0
+                if (chargeData == null || loanCharge.amountOrPercentage().compareTo(chargeData.getAmountOrPercentage()) != 0
                         || (loanCharge.isSpecifiedDueDate() && !loanCharge.getDueLocalDate().equals(chargeData.getDueDate()))) {
                     isChargeModified = true;
                 }
@@ -515,7 +524,7 @@ public class LoanAssemblerImpl implements LoanAssembler {
                 possiblyModifedLoanCollateralItems = this.loanCollateralAssembler.fromParsedJson(command.parsedJson());
             }
         }
-        this.loanScheduleAssembler.updateLoanApplicationAttributes(command, loan, changes);
+        this.loanScheduleAssembler.updateLoanApplicationAttributes(command, loan, loanProduct, changes);
 
         if (!changes.isEmpty()) {
             final boolean recalculateLoanSchedule = !(changes.size() == 1
@@ -576,7 +585,7 @@ public class LoanAssemblerImpl implements LoanAssembler {
             changes.put(LoanApiConstants.productIdParameterName, newValue);
             loan.updateLoanProduct(loanProduct);
             final MonetaryCurrency currency = new MonetaryCurrency(loanProduct.getCurrency().getCode(),
-                    loanProduct.getCurrency().getDigitsAfterDecimal(), loanProduct.getCurrency().getCurrencyInMultiplesOf());
+                    loanProduct.getCurrency().getDigitsAfterDecimal(), loanProduct.getCurrency().getInMultiplesOf());
             loan.getLoanRepaymentScheduleDetail().setCurrency(currency);
 
             if (!changes.containsKey(LoanApiConstants.interestRateFrequencyTypeParameterName)) {
@@ -590,6 +599,15 @@ public class LoanAssemblerImpl implements LoanAssembler {
                 loan.setIsFloatingInterestRate(null);
             }
             loan.updateIsInterestRecalculationEnabled();
+            // the loan takes the new product's strategy unless the request overrides it
+            if (!command.parameterExists(LoanApiConstants.monthEndDueDateStrategyParameterName)) {
+                final MonthEndDueDateStrategy productStrategy = loanProduct.getLoanProductRelatedDetail().getMonthEndDueDateStrategy();
+                if (!Objects.equals(productStrategy, loan.getLoanRepaymentScheduleDetail().getMonthEndDueDateStrategy())) {
+                    changes.put(LoanApiConstants.monthEndDueDateStrategyParameterName,
+                            productStrategy == null ? null : productStrategy.name());
+                    loan.getLoanRepaymentScheduleDetail().setMonthEndDueDateStrategy(productStrategy);
+                }
+            }
             changes.put(Loan.RECALCULATE_LOAN_SCHEDULE, true);
         }
 
@@ -670,8 +688,12 @@ public class LoanAssemblerImpl implements LoanAssembler {
             changes.put(LoanApiConstants.dateFormatParameterName, dateFormatAsInput);
             changes.put(LoanApiConstants.localeParameterName, localeAsInput);
             changes.put(Loan.RECALCULATE_LOAN_SCHEDULE, true);
-            loan.setExpectedDisbursementDate(
-                    command.localDateValueOfParameterNamed(LoanApiConstants.expectedDisbursementDateParameterName));
+            final LocalDate newExpectedDisbursementDate = command
+                    .localDateValueOfParameterNamed(LoanApiConstants.expectedDisbursementDateParameterName);
+            loan.setExpectedDisbursementDate(newExpectedDisbursementDate);
+            if (loan.getDisbursementDetails().isEmpty()) {
+                loanDisbursementService.moveDownPaymentFeesToExpectedDisbursementDate(loan, newExpectedDisbursementDate);
+            }
         }
 
         if (command.isChangeInLocalDateParameterNamed(LoanApiConstants.repaymentsStartingFromDateParameterName,
@@ -720,10 +742,10 @@ public class LoanAssemblerImpl implements LoanAssembler {
         }
 
         if (command.isChangeInIntegerParameterNamed(LoanApiConstants.loanTermFrequencyTypeParameterName,
-                loan.getTermPeriodFrequencyType())) {
+                loan.getTermPeriodFrequencyType().getValue())) {
             final Integer newValue = command.integerValueOfParameterNamed(LoanApiConstants.loanTermFrequencyTypeParameterName);
             changes.put(LoanApiConstants.loanTermFrequencyTypeParameterName, newValue);
-            loan.setTermPeriodFrequencyType(newValue);
+            loan.setTermPeriodFrequencyType(PeriodFrequencyType.fromInt(newValue));
         }
 
         if (command.isChangeInBigDecimalParameterNamed(LoanApiConstants.principalParameterName, loan.getApprovedPrincipal())) {
@@ -737,7 +759,10 @@ public class LoanAssemblerImpl implements LoanAssembler {
         }
 
         if (loanProduct.isMultiDisburseLoan()) {
-            loanDisbursementService.updateDisbursementDetails(loan, command, changes);
+            final boolean resentChargesBringDownPaymentFees = changes.containsKey(LoanApiConstants.chargesParameterName)
+                    && possiblyModifiedLoanCharges.stream()
+                            .anyMatch(charge -> charge.getId() == null && charge.getDisbursementDetail() != null);
+            loanDisbursementService.updateDisbursementDetails(loan, command, changes, !resentChargesBringDownPaymentFees);
             if (command.isChangeInBigDecimalParameterNamed(LoanApiConstants.maxOutstandingBalanceParameterName,
                     loan.getMaxOutstandingLoanBalance())) {
                 loan.setMaxOutstandingLoanBalance(
@@ -763,6 +788,7 @@ public class LoanAssemblerImpl implements LoanAssembler {
                 }
             }
         } else {
+            loanDisbursementService.removeDownPaymentFeesOfTranches(loan, loan.getAllDisbursementDetails());
             loan.clearDisbursementDetails();
         }
 
@@ -783,7 +809,7 @@ public class LoanAssemblerImpl implements LoanAssembler {
             changes.put(LoanApiConstants.fixedPrincipalPercentagePerInstallmentParamName, loan.getFixedPrincipalPercentagePerInstallment());
         }
 
-        final LoanProductRelatedDetail productRelatedDetail = loan.repaymentScheduleDetail();
+        final LoanProductRelatedDetail productRelatedDetail = loan.getLoanProductRelatedDetail();
         if (loan.loanProduct().getLoanConfigurableAttributes() != null) {
             loanScheduleAssembler.updateProductRelatedDetails(productRelatedDetail, loan);
         }
@@ -840,7 +866,7 @@ public class LoanAssemblerImpl implements LoanAssembler {
 
         final String chargesParamName = "charges";
         if (changes.containsKey(chargesParamName)) {
-            loan.updateLoanCharges(possiblyModifiedLoanCharges);
+            loanChargeService.updateLoanCharges(loan, possiblyModifiedLoanCharges, chargeIdsBeforeUpdate);
         }
 
         // update installment level delinquency
@@ -851,16 +877,34 @@ public class LoanAssemblerImpl implements LoanAssembler {
             loan.updateEnableInstallmentLevelDelinquency(enableInstallmentLevelDelinquency);
         }
 
+        // update allow full term for tranche
+        if (command.isChangeInBooleanParameterNamed(LoanProductConstants.ALLOW_FULL_TERM_FOR_TRANCHE_PARAM_NAME,
+                loan.isAllowFullTermForTranche())) {
+            final Boolean allowFullTermForTranche = command
+                    .booleanObjectValueOfParameterNamed(LoanProductConstants.ALLOW_FULL_TERM_FOR_TRANCHE_PARAM_NAME);
+            loan.updateAllowFullTermForTranche(allowFullTermForTranche);
+        }
+
         if (changes.containsKey("recalculateLoanSchedule")) {
             changes.remove("recalculateLoanSchedule");
 
-            final JsonElement parsedQuery = this.fromApiJsonHelper.parse(command.json());
-            final JsonQuery query = JsonQuery.from(command.json(), parsedQuery, this.fromApiJsonHelper);
-
-            final LoanScheduleModel loanSchedule = this.calculationPlatformService.calculateLoanSchedule(query, false);
-            loan.updateLoanSchedule(loanSchedule);
-            loanAccrualsProcessingService.reprocessExistingAccruals(loan);
+            // FINERACT-2665: recalculate from the loan's own (already-modified) state, exactly like every other
+            // recalc path (approval, reschedule, apply-holidays). loan.modifyApplication has applied the fields the
+            // request provided and left omitted ones unchanged, so the incoming request JSON is not re-read here -
+            // an omitted field is simply ignored and its existing value flows through.
+            //
+            // Charges are recalculated BEFORE the schedule is regenerated: the schedule generator bakes each period's
+            // feeChargesDue from the charge amounts as they currently stand on the loan, so a percentage-based charge
+            // whose base changed (e.g. principal/interest) must be re-derived first, otherwise the regenerated
+            // schedule reports a stale feeChargesDue. It is recalculated again afterwards to re-derive amounts against
+            // the new schedule and to refresh the total-charges-due-at-disbursement summary (which
+            // regenerateRepaymentSchedule does not touch).
             loanChargeService.recalculateAllCharges(loan);
+            final ScheduleGeneratorDTO scheduleGeneratorDTO = this.loanUtilService.buildScheduleGeneratorDTO(loan, null);
+            this.loanScheduleService.regenerateRepaymentSchedule(loan, scheduleGeneratorDTO);
+            loanChargeService.recalculateAllCharges(loan);
+            // Accruals are reprocessed here to mirror the approval/undo-approval flow.
+            loanAccrualsProcessingService.reprocessExistingAccruals(loan, false);
         }
 
         // Changes to modify loan rates.
@@ -885,7 +929,7 @@ public class LoanAssemblerImpl implements LoanAssembler {
         loan.setClosedOnDate(withdrawnOn);
         loan.setClosedBy(currentUser);
 
-        final Locale locale = new Locale(command.locale());
+        final Locale locale = Locale.of(command.locale());
         final DateTimeFormatter fmt = DateTimeFormatter.ofPattern(command.dateFormat()).withLocale(locale);
 
         actualChanges.put(Loan.PARAM_STATUS, LoanEnumerations.status(loan.getStatus()));
@@ -907,7 +951,7 @@ public class LoanAssemblerImpl implements LoanAssembler {
         loan.setClosedOnDate(rejectedOn);
         loan.setClosedBy(currentUser);
 
-        final Locale locale = new Locale(command.locale());
+        final Locale locale = Locale.of(command.locale());
         final DateTimeFormatter fmt = DateTimeFormatter.ofPattern(command.dateFormat()).withLocale(locale);
 
         actualChanges.put(Loan.PARAM_STATUS, LoanEnumerations.status(loan.getStatus()));

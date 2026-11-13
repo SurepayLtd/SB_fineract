@@ -25,6 +25,7 @@ import com.google.gson.Gson;
 import com.jayway.jsonpath.JsonPathException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.github.resilience4j.core.functions.Either;
+import io.github.resilience4j.retry.Retry;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.ws.rs.core.UriInfo;
@@ -51,13 +52,15 @@ import org.apache.fineract.batch.domain.Header;
 import org.apache.fineract.batch.exception.BatchReferenceInvalidException;
 import org.apache.fineract.batch.exception.ErrorInfo;
 import org.apache.fineract.batch.service.ResolutionHelper.BatchRequestNode;
+import org.apache.fineract.commands.configuration.RetryConfigurationAssembler;
 import org.apache.fineract.infrastructure.core.domain.BatchRequestContextHolder;
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.filters.BatchCallHandler;
 import org.apache.fineract.infrastructure.core.filters.BatchFilter;
 import org.apache.fineract.infrastructure.core.filters.BatchRequestPreprocessor;
 import org.apache.fineract.infrastructure.core.persistence.ExtendedJpaTransactionManager;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.NonTransientDataAccessException;
 import org.springframework.stereotype.Service;
@@ -65,6 +68,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.TransactionExecution;
 import org.springframework.transaction.TransactionSystemException;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -72,9 +76,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * CommandStrategy from CommandStrategyProvider.
  *
  * @author Rishabh Shukla
- * @see org.apache.fineract.batch.domain.BatchRequest
- * @see org.apache.fineract.batch.domain.BatchResponse
- * @see org.apache.fineract.batch.command.CommandStrategyProvider
+ * @see BatchRequest
+ * @see BatchResponse
+ * @see CommandStrategyProvider
  */
 @Service
 @RequiredArgsConstructor
@@ -83,15 +87,16 @@ public class BatchApiServiceImpl implements BatchApiService {
 
     private final CommandStrategyProvider strategyProvider;
     private final ResolutionHelper resolutionHelper;
-    private final PlatformTransactionManager transactionManager;
     private final ErrorHandler errorHandler;
 
     private final List<BatchFilter> batchFilters;
 
     private final List<BatchRequestPreprocessor> batchPreprocessors;
 
-    @PersistenceContext
-    private final EntityManager entityManager;
+    private final RetryConfigurationAssembler retryConfigurationAssembler;
+
+    private PlatformTransactionManager transactionManager;
+    private EntityManager entityManager;
 
     /**
      * Run each request root step in a separated transaction
@@ -139,34 +144,40 @@ public class BatchApiServiceImpl implements BatchApiService {
      */
     private List<BatchResponse> callInTransaction(Consumer<TransactionTemplate> transactionConfigurator,
             Supplier<List<BatchResponse>> request) {
+        Retry retry = retryConfigurationAssembler.getRetryConfigurationForBatchApiWithEnclosingTransaction();
         List<BatchResponse> responseList = new ArrayList<>();
-        try {
-            TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
-            if (transactionManager instanceof ExtendedJpaTransactionManager extendedJpaTransactionManager) {
-                transactionTemplate.setReadOnly(extendedJpaTransactionManager.isReadOnlyConnection());
-            }
-            transactionConfigurator.accept(transactionTemplate);
-            return transactionTemplate.execute(status -> {
-                BatchRequestContextHolder.setEnclosingTransaction(status);
-                try {
+        Supplier<List<BatchResponse>> batchSupplier = () -> {
+            responseList.clear();
+            try {
+                TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+                if (transactionManager instanceof ExtendedJpaTransactionManager extendedJpaTransactionManager) {
+                    transactionTemplate.setReadOnly(extendedJpaTransactionManager.isReadOnly());
+                }
+                transactionConfigurator.accept(transactionTemplate);
+                return transactionTemplate.execute(status -> {
+                    BatchRequestContextHolder.setEnclosingTransaction(status);
                     responseList.addAll(request.get());
                     return responseList;
-                } catch (BatchExecutionException ex) {
-                    log.error("Exception during the batch request processing", ex);
-                    responseList.add(buildErrorResponse(ex.getCause(), ex.getRequest()));
-                    return responseList;
-                } finally {
-                    BatchRequestContextHolder.resetTransaction();
-                }
-            });
+                });
+            } finally {
+                BatchRequestContextHolder.resetTransaction();
+            }
+        };
+        Supplier<List<BatchResponse>> retryingBatch = Retry.decorateSupplier(retry, batchSupplier);
+        try {
+            return retryingBatch.get();
         } catch (TransactionException | NonTransientDataAccessException ex) {
             return buildErrorResponses(ex, responseList);
+        } catch (BatchExecutionException ex) {
+            log.error("Exception during the batch request processing", ex);
+            responseList.add(buildErrorResponse(ex.getCause(), ex.getRequest()));
+            return responseList;
         }
     }
 
     /**
-     * Returns the response list by getting a proper {@link org.apache.fineract.batch.command.CommandStrategy}.
-     * execute() method of acquired commandStrategy is then provided with the separate Request.
+     * Returns the response list by getting a proper {@link CommandStrategy}. execute() method of acquired
+     * commandStrategy is then provided with the separate Request.
      *
      * @param requestList
      * @param uriInfo
@@ -288,8 +299,8 @@ public class BatchApiServiceImpl implements BatchApiService {
      *            the current request node
      * @return {@code BatchResponse} list of the generated batch responses
      */
-    private List<BatchResponse> parentRequestFailedRecursive(@NotNull BatchRequest request, @NotNull BatchRequestNode requestNode,
-            @NotNull BatchResponse response, Long parentId) {
+    private List<BatchResponse> parentRequestFailedRecursive(@NonNull BatchRequest request, @NonNull BatchRequestNode requestNode,
+            @NonNull BatchResponse response, Long parentId) {
         List<BatchResponse> responseList = new ArrayList<>();
         if (parentId == null) { // root
             BatchRequestContextHolder.getEnclosingTransaction().ifPresent(TransactionExecution::setRollbackOnly);
@@ -339,14 +350,33 @@ public class BatchApiServiceImpl implements BatchApiService {
         return response;
     }
 
-    @NotNull
-    private List<BatchResponse> buildErrorResponses(Throwable ex, @NotNull List<BatchResponse> responseList) {
+    /**
+     * Tells a failed commit apart from a transaction that was deliberately marked rollback-only, both of which reach
+     * this method with every sub-response reporting 200.
+     * <p>
+     * Only a failed commit is a concurrency failure worth reporting as such - it is the outcome a caller can retry. A
+     * rollback-only transaction is not: maker-checker reaches exactly this point, because
+     * {@code RollbackTransactionNotApprovedExceptionMapper} answers 200 while the participating transaction that threw
+     * has marked the enclosing one rollback-only. Rewriting that into a retryable conflict would make callers retry a
+     * command that is waiting for a checker and can never succeed on its own.
+     * <p>
+     * The two are told apart by the cause, not the type: {@code AbstractPlatformTransactionManager} raises its
+     * rollback-only {@link UnexpectedRollbackException} with no cause, whereas a commit failure always carries the
+     * {@link TransactionSystemException} the JPA transaction manager reports (see
+     * {@code ExtendedJpaTransactionManager#doCommit}).
+     */
+    private boolean isCommitFailure(Throwable ex) {
+        return ex instanceof TransactionSystemException || ex.getCause() instanceof TransactionSystemException;
+    }
+
+    @NonNull
+    private List<BatchResponse> buildErrorResponses(Throwable ex, @NonNull List<BatchResponse> responseList) {
         BatchResponse response = responseList.isEmpty() ? null
                 : responseList.stream().filter(e -> e.getStatusCode() == null || e.getStatusCode() != SC_OK).findFirst()
                         .orElse(responseList.get(responseList.size() - 1));
 
-        if (response != null && response.getStatusCode() == SC_OK && ex instanceof TransactionSystemException tse) {
-            ex = new ConcurrencyFailureException(tse.getMessage(), tse.getCause());
+        if (response != null && response.getStatusCode() == SC_OK && isCommitFailure(ex)) {
+            ex = new ConcurrencyFailureException(ex.getMessage(), ex.getCause());
         }
 
         Long requestId = null;
@@ -379,5 +409,15 @@ public class BatchApiServiceImpl implements BatchApiService {
     private BatchResponse buildErrorResponse(Long requestId, Integer statusCode, String body, Set<Header> headers) {
         return new BatchResponse().setRequestId(requestId).setStatusCode(statusCode == null ? SC_INTERNAL_SERVER_ERROR : statusCode)
                 .setBody(body == null ? "Request with id " + requestId + " was erroneous!" : body).setHeaders(headers);
+    }
+
+    @PersistenceContext
+    public void setEntityManager(EntityManager entityManager) {
+        this.entityManager = entityManager;
+    }
+
+    @Autowired
+    public void setTransactionManager(PlatformTransactionManager transactionManager) {
+        this.transactionManager = transactionManager;
     }
 }

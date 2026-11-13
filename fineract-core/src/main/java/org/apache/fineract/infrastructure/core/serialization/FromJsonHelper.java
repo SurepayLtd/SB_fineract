@@ -30,6 +30,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.MonthDay;
+import java.time.OffsetTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -39,7 +40,9 @@ import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.exception.InvalidJsonException;
+import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.exception.UnsupportedParameterException;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
@@ -221,6 +224,10 @@ public class FromJsonHelper {
         return this.helperDelegator.extractLocalDateTimeNamed(parameterName, element, new HashSet<>());
     }
 
+    public OffsetTime extractOffsetTimeNamed(final String parameterName, final JsonElement element) {
+        return this.helperDelegator.extractOffsetTimeNamed(parameterName, element, new HashSet<>());
+    }
+
     public LocalTime extractLocalTimeNamed(final String parameterName, final JsonElement element, final String dateFormat,
             final Locale locale) {
         return this.helperDelegator.extractLocalTimeNamed(parameterName, element, dateFormat, locale, new HashSet<>());
@@ -313,4 +320,22 @@ public class FromJsonHelper {
         return this.gsonConverter;
     }
 
+    public <T extends Enum<T>> T enumValueOfParameterNamed(String parameterName, final JsonElement element, Class<T> enumType) {
+        String value = null;
+        try {
+            value = this.helperDelegator.extractStringNamed(parameterName, element, new HashSet<String>());
+            if (value != null) {
+                return Enum.valueOf(enumType, value);
+            } else {
+                return null;
+            }
+        } catch (IllegalArgumentException e) {
+            throw new PlatformApiDataValidationException(List.of(ApiParameterError.parameterError("validation.msg.enum.value.not.found",
+                    "Enum value not exists: ", enumType.getName(), value)), e);
+        }
+    }
+
+    public Integer extractIntegerNamed(String paramName, JsonObject element) {
+        return extractIntegerNamed(paramName, element, new HashSet<>());
+    }
 }

@@ -355,14 +355,14 @@ class SelfLoansApiResourceTest {
   @Test
   void retrieveGuarantors_mappedLoan_returnsData() {
     mockLoanMapped();
-    String data = "[\"data\"]";
-    when(guarantorsApiResource.retrieveGuarantorDetails(uriInfo, LOAN_ID)).thenReturn(data);
+    List<GuarantorData> data = List.of(mock(GuarantorData.class));
+    when(guarantorsApiResource.retrieveGuarantorDetails(LOAN_ID)).thenReturn(data);
 
-    String result = resource.retrieveGuarantorDetails(LOAN_ID, uriInfo);
+    List<GuarantorData> result = resource.retrieveGuarantorDetails(LOAN_ID, uriInfo);
 
     assertNotNull(result);
     assertEquals(data, result);
-    verify(guarantorsApiResource).retrieveGuarantorDetails(uriInfo, LOAN_ID);
+    verify(guarantorsApiResource).retrieveGuarantorDetails(LOAN_ID);
   }
 
   @Test

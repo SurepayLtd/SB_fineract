@@ -22,7 +22,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -33,7 +33,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 @WebAppConfiguration
 class SelfServiceSecurityWiringTest {
 
-  @MockBean private SelfServiceAuthenticationTokenService selfServiceAuthenticationTokenService;
+  @MockitoBean private SelfServiceAuthenticationTokenService selfServiceAuthenticationTokenService;
 
   @Autowired private ApplicationContext ctx;
 

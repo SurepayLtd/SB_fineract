@@ -2,33 +2,15 @@
 
 == Description
 
-Finally create a directory with release name ({revnumber} in this example) in https://dist.apache.org/repos/dist/dev/fineract and add the following files in this new directory:
+Next we'll stage the release candidate. Create a new folder and add these files:
 
-* apache-fineract-{revnumber}-binary.tar.gz.sha
-* apache-fineract-{revnumber}-binary.tar.gz
-* apache-fineract-{revnumber}-binary.tar.gz.asc
-* apache-fineract-{revnumber}-binary.tar.gz.md5
-* apache-fineract-{revnumber}-src.tar.gz.sha
-* apache-fineract-{revnumber}-src.tar.gz
-* apache-fineract-{revnumber}-src.tar.gz.asc
-* apache-fineract-{revnumber}-src.tar.gz.md5
+* apache-fineract-bin-{revnumber}.tar.gz
+* apache-fineract-bin-{revnumber}.tar.gz.sha512
+* apache-fineract-bin-{revnumber}.tar.gz.asc
+* apache-fineract-src-{revnumber}.tar.gz
+* apache-fineract-src-{revnumber}.tar.gz.sha512
+* apache-fineract-src-{revnumber}.tar.gz.asc
 
-Upload binary and source archives to ASF's distribution dev (staging) area:
+These files (or "artifacts") comprise the release candidate.
 
-[source,bash,subs="attributes+,+macros"]
-----
-% svn co https://dist.apache.org/repos/dist/dev/fineract/ fineract-dist-dev
-% mkdir fineract-dist-dev/{revnumber}
-% cp fineract/build/distributions/* fineract-dist-dev/{revnumber}/
-% svn commit
-----
-
-NOTE: You will need your ASF Committer credentials to be able to access the Subversion host https://dist.apache.org via.
-
-== Gradle Task
-
-.Command
-[source,bash,subs="attributes+,+macros"]
-----
-% ./gradlew fineractReleaseStep8 -Pfineract.release.version={revnumber}
-----
+Upload these files to ATR. The `rsync` method seems to work best. After the upload completes, automated checks will run.

@@ -18,9 +18,20 @@
  */
 package org.apache.fineract.portfolio.charge.domain;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import org.apache.fineract.portfolio.charge.data.ChargeSummaryData;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ChargeRepository extends JpaRepository<Charge, Long>, JpaSpecificationExecutor<Charge> {
-    // no added behaviour
+
+    @Query("select lc.id from WorkingCapitalLoanCharge lc where lc.charge.id = :chargeId and lc.active = true")
+    Optional<Long> isAnyWorkingCapitalLoansAssociateWithThisCharge(@Param("chargeId") Long chargeId);
+
+    @Query("select new org.apache.fineract.portfolio.charge.data.ChargeSummaryData(c.id, c.name, c.penalty) from Charge c where c.id in :chargeIds")
+    List<ChargeSummaryData> findChargeSummariesByIds(@Param("chargeIds") Collection<Long> chargeIds);
 }

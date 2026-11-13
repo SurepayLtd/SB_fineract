@@ -27,31 +27,44 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import lombok.Getter;
+import lombok.Setter;
 import org.apache.fineract.accounting.common.AccountingEnumerations;
 import org.apache.fineract.accounting.common.AccountingRuleType;
 import org.apache.fineract.accounting.glaccount.data.GLAccountData;
-import org.apache.fineract.accounting.producttoaccountmapping.data.ChargeOffReasonToGLAccountMapper;
+import org.apache.fineract.accounting.producttoaccountmapping.data.AdvancedMappingToExpenseAccountData;
 import org.apache.fineract.accounting.producttoaccountmapping.data.ChargeToGLAccountMapper;
+import org.apache.fineract.accounting.producttoaccountmapping.data.ClassificationToGLAccountData;
 import org.apache.fineract.accounting.producttoaccountmapping.data.PaymentTypeToGLAccountMapper;
 import org.apache.fineract.infrastructure.codes.data.CodeValueData;
+import org.apache.fineract.infrastructure.core.api.ApiFacingEnum;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.core.data.StringEnumOptionData;
+import org.apache.fineract.infrastructure.dataqueries.data.DatatableData;
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
 import org.apache.fineract.portfolio.calendar.data.CalendarData;
 import org.apache.fineract.portfolio.charge.data.ChargeData;
 import org.apache.fineract.portfolio.common.domain.DaysInMonthType;
+import org.apache.fineract.portfolio.common.domain.DaysInYearCustomStrategyType;
 import org.apache.fineract.portfolio.common.domain.DaysInYearType;
+import org.apache.fineract.portfolio.common.domain.MonthEndDueDateStrategy;
 import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
 import org.apache.fineract.portfolio.common.service.CommonEnumerations;
 import org.apache.fineract.portfolio.delinquency.data.DelinquencyBucketData;
 import org.apache.fineract.portfolio.floatingrates.data.FloatingRateData;
 import org.apache.fineract.portfolio.fund.data.FundData;
 import org.apache.fineract.portfolio.loanaccount.data.LoanInterestRecalculationData;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanBuyDownFeeCalculationType;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanBuyDownFeeIncomeType;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanBuyDownFeeStrategy;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanCapitalizedIncomeCalculationType;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanCapitalizedIncomeStrategy;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanCapitalizedIncomeType;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanChargeOffBehaviour;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleProcessingType;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleType;
 import org.apache.fineract.portfolio.loanproduct.domain.AllocationType;
 import org.apache.fineract.portfolio.loanproduct.domain.AmortizationMethod;
+import org.apache.fineract.portfolio.loanproduct.domain.CreditAllocationStrategy;
 import org.apache.fineract.portfolio.loanproduct.domain.CreditAllocationTransactionType;
 import org.apache.fineract.portfolio.loanproduct.domain.FutureInstallmentAllocationRule;
 import org.apache.fineract.portfolio.loanproduct.domain.InterestCalculationPeriodMethod;
@@ -84,6 +97,9 @@ public class LoanProductData implements Serializable {
     private final LocalDate closeDate;
     private final String status;
     private final String externalId;
+
+    @Setter
+    private List<DatatableData> datatables;
     // terms
     private final CurrencyData currency;
     private final BigDecimal principal;
@@ -94,6 +110,10 @@ public class LoanProductData implements Serializable {
     private final Integer maxNumberOfRepayments;
     private final Integer repaymentEvery;
     private final EnumOptionData repaymentFrequencyType;
+    /** First due day of the month of a semi-monthly product. */
+    private final Integer firstRepaymentDayOfMonth;
+    /** Second due day of the month of a semi-monthly product; 31 is the last day of the month. */
+    private final Integer secondRepaymentDayOfMonth;
     private final Integer fixedLength;
     private final BigDecimal interestRatePerPeriod;
     private final BigDecimal minInterestRatePerPeriod;
@@ -140,6 +160,7 @@ public class LoanProductData implements Serializable {
     private final Integer installmentAmountInMultiplesOf;
     private final EnumOptionData repaymentStartDateType;
     private final List<StringEnumOptionData> supportedInterestRefundTypes;
+    private final List<StringEnumOptionData> supportedFeeRefundTypes;
     private final StringEnumOptionData chargeOffBehaviour;
 
     // charges
@@ -155,9 +176,10 @@ public class LoanProductData implements Serializable {
     private Collection<PaymentTypeToGLAccountMapper> paymentChannelToFundSourceMappings;
     private Collection<ChargeToGLAccountMapper> feeToIncomeAccountMappings;
     private Collection<ChargeToGLAccountMapper> penaltyToIncomeAccountMappings;
-    private List<ChargeOffReasonToGLAccountMapper> chargeOffReasonToExpenseAccountMappings;
+    private List<AdvancedMappingToExpenseAccountData> chargeOffReasonToExpenseAccountMappings;
     private final boolean enableAccrualActivityPosting;
-
+    private List<AdvancedMappingToExpenseAccountData> writeOffReasonsToExpenseMappings;
+    private final List<CodeValueData> writeOffReasonOptions;
     // rates
     private final boolean isRatesEnabled;
     private final Collection<RateData> rates;
@@ -191,6 +213,7 @@ public class LoanProductData implements Serializable {
 
     private final List<EnumOptionData> creditAllocationTransactionTypes;
     private final List<EnumOptionData> creditAllocationAllocationTypes;
+    private final List<EnumOptionData> creditAllocationStrategyOptions;
 
     private final List<EnumOptionData> loanScheduleTypeOptions;
     private final List<EnumOptionData> loanScheduleProcessingTypeOptions;
@@ -199,6 +222,7 @@ public class LoanProductData implements Serializable {
     private final List<FloatingRateData> floatingRateOptions;
     private final List<EnumOptionData> repaymentStartDateTypeOptions;
     private final List<StringEnumOptionData> supportedInterestRefundTypesOptions;
+    private final List<StringEnumOptionData> supportedFeeRefundTypesOptions;
     private final List<StringEnumOptionData> chargeOffBehaviourOptions;
 
     private final Boolean multiDisburseLoan;
@@ -208,6 +232,7 @@ public class LoanProductData implements Serializable {
     private final Boolean allowApprovedDisbursedAmountsOverApplied;
     private final String overAppliedCalculationType;
     private final Integer overAppliedNumber;
+    private final Boolean allowFullTermForTranche;
 
     private final BigDecimal principalThresholdForLastInstallment;
 
@@ -236,6 +261,30 @@ public class LoanProductData implements Serializable {
     private final EnumOptionData loanScheduleType;
     private final EnumOptionData loanScheduleProcessingType;
     private final boolean interestRecognitionOnDisbursementDate;
+    private final List<StringEnumOptionData> daysInYearCustomStrategyOptions;
+    private final StringEnumOptionData daysInYearCustomStrategy;
+    private final List<StringEnumOptionData> monthEndDueDateStrategyOptions;
+    private final StringEnumOptionData monthEndDueDateStrategy;
+    private Boolean enableIncomeCapitalization;
+    private StringEnumOptionData capitalizedIncomeCalculationType;
+    private StringEnumOptionData capitalizedIncomeStrategy;
+    private final StringEnumOptionData capitalizedIncomeType;
+    private List<StringEnumOptionData> capitalizedIncomeCalculationTypeOptions;
+    private List<StringEnumOptionData> capitalizedIncomeStrategyOptions;
+    private List<StringEnumOptionData> capitalizedIncomeTypeOptions;
+    private Boolean enableBuyDownFee;
+    private StringEnumOptionData buyDownFeeCalculationType;
+    private StringEnumOptionData buyDownFeeStrategy;
+    private StringEnumOptionData buyDownFeeIncomeType;
+    private boolean merchantBuyDownFee;
+    private List<StringEnumOptionData> buyDownFeeCalculationTypeOptions;
+    private List<StringEnumOptionData> buyDownFeeStrategyOptions;
+    private List<StringEnumOptionData> buyDownFeeIncomeTypeOptions;
+
+    private final List<CodeValueData> capitalizedIncomeClassificationOptions;
+    private final List<CodeValueData> buydownFeeClassificationOptions;
+    private List<ClassificationToGLAccountData> capitalizedIncomeClassificationToIncomeAccountMappings;
+    private List<ClassificationToGLAccountData> buydownFeeClassificationToIncomeAccountMappings;
 
     /**
      * Used when returning lookup information about loan product for dropdowns.
@@ -274,7 +323,7 @@ public class LoanProductData implements Serializable {
         final EnumOptionData amortizationType = null;
         final EnumOptionData interestType = null;
         final EnumOptionData interestCalculationPeriodType = null;
-        final Boolean allowPartialPeriodInterestCalcualtion = null;
+        final Boolean allowPartialPeriodInterestCalculation = null;
         final Long fundId = null;
         final String fundName = null;
         final String transactionProcessingStrategyCode = null;
@@ -302,6 +351,7 @@ public class LoanProductData implements Serializable {
         final Boolean allowApprovedDisbursedAmountsOverApplied = false;
         final String overAppliedCalculationType = null;
         final Integer overAppliedNumber = null;
+        final Boolean allowFullTermForTranche = null;
 
         final LoanProductGuaranteeData productGuaranteeData = null;
         final boolean holdGuaranteeFunds = false;
@@ -336,34 +386,49 @@ public class LoanProductData implements Serializable {
         final boolean enableInstallmentLevelDelinquency = false;
         final EnumOptionData loanScheduleType = null;
         final EnumOptionData loanScheduleProcessingType = null;
-        final EnumOptionData loanScheduleTypeOptions = null;
-        final EnumOptionData loanScheduleProcessingTypeOptions = null;
         final boolean enableAccrualActivityPosting = false;
         final List<StringEnumOptionData> supportedInterestRefundTypes = null;
+        final List<StringEnumOptionData> supportedFeeRefundTypes = null;
         final StringEnumOptionData chargeOffBehaviour = null;
         final boolean interestRecognitionOnDisbursementDate = false;
+        final StringEnumOptionData daysInYearTypeCustomStrategy = null;
+        final boolean enableIncomeCapitalization = false;
+        final StringEnumOptionData capitalizedIncomeCalculationType = null;
+        final StringEnumOptionData capitalizedIncomeStrategy = null;
+        final StringEnumOptionData capitalizedIncomeType = null;
+        final boolean enableBuyDownFee = false;
+        final StringEnumOptionData buyDownFeeCalculationType = null;
+        final StringEnumOptionData buyDownFeeStrategy = null;
+        final StringEnumOptionData buyDownFeeIncomeType = null;
+        final boolean merchantBuyDownFee = false;
+        final List<AdvancedMappingToExpenseAccountData> writeOffReasonsToExpenseMappings = null;
+        final List<CodeValueData> writeOffReasonOptions = null;
 
         return new LoanProductData(id, name, shortName, description, currency, principal, minPrincipal, maxPrincipal, tolerance,
                 numberOfRepayments, minNumberOfRepayments, maxNumberOfRepayments, repaymentEvery, interestRatePerPeriod,
-                minInterestRatePerPeriod, maxInterestRatePerPeriod, annualInterestRate, repaymentFrequencyType, interestRateFrequencyType,
-                amortizationType, interestType, interestCalculationPeriodType, allowPartialPeriodInterestCalcualtion, fundId, fundName,
-                transactionProcessingStrategyCode, transactionProcessingStrategyName, graceOnPrincipalPayment,
-                recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment, graceOnInterestCharged, charges, accountingType,
-                includeInBorrowerCycle, useBorrowerCycle, startDate, closeDate, status, externalId, principalVariations,
-                interestRateVariations, numberOfRepaymentVariations, multiDisburseLoan, maxTrancheCount, outstandingLoanBalance,
-                disallowExpectedDisbursements, allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType, overAppliedNumber,
-                graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType, isInterestRecalculationEnabled,
-                interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds, productGuaranteeData,
-                principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion, canDefineInstallmentAmount,
-                installmentAmountInMultiplesOf, loanProductConfigurableAttributes, isLinkedToFloatingInterestRates, floatingRateId,
-                floatingRateName, interestRateDifferential, minDifferentialLendingRate, defaultDifferentialLendingRate,
-                maxDifferentialLendingRate, isFloatingInterestRateCalculationAllowed, isVariableInstallmentsAllowed, minimumGap, maximumGap,
-                syncExpectedWithDisbursementDate, canUseForTopup, isEqualAmortization, rateOptions, rates, isRatesEnabled,
-                fixedPrincipalPercentagePerInstallment, delinquencyBucketOptions, delinquencyBucket, dueDaysForRepaymentEvent,
-                overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment,
-                paymentAllocation, creditAllocation, repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType,
-                loanScheduleProcessingType, fixedLength, enableAccrualActivityPosting, supportedInterestRefundTypes, chargeOffBehaviour,
-                interestRecognitionOnDisbursementDate, isUssd);
+                minInterestRatePerPeriod, maxInterestRatePerPeriod, annualInterestRate, repaymentFrequencyType, null, null,
+                interestRateFrequencyType, amortizationType, interestType, interestCalculationPeriodType,
+                allowPartialPeriodInterestCalculation, fundId, fundName, transactionProcessingStrategyCode,
+                transactionProcessingStrategyName, graceOnPrincipalPayment, recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment,
+                graceOnInterestCharged, charges, accountingType, includeInBorrowerCycle, useBorrowerCycle, startDate, closeDate, status,
+                externalId, principalVariations, interestRateVariations, numberOfRepaymentVariations, multiDisburseLoan, maxTrancheCount,
+                outstandingLoanBalance, disallowExpectedDisbursements, allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType,
+                overAppliedNumber, allowFullTermForTranche, graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType,
+                isInterestRecalculationEnabled, interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds,
+                productGuaranteeData, principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion,
+                canDefineInstallmentAmount, installmentAmountInMultiplesOf, loanProductConfigurableAttributes,
+                isLinkedToFloatingInterestRates, floatingRateId, floatingRateName, interestRateDifferential, minDifferentialLendingRate,
+                defaultDifferentialLendingRate, maxDifferentialLendingRate, isFloatingInterestRateCalculationAllowed,
+                isVariableInstallmentsAllowed, minimumGap, maximumGap, syncExpectedWithDisbursementDate, canUseForTopup,
+                isEqualAmortization, rateOptions, rates, isRatesEnabled, fixedPrincipalPercentagePerInstallment, delinquencyBucketOptions,
+                delinquencyBucket, dueDaysForRepaymentEvent, overDueDaysForRepaymentEvent, enableDownPayment,
+                disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment, paymentAllocation, creditAllocation,
+                repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType, loanScheduleProcessingType, fixedLength,
+                enableAccrualActivityPosting, supportedInterestRefundTypes, supportedFeeRefundTypes, chargeOffBehaviour,
+                interestRecognitionOnDisbursementDate, daysInYearTypeCustomStrategy, enableIncomeCapitalization,
+                capitalizedIncomeCalculationType, capitalizedIncomeStrategy, capitalizedIncomeType, enableBuyDownFee,
+                buyDownFeeCalculationType, buyDownFeeStrategy, buyDownFeeIncomeType, merchantBuyDownFee, writeOffReasonsToExpenseMappings,
+                writeOffReasonOptions, null, isUssd);
 
     }
 
@@ -400,7 +465,7 @@ public class LoanProductData implements Serializable {
         final EnumOptionData amortizationType = null;
         final EnumOptionData interestType = null;
         final EnumOptionData interestCalculationPeriodType = null;
-        final Boolean allowPartialPeriodInterestCalcualtion = null;
+        final Boolean allowPartialPeriodInterestCalculation = null;
         final Long fundId = null;
         final String fundName = null;
         final String transactionProcessingStrategyCode = null;
@@ -431,6 +496,7 @@ public class LoanProductData implements Serializable {
         final Boolean allowApprovedDisbursedAmountsOverApplied = false;
         final String overAppliedCalculationType = null;
         final Integer overAppliedNumber = null;
+        final Boolean allowFullTermForTranche = null;
 
         final EnumOptionData daysInMonthType = null;
         final EnumOptionData daysInYearType = null;
@@ -466,30 +532,47 @@ public class LoanProductData implements Serializable {
         final EnumOptionData loanScheduleProcessingType = null;
         final boolean enableAccrualActivityPosting = false;
         final List<StringEnumOptionData> supportedInterestRefundTypes = null;
+        final List<StringEnumOptionData> supportedFeeRefundTypes = null;
         final StringEnumOptionData chargeOffBehaviour = null;
         final boolean interestRecognitionOnDisbursementDate = false;
+        final StringEnumOptionData daysInYearTypeCustomStrategy = null;
+        final boolean enableIncomeCapitalization = false;
+        final StringEnumOptionData capitalizedIncomeCalculationType = null;
+        final StringEnumOptionData capitalizedIncomeStrategy = null;
+        final StringEnumOptionData capitalizedIncomeType = null;
+        final boolean enableBuyDownFee = false;
+        final StringEnumOptionData buyDownFeeCalculationType = null;
+        final StringEnumOptionData buyDownFeeStrategy = null;
+        final StringEnumOptionData buyDownFeeIncomeType = null;
+        final boolean merchantBuyDownFee = false;
+        final List<AdvancedMappingToExpenseAccountData> writeOffReasonsToExpenseMappings = null;
+        final List<CodeValueData> writeOffReasonOptions = null;
 
         return new LoanProductData(id, name, shortName, description, currency, principal, minPrincipal, maxPrincipal, tolerance,
                 numberOfRepayments, minNumberOfRepayments, maxNumberOfRepayments, repaymentEvery, interestRatePerPeriod,
-                minInterestRatePerPeriod, maxInterestRatePerPeriod, annualInterestRate, repaymentFrequencyType, interestRateFrequencyType,
-                amortizationType, interestType, interestCalculationPeriodType, allowPartialPeriodInterestCalcualtion, fundId, fundName,
-                transactionProcessingStrategyCode, transactionProcessingStrategyName, graceOnPrincipalPayment,
-                recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment, graceOnInterestCharged, charges, accountingType,
-                includeInBorrowerCycle, useBorrowerCycle, startDate, closeDate, status, externalId, principalVariations,
-                interestRateVariations, numberOfRepaymentVariations, multiDisburseLoan, maxTrancheCount, outstandingLoanBalance,
-                disallowExpectedDisbursements, allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType, overAppliedNumber,
-                graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType, isInterestRecalculationEnabled,
-                interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds, productGuaranteeData,
-                principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion, canDefineInstallmentAmount,
-                installmentAmountInMultiplesOf, loanProductConfigurableAttributes, isLinkedToFloatingInterestRates, floatingRateId,
-                floatingRateName, interestRateDifferential, minDifferentialLendingRate, defaultDifferentialLendingRate,
-                maxDifferentialLendingRate, isFloatingInterestRateCalculationAllowed, isVariableInstallmentsAllowed, minimumGap, maximumGap,
-                syncExpectedWithDisbursementDate, canUseForTopup, isEqualAmortization, rateOptions, rates, isRatesEnabled,
-                fixedPrincipalPercentagePerInstallment, delinquencyBucketOptions, delinquencyBucket, dueDaysForRepaymentEvent,
-                overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment,
-                paymentAllocation, creditAllocation, repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType,
-                loanScheduleProcessingType, fixedLength, enableAccrualActivityPosting, supportedInterestRefundTypes, chargeOffBehaviour,
-                interestRecognitionOnDisbursementDate, isUssd);
+                minInterestRatePerPeriod, maxInterestRatePerPeriod, annualInterestRate, repaymentFrequencyType, null, null,
+                interestRateFrequencyType, amortizationType, interestType, interestCalculationPeriodType,
+                allowPartialPeriodInterestCalculation, fundId, fundName, transactionProcessingStrategyCode,
+                transactionProcessingStrategyName, graceOnPrincipalPayment, recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment,
+                graceOnInterestCharged, charges, accountingType, includeInBorrowerCycle, useBorrowerCycle, startDate, closeDate, status,
+                externalId, principalVariations, interestRateVariations, numberOfRepaymentVariations, multiDisburseLoan, maxTrancheCount,
+                outstandingLoanBalance, disallowExpectedDisbursements, allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType,
+                overAppliedNumber, allowFullTermForTranche, graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType,
+                isInterestRecalculationEnabled, interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds,
+                productGuaranteeData, principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion,
+                canDefineInstallmentAmount, installmentAmountInMultiplesOf, loanProductConfigurableAttributes,
+                isLinkedToFloatingInterestRates, floatingRateId, floatingRateName, interestRateDifferential, minDifferentialLendingRate,
+                defaultDifferentialLendingRate, maxDifferentialLendingRate, isFloatingInterestRateCalculationAllowed,
+                isVariableInstallmentsAllowed, minimumGap, maximumGap, syncExpectedWithDisbursementDate, canUseForTopup,
+                isEqualAmortization, rateOptions, rates, isRatesEnabled, fixedPrincipalPercentagePerInstallment, delinquencyBucketOptions,
+                delinquencyBucket, dueDaysForRepaymentEvent, overDueDaysForRepaymentEvent, enableDownPayment,
+                disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment, paymentAllocation, creditAllocation,
+                repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType, loanScheduleProcessingType, fixedLength,
+                enableAccrualActivityPosting, supportedInterestRefundTypes, supportedFeeRefundTypes, chargeOffBehaviour,
+                interestRecognitionOnDisbursementDate, daysInYearTypeCustomStrategy, enableIncomeCapitalization,
+                capitalizedIncomeCalculationType, capitalizedIncomeStrategy, capitalizedIncomeType, enableBuyDownFee,
+                buyDownFeeCalculationType, buyDownFeeStrategy, buyDownFeeIncomeType, merchantBuyDownFee, writeOffReasonsToExpenseMappings,
+                writeOffReasonOptions, null, isUssd);
 
     }
 
@@ -531,7 +614,7 @@ public class LoanProductData implements Serializable {
         final EnumOptionData interestType = LoanEnumerations.interestType(InterestMethod.DECLINING_BALANCE);
         final EnumOptionData interestCalculationPeriodType = LoanEnumerations
                 .interestCalculationPeriodType(InterestCalculationPeriodMethod.SAME_AS_REPAYMENT_PERIOD);
-        final Boolean allowPartialPeriodInterestCalcualtion = null;
+        final Boolean allowPartialPeriodInterestCalculation = null;
         final Long fundId = null;
         final String fundName = null;
         final String transactionProcessingStrategyCode = null;
@@ -563,6 +646,7 @@ public class LoanProductData implements Serializable {
         final Boolean allowApprovedDisbursedAmountsOverApplied = false;
         final String overAppliedCalculationType = null;
         final Integer overAppliedNumber = null;
+        final Boolean allowFullTermForTranche = null;
 
         final EnumOptionData daysInMonthType = CommonEnumerations.daysInMonthType(DaysInMonthType.ACTUAL);
         final EnumOptionData daysInYearType = CommonEnumerations.daysInYearType(DaysInYearType.ACTUAL);
@@ -599,30 +683,48 @@ public class LoanProductData implements Serializable {
         final EnumOptionData loanScheduleProcessingType = LoanScheduleProcessingType.HORIZONTAL.asEnumOptionData();
         final boolean enableAccrualActivityPosting = false;
         final List<StringEnumOptionData> supportedInterestRefundTypes = null;
+        final List<StringEnumOptionData> supportedFeeRefundTypes = null;
         final StringEnumOptionData chargeOffBehaviour = LoanChargeOffBehaviour.REGULAR.getValueAsStringEnumOptionData();
         final boolean interestRecognitionOnDisbursementDate = false;
+        final StringEnumOptionData daysInYearTypeCustomStrategy = null;
+        final boolean enableIncomeCapitalization = false;
+        final StringEnumOptionData capitalizedIncomeCalculationType = null;
+        final StringEnumOptionData capitalizedIncomeStrategy = null;
+        final StringEnumOptionData capitalizedIncomeType = null;
+        final boolean enableBuyDownFee = false;
+        final StringEnumOptionData buyDownFeeCalculationType = null;
+        final StringEnumOptionData buyDownFeeStrategy = null;
+        final StringEnumOptionData buyDownFeeIncomeType = null;
+        final boolean merchantBuyDownFee = false;
+        final List<AdvancedMappingToExpenseAccountData> writeOffReasonsToExpenseMappings = null;
+        final List<CodeValueData> writeOffReasonOptions = null;
 
         return new LoanProductData(id, name, shortName, description, currency, principal, minPrincipal, maxPrincipal, tolerance,
                 numberOfRepayments, minNumberOfRepayments, maxNumberOfRepayments, repaymentEvery, interestRatePerPeriod,
-                minInterestRatePerPeriod, maxInterestRatePerPeriod, annualInterestRate, repaymentFrequencyType, interestRateFrequencyType,
-                amortizationType, interestType, interestCalculationPeriodType, allowPartialPeriodInterestCalcualtion, fundId, fundName,
-                transactionProcessingStrategyCode, transactionProcessingStrategyName, graceOnPrincipalPayment,
-                recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment, graceOnInterestCharged, charges, accountingType,
-                includeInBorrowerCycle, useBorrowerCycle, startDate, closeDate, status, externalId, principalVariationsForBorrowerCycle,
-                interestRateVariationsForBorrowerCycle, numberOfRepaymentVariationsForBorrowerCycle, multiDisburseLoan, maxTrancheCount,
-                outstandingLoanBalance, disallowExpectedDisbursements, allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType,
-                overAppliedNumber, graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType, isInterestRecalculationEnabled,
-                interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds, productGuaranteeData,
-                principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion, canDefineInstallmentAmount,
-                installmentAmountInMultiplesOf, loanProductConfigurableAttributes, isLinkedToFloatingInterestRates, floatingRateId,
-                floatingRateName, interestRateDifferential, minDifferentialLendingRate, defaultDifferentialLendingRate,
-                maxDifferentialLendingRate, isFloatingInterestRateCalculationAllowed, isVariableInstallmentsAllowed, minimumGap, maximumGap,
-                syncExpectedWithDisbursementDate, canUseForTopup, isEqualAmortization, rateOptions, rates, isRatesEnabled,
-                fixedPrincipalPercentagePerInstallment, delinquencyBucketOptions, delinquencyBucket, dueDaysForRepaymentEvent,
-                overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment,
-                paymentAllocation, creditAllocation, repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType,
-                loanScheduleProcessingType, fixedLength, enableAccrualActivityPosting, supportedInterestRefundTypes, chargeOffBehaviour,
-                interestRecognitionOnDisbursementDate, isUssd);
+                minInterestRatePerPeriod, maxInterestRatePerPeriod, annualInterestRate, repaymentFrequencyType, null, null,
+                interestRateFrequencyType, amortizationType, interestType, interestCalculationPeriodType,
+                allowPartialPeriodInterestCalculation, fundId, fundName, transactionProcessingStrategyCode,
+                transactionProcessingStrategyName, graceOnPrincipalPayment, recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment,
+                graceOnInterestCharged, charges, accountingType, includeInBorrowerCycle, useBorrowerCycle, startDate, closeDate, status,
+                externalId, principalVariationsForBorrowerCycle, interestRateVariationsForBorrowerCycle,
+                numberOfRepaymentVariationsForBorrowerCycle, multiDisburseLoan, maxTrancheCount, outstandingLoanBalance,
+                disallowExpectedDisbursements, allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType, overAppliedNumber,
+                allowFullTermForTranche, graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType,
+                isInterestRecalculationEnabled, interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds,
+                productGuaranteeData, principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion,
+                canDefineInstallmentAmount, installmentAmountInMultiplesOf, loanProductConfigurableAttributes,
+                isLinkedToFloatingInterestRates, floatingRateId, floatingRateName, interestRateDifferential, minDifferentialLendingRate,
+                defaultDifferentialLendingRate, maxDifferentialLendingRate, isFloatingInterestRateCalculationAllowed,
+                isVariableInstallmentsAllowed, minimumGap, maximumGap, syncExpectedWithDisbursementDate, canUseForTopup,
+                isEqualAmortization, rateOptions, rates, isRatesEnabled, fixedPrincipalPercentagePerInstallment, delinquencyBucketOptions,
+                delinquencyBucket, dueDaysForRepaymentEvent, overDueDaysForRepaymentEvent, enableDownPayment,
+                disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment, paymentAllocation, creditAllocation,
+                repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType, loanScheduleProcessingType, fixedLength,
+                enableAccrualActivityPosting, supportedInterestRefundTypes, supportedFeeRefundTypes, chargeOffBehaviour,
+                interestRecognitionOnDisbursementDate, daysInYearTypeCustomStrategy, enableIncomeCapitalization,
+                capitalizedIncomeCalculationType, capitalizedIncomeStrategy, capitalizedIncomeType, enableBuyDownFee,
+                buyDownFeeCalculationType, buyDownFeeStrategy, buyDownFeeIncomeType, merchantBuyDownFee, writeOffReasonsToExpenseMappings,
+                writeOffReasonOptions, null, isUssd);
 
     }
 
@@ -657,7 +759,7 @@ public class LoanProductData implements Serializable {
         final EnumOptionData interestType = LoanEnumerations.interestType(InterestMethod.DECLINING_BALANCE);
         final EnumOptionData interestCalculationPeriodType = LoanEnumerations
                 .interestCalculationPeriodType(InterestCalculationPeriodMethod.SAME_AS_REPAYMENT_PERIOD);
-        final Boolean allowPartialPeriodInterestCalcualtion = null;
+        final Boolean allowPartialPeriodInterestCalculation = null;
         final Long fundId = null;
         final String fundName = null;
         final String transactionProcessingStrategyCode = null;
@@ -690,6 +792,7 @@ public class LoanProductData implements Serializable {
         final Boolean allowApprovedDisbursedAmountsOverApplied = false;
         final String overAppliedCalculationType = null;
         final Integer overAppliedNumber = null;
+        final Boolean allowFullTermForTranche = null;
 
         final EnumOptionData daysInMonthType = CommonEnumerations.daysInMonthType(DaysInMonthType.ACTUAL);
         final EnumOptionData daysInYearType = CommonEnumerations.daysInYearType(DaysInYearType.ACTUAL);
@@ -726,42 +829,66 @@ public class LoanProductData implements Serializable {
         final EnumOptionData loanScheduleProcessingType = null;
         final boolean enableAccrualActivityPosting = false;
         final List<StringEnumOptionData> supportedInterestRefundTypes = null;
+        final List<StringEnumOptionData> supportedFeeRefundTypes = null;
         final StringEnumOptionData chargeOffBehaviour = null;
         final boolean interestRecognitionOnDisbursementDate = false;
+        final StringEnumOptionData daysInYearTypeCustomStrategy = null;
+        final boolean enableIncomeCapitalization = false;
+        final StringEnumOptionData capitalizedIncomeCalculationType = null;
+        final StringEnumOptionData capitalizedIncomeStrategy = null;
+        final StringEnumOptionData capitalizedIncomeType = null;
+        final boolean enableBuyDownFee = false;
+        final StringEnumOptionData buyDownFeeCalculationType = null;
+        final StringEnumOptionData buyDownFeeStrategy = null;
+        final StringEnumOptionData buyDownFeeIncomeType = null;
+        final boolean merchantBuyDownFee = false;
+        final List<AdvancedMappingToExpenseAccountData> writeOffReasonsToExpenseMappings = null;
+        final List<CodeValueData> writeOffReasonOptions = null;
 
         return new LoanProductData(id, name, shortName, description, currency, principal, minPrincipal, maxPrincipal, tolerance,
                 numberOfRepayments, minNumberOfRepayments, maxNumberOfRepayments, repaymentEvery, interestRatePerPeriod,
-                minInterestRatePerPeriod, maxInterestRatePerPeriod, annualInterestRate, repaymentFrequencyType, interestRateFrequencyType,
-                amortizationType, interestType, interestCalculationPeriodType, allowPartialPeriodInterestCalcualtion, fundId, fundName,
-                transactionProcessingStrategyCode, transactionProcessingStrategyName, graceOnPrincipalPayment,
-                recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment, graceOnInterestCharged, charges, accountingType,
-                includeInBorrowerCycle, useBorrowerCycle, startDate, closeDate, status, externalId, principalVariationsForBorrowerCycle,
-                interestRateVariationsForBorrowerCycle, numberOfRepaymentVariationsForBorrowerCycle, multiDisburseLoan, maxTrancheCount,
-                outstandingLoanBalance, disallowExpectedDisbursements, allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType,
-                overAppliedNumber, graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType, isInterestRecalculationEnabled,
-                interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds, productGuaranteeData,
-                principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion, canDefineInstallmentAmount,
-                installmentAmountInMultiplesOf, loanProductConfigurableAttributes, isLinkedToFloatingInterestRates, floatingRateId,
-                floatingRateName, interestRateDifferential, minDifferentialLendingRate, defaultDifferentialLendingRate,
-                maxDifferentialLendingRate, isFloatingInterestRateCalculationAllowed, isVariableInstallmentsAllowed, minimumGap, maximumGap,
-                syncExpectedWithDisbursementDate, canUseForTopup, isEqualAmortization, rateOptions, rates, isRatesEnabled,
-                fixedPrincipalPercentagePerInstallment, delinquencyBucketOptions, delinquencyBucket, dueDaysForRepaymentEvent,
-                overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment,
-                paymentAllocation, creditAllocationData, repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType,
-                loanScheduleProcessingType, fixedLength, enableAccrualActivityPosting, supportedInterestRefundTypes, chargeOffBehaviour,
-                interestRecognitionOnDisbursementDate, isUssd);
+                minInterestRatePerPeriod, maxInterestRatePerPeriod, annualInterestRate, repaymentFrequencyType, null, null,
+                interestRateFrequencyType, amortizationType, interestType, interestCalculationPeriodType,
+                allowPartialPeriodInterestCalculation, fundId, fundName, transactionProcessingStrategyCode,
+                transactionProcessingStrategyName, graceOnPrincipalPayment, recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment,
+                graceOnInterestCharged, charges, accountingType, includeInBorrowerCycle, useBorrowerCycle, startDate, closeDate, status,
+                externalId, principalVariationsForBorrowerCycle, interestRateVariationsForBorrowerCycle,
+                numberOfRepaymentVariationsForBorrowerCycle, multiDisburseLoan, maxTrancheCount, outstandingLoanBalance,
+                disallowExpectedDisbursements, allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType, overAppliedNumber,
+                allowFullTermForTranche, graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType,
+                isInterestRecalculationEnabled, interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds,
+                productGuaranteeData, principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion,
+                canDefineInstallmentAmount, installmentAmountInMultiplesOf, loanProductConfigurableAttributes,
+                isLinkedToFloatingInterestRates, floatingRateId, floatingRateName, interestRateDifferential, minDifferentialLendingRate,
+                defaultDifferentialLendingRate, maxDifferentialLendingRate, isFloatingInterestRateCalculationAllowed,
+                isVariableInstallmentsAllowed, minimumGap, maximumGap, syncExpectedWithDisbursementDate, canUseForTopup,
+                isEqualAmortization, rateOptions, rates, isRatesEnabled, fixedPrincipalPercentagePerInstallment, delinquencyBucketOptions,
+                delinquencyBucket, dueDaysForRepaymentEvent, overDueDaysForRepaymentEvent, enableDownPayment,
+                disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment, paymentAllocation, creditAllocationData,
+                repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType, loanScheduleProcessingType, fixedLength,
+                enableAccrualActivityPosting, supportedInterestRefundTypes, supportedFeeRefundTypes, chargeOffBehaviour,
+                interestRecognitionOnDisbursementDate, daysInYearTypeCustomStrategy, enableIncomeCapitalization,
+                capitalizedIncomeCalculationType, capitalizedIncomeStrategy, capitalizedIncomeType, enableBuyDownFee,
+                buyDownFeeCalculationType, buyDownFeeStrategy, buyDownFeeIncomeType, merchantBuyDownFee, writeOffReasonsToExpenseMappings,
+                writeOffReasonOptions, null, isUssd);
     }
 
     public static LoanProductData withAccountingDetails(final LoanProductData productData, final Map<String, Object> accountingMappings,
             final Collection<PaymentTypeToGLAccountMapper> paymentChannelToFundSourceMappings,
             final Collection<ChargeToGLAccountMapper> feeToGLAccountMappings,
             final Collection<ChargeToGLAccountMapper> penaltyToGLAccountMappings,
-            final List<ChargeOffReasonToGLAccountMapper> chargeOffReasonToGLAccountMappings) {
+            final List<AdvancedMappingToExpenseAccountData> chargeOffReasonToGLAccountMappings,
+            final List<AdvancedMappingToExpenseAccountData> writeOffReasonToGLAccountMappings,
+            final List<ClassificationToGLAccountData> capitalizedIncomeClassificationToIncomeAccountMappings,
+            final List<ClassificationToGLAccountData> buydownFeeClassificationToIncomeAccountMappings) {
         productData.accountingMappings = accountingMappings;
         productData.paymentChannelToFundSourceMappings = paymentChannelToFundSourceMappings;
         productData.feeToIncomeAccountMappings = feeToGLAccountMappings;
         productData.penaltyToIncomeAccountMappings = penaltyToGLAccountMappings;
         productData.chargeOffReasonToExpenseAccountMappings = chargeOffReasonToGLAccountMappings;
+        productData.writeOffReasonsToExpenseMappings = writeOffReasonToGLAccountMappings;
+        productData.capitalizedIncomeClassificationToIncomeAccountMappings = capitalizedIncomeClassificationToIncomeAccountMappings;
+        productData.buydownFeeClassificationToIncomeAccountMappings = buydownFeeClassificationToIncomeAccountMappings;
         return productData;
     }
 
@@ -770,9 +897,10 @@ public class LoanProductData implements Serializable {
             final Integer numberOfRepayments, final Integer minNumberOfRepayments, final Integer maxNumberOfRepayments,
             final Integer repaymentEvery, final BigDecimal interestRatePerPeriod, final BigDecimal minInterestRatePerPeriod,
             final BigDecimal maxInterestRatePerPeriod, final BigDecimal annualInterestRate, final EnumOptionData repaymentFrequencyType,
-            final EnumOptionData interestRateFrequencyType, final EnumOptionData amortizationType, final EnumOptionData interestType,
-            final EnumOptionData interestCalculationPeriodType, final Boolean allowPartialPeriodInterestCalculation, final Long fundId,
-            final String fundName, final String transactionProcessingStrategyCode, final String transactionProcessingStrategyName,
+            final Integer firstRepaymentDayOfMonth, final Integer secondRepaymentDayOfMonth, final EnumOptionData interestRateFrequencyType,
+            final EnumOptionData amortizationType, final EnumOptionData interestType, final EnumOptionData interestCalculationPeriodType,
+            final Boolean allowPartialPeriodInterestCalculation, final Long fundId, final String fundName,
+            final String transactionProcessingStrategyCode, final String transactionProcessingStrategyName,
             final Integer graceOnPrincipalPayment, final Integer recurringMoratoriumOnPrincipalPeriods,
             final Integer graceOnInterestPayment, final Integer graceOnInterestCharged, final Collection<ChargeData> charges,
             final EnumOptionData accountingType, final boolean includeInBorrowerCycle, boolean useBorrowerCycle, final LocalDate startDate,
@@ -782,9 +910,9 @@ public class LoanProductData implements Serializable {
             Collection<LoanProductBorrowerCycleVariationData> numberOfRepaymentVariations, Boolean multiDisburseLoan,
             Integer maxTrancheCount, BigDecimal outstandingLoanBalance, final Boolean disallowExpectedDisbursements,
             final Boolean allowApprovedDisbursedAmountsOverApplied, final String overAppliedCalculationType,
-            final Integer overAppliedNumber, final Integer graceOnArrearsAgeing, final Integer overdueDaysForNPA,
-            final EnumOptionData daysInMonthType, final EnumOptionData daysInYearType, final boolean isInterestRecalculationEnabled,
-            final LoanProductInterestRecalculationData interestRecalculationData,
+            final Integer overAppliedNumber, final Boolean allowFullTermForTranche, final Integer graceOnArrearsAgeing,
+            final Integer overdueDaysForNPA, final EnumOptionData daysInMonthType, final EnumOptionData daysInYearType,
+            final boolean isInterestRecalculationEnabled, final LoanProductInterestRecalculationData interestRecalculationData,
             final Integer minimumDaysBetweenDisbursalAndFirstRepayment, boolean holdGuaranteeFunds,
             final LoanProductGuaranteeData loanProductGuaranteeData, final BigDecimal principalThresholdForLastInstallment,
             final boolean accountMovesOutOfNPAOnlyOnArrearsCompletion, boolean canDefineInstallmentAmount,
@@ -803,7 +931,15 @@ public class LoanProductData implements Serializable {
             final EnumOptionData repaymentStartDateType, final boolean enableInstallmentLevelDelinquency,
             final EnumOptionData loanScheduleType, final EnumOptionData loanScheduleProcessingType, final Integer fixedLength,
             final boolean enableAccrualActivityPosting, final List<StringEnumOptionData> supportedInterestRefundTypes,
-            StringEnumOptionData chargeOffBehaviour, final boolean interestRecognitionOnDisbursementDate, boolean isUssd) {
+            final List<StringEnumOptionData> supportedFeeRefundTypes, StringEnumOptionData chargeOffBehaviour,
+            final boolean interestRecognitionOnDisbursementDate, final StringEnumOptionData daysInYearCustomStrategy,
+            final boolean enableIncomeCapitalization, final StringEnumOptionData capitalizedIncomeCalculationType,
+            final StringEnumOptionData capitalizedIncomeStrategy, final StringEnumOptionData capitalizedIncomeType,
+            final boolean enableBuyDownFee, final StringEnumOptionData buyDownFeeCalculationType,
+            final StringEnumOptionData buyDownFeeStrategy, final StringEnumOptionData buyDownFeeIncomeType,
+            final boolean merchantBuyDownFee, final List<AdvancedMappingToExpenseAccountData> writeOffReasonsToExpenseMappings,
+            final List<CodeValueData> writeOffReasonOptions, final StringEnumOptionData monthEndDueDateStrategy,
+            final boolean isUssd) {
         this.id = id;
         this.name = name;
         this.shortName = shortName;
@@ -838,6 +974,8 @@ public class LoanProductData implements Serializable {
         this.minimumGap = minimumGapBetweenInstallments;
         this.maximumGap = maximumGapBetweenInstallments;
         this.repaymentFrequencyType = repaymentFrequencyType;
+        this.firstRepaymentDayOfMonth = firstRepaymentDayOfMonth;
+        this.secondRepaymentDayOfMonth = secondRepaymentDayOfMonth;
         this.interestRateFrequencyType = interestRateFrequencyType;
         this.amortizationType = amortizationType;
         this.interestType = interestType;
@@ -859,6 +997,16 @@ public class LoanProductData implements Serializable {
         this.rateOptions = rateOptions;
         this.rates = rates;
         this.isRatesEnabled = isRatesEnabled;
+        this.daysInYearCustomStrategy = daysInYearCustomStrategy;
+        this.enableIncomeCapitalization = enableIncomeCapitalization;
+        this.capitalizedIncomeCalculationType = capitalizedIncomeCalculationType;
+        this.capitalizedIncomeStrategy = capitalizedIncomeStrategy;
+        this.capitalizedIncomeType = capitalizedIncomeType;
+        this.enableBuyDownFee = enableBuyDownFee;
+        this.buyDownFeeCalculationType = buyDownFeeCalculationType;
+        this.buyDownFeeStrategy = buyDownFeeStrategy;
+        this.buyDownFeeIncomeType = buyDownFeeIncomeType;
+        this.merchantBuyDownFee = merchantBuyDownFee;
 
         this.chargeOptions = null;
         this.penaltyOptions = null;
@@ -880,6 +1028,7 @@ public class LoanProductData implements Serializable {
         this.feeToIncomeAccountMappings = null;
         this.penaltyToIncomeAccountMappings = null;
         this.chargeOffReasonToExpenseAccountMappings = null;
+        this.writeOffReasonsToExpenseMappings = null;
         this.valueConditionTypeOptions = null;
         this.principalVariationsForBorrowerCycle = principalVariations;
         this.interestRateVariationsForBorrowerCycle = interestRateVariations;
@@ -891,6 +1040,7 @@ public class LoanProductData implements Serializable {
         this.allowApprovedDisbursedAmountsOverApplied = allowApprovedDisbursedAmountsOverApplied;
         this.overAppliedCalculationType = overAppliedCalculationType;
         this.overAppliedNumber = overAppliedNumber;
+        this.allowFullTermForTranche = allowFullTermForTranche;
 
         this.graceOnArrearsAgeing = graceOnArrearsAgeing;
         this.overdueDaysForNPA = overdueDaysForNPA;
@@ -935,6 +1085,7 @@ public class LoanProductData implements Serializable {
         this.advancedPaymentAllocationTypes = PaymentAllocationType.getValuesAsEnumOptionDataList();
         this.creditAllocationTransactionTypes = CreditAllocationTransactionType.getValuesAsEnumOptionDataList();
         this.creditAllocationAllocationTypes = AllocationType.getValuesAsEnumOptionDataList();
+        this.creditAllocationStrategyOptions = CreditAllocationStrategy.getValuesAsEnumOptionDataList();
         this.enableInstallmentLevelDelinquency = enableInstallmentLevelDelinquency;
         this.loanScheduleType = loanScheduleType;
         this.loanScheduleProcessingType = loanScheduleProcessingType;
@@ -943,10 +1094,28 @@ public class LoanProductData implements Serializable {
         this.enableAccrualActivityPosting = enableAccrualActivityPosting;
         this.supportedInterestRefundTypes = supportedInterestRefundTypes;
         this.supportedInterestRefundTypesOptions = null;
+        this.supportedFeeRefundTypes = supportedFeeRefundTypes;
+        this.supportedFeeRefundTypesOptions = null;
         this.chargeOffBehaviour = chargeOffBehaviour;
         this.chargeOffBehaviourOptions = null;
         this.chargeOffReasonOptions = null;
         this.interestRecognitionOnDisbursementDate = interestRecognitionOnDisbursementDate;
+        this.daysInYearCustomStrategyOptions = ApiFacingEnum.getValuesAsStringEnumOptionDataList(DaysInYearCustomStrategyType.class);
+        this.monthEndDueDateStrategy = monthEndDueDateStrategy;
+        this.monthEndDueDateStrategyOptions = ApiFacingEnum.getValuesAsStringEnumOptionDataList(MonthEndDueDateStrategy.class);
+        this.capitalizedIncomeCalculationTypeOptions = ApiFacingEnum
+                .getValuesAsStringEnumOptionDataList(LoanCapitalizedIncomeCalculationType.class);
+        this.capitalizedIncomeStrategyOptions = ApiFacingEnum.getValuesAsStringEnumOptionDataList(LoanCapitalizedIncomeStrategy.class);
+        this.capitalizedIncomeTypeOptions = ApiFacingEnum.getValuesAsStringEnumOptionDataList(LoanCapitalizedIncomeType.class);
+        this.buyDownFeeCalculationTypeOptions = ApiFacingEnum.getValuesAsStringEnumOptionDataList(LoanBuyDownFeeCalculationType.class);
+        this.buyDownFeeStrategyOptions = ApiFacingEnum.getValuesAsStringEnumOptionDataList(LoanBuyDownFeeStrategy.class);
+        this.buyDownFeeIncomeTypeOptions = ApiFacingEnum.getValuesAsStringEnumOptionDataList(LoanBuyDownFeeIncomeType.class);
+        this.writeOffReasonsToExpenseMappings = writeOffReasonsToExpenseMappings;
+        this.writeOffReasonOptions = writeOffReasonOptions;
+        this.capitalizedIncomeClassificationOptions = null;
+        this.buydownFeeClassificationOptions = null;
+        this.capitalizedIncomeClassificationToIncomeAccountMappings = null;
+        this.buydownFeeClassificationToIncomeAccountMappings = null;
         this.isUssd = isUssd;
     }
 
@@ -969,9 +1138,17 @@ public class LoanProductData implements Serializable {
             final List<EnumOptionData> advancedPaymentAllocationFutureInstallmentAllocationRules,
             final List<EnumOptionData> advancedPaymentAllocationTypes, final List<EnumOptionData> loanScheduleTypeOptions,
             final List<EnumOptionData> loanScheduleProcessingTypeOptions, final List<EnumOptionData> creditAllocationTransactionTypes,
-            final List<EnumOptionData> creditAllocationAllocationTypes,
+            final List<EnumOptionData> creditAllocationAllocationTypes, final List<EnumOptionData> creditAllocationStrategyOptions,
             final List<StringEnumOptionData> supportedInterestRefundTypesOptions,
-            final List<StringEnumOptionData> chargeOffBehaviourOptions, final List<CodeValueData> chargeOffReasonOptions) {
+            final List<StringEnumOptionData> supportedFeeRefundTypesOptions, final List<StringEnumOptionData> chargeOffBehaviourOptions,
+            final List<CodeValueData> chargeOffReasonOptions, final List<StringEnumOptionData> daysInYearCustomStrategyOptions,
+            final List<StringEnumOptionData> capitalizedIncomeCalculationTypeOptions,
+            final List<StringEnumOptionData> capitalizedIncomeStrategyOptions,
+            final List<StringEnumOptionData> capitalizedIncomeTypeOptions,
+            final List<StringEnumOptionData> buyDownFeeCalculationTypeOptions, final List<StringEnumOptionData> buyDownFeeStrategyOptions,
+            final List<StringEnumOptionData> buyDownFeeIncomeTypeOptions, final List<CodeValueData> writeOffReasonOptions,
+            final List<CodeValueData> capitalizedIncomeClassificationOptions, final List<CodeValueData> buydownFeeClassificationOptions,
+            final List<StringEnumOptionData> monthEndDueDateStrategyOptions) {
 
         this.id = productData.id;
         this.name = productData.name;
@@ -1005,6 +1182,8 @@ public class LoanProductData implements Serializable {
         this.minimumGap = productData.minimumGap;
         this.maximumGap = productData.maximumGap;
         this.repaymentFrequencyType = productData.repaymentFrequencyType;
+        this.firstRepaymentDayOfMonth = productData.firstRepaymentDayOfMonth;
+        this.secondRepaymentDayOfMonth = productData.secondRepaymentDayOfMonth;
         this.interestRateFrequencyType = productData.interestRateFrequencyType;
         this.amortizationType = productData.amortizationType;
         this.interestType = productData.interestType;
@@ -1025,6 +1204,8 @@ public class LoanProductData implements Serializable {
         this.feeToIncomeAccountMappings = productData.feeToIncomeAccountMappings;
         this.penaltyToIncomeAccountMappings = productData.penaltyToIncomeAccountMappings;
         this.chargeOffReasonToExpenseAccountMappings = productData.chargeOffReasonToExpenseAccountMappings;
+        this.writeOffReasonsToExpenseMappings = productData.writeOffReasonsToExpenseMappings;
+        this.writeOffReasonOptions = writeOffReasonOptions;
 
         this.chargeOptions = chargeOptions;
         this.penaltyOptions = penaltyOptions;
@@ -1058,6 +1239,7 @@ public class LoanProductData implements Serializable {
         this.allowApprovedDisbursedAmountsOverApplied = productData.allowApprovedDisbursedAmountsOverApplied;
         this.overAppliedCalculationType = productData.overAppliedCalculationType;
         this.overAppliedNumber = productData.overAppliedNumber;
+        this.allowFullTermForTranche = productData.allowFullTermForTranche;
 
         this.minimumDaysBetweenDisbursalAndFirstRepayment = productData.minimumDaysBetweenDisbursalAndFirstRepayment;
 
@@ -1120,6 +1302,7 @@ public class LoanProductData implements Serializable {
         this.advancedPaymentAllocationFutureInstallmentAllocationRules = advancedPaymentAllocationFutureInstallmentAllocationRules;
         this.advancedPaymentAllocationTypes = advancedPaymentAllocationTypes;
         this.creditAllocationAllocationTypes = creditAllocationAllocationTypes;
+        this.creditAllocationStrategyOptions = creditAllocationStrategyOptions;
         this.creditAllocationTransactionTypes = creditAllocationTransactionTypes;
         this.enableInstallmentLevelDelinquency = productData.enableInstallmentLevelDelinquency;
         this.loanScheduleType = productData.getLoanScheduleType();
@@ -1129,10 +1312,37 @@ public class LoanProductData implements Serializable {
         this.enableAccrualActivityPosting = productData.enableAccrualActivityPosting;
         this.supportedInterestRefundTypesOptions = supportedInterestRefundTypesOptions;
         this.supportedInterestRefundTypes = productData.supportedInterestRefundTypes;
+        this.supportedFeeRefundTypesOptions = supportedFeeRefundTypesOptions;
+        this.supportedFeeRefundTypes = productData.supportedFeeRefundTypes;
         this.chargeOffBehaviour = productData.chargeOffBehaviour;
         this.chargeOffBehaviourOptions = chargeOffBehaviourOptions;
         this.chargeOffReasonOptions = chargeOffReasonOptions;
         this.interestRecognitionOnDisbursementDate = productData.interestRecognitionOnDisbursementDate;
+        this.daysInYearCustomStrategyOptions = daysInYearCustomStrategyOptions;
+        this.daysInYearCustomStrategy = productData.daysInYearCustomStrategy;
+        this.monthEndDueDateStrategyOptions = monthEndDueDateStrategyOptions;
+        this.monthEndDueDateStrategy = productData.monthEndDueDateStrategy;
+        this.enableIncomeCapitalization = productData.enableIncomeCapitalization;
+        this.capitalizedIncomeCalculationType = productData.capitalizedIncomeCalculationType;
+        this.capitalizedIncomeStrategy = productData.capitalizedIncomeStrategy;
+        this.capitalizedIncomeType = productData.capitalizedIncomeType;
+        this.capitalizedIncomeCalculationTypeOptions = capitalizedIncomeCalculationTypeOptions;
+        this.capitalizedIncomeStrategyOptions = capitalizedIncomeStrategyOptions;
+        this.capitalizedIncomeTypeOptions = capitalizedIncomeTypeOptions;
+
+        this.enableBuyDownFee = productData.enableBuyDownFee;
+        this.buyDownFeeCalculationType = productData.buyDownFeeCalculationType;
+        this.buyDownFeeStrategy = productData.buyDownFeeStrategy;
+        this.buyDownFeeIncomeType = productData.buyDownFeeIncomeType;
+        this.buyDownFeeCalculationTypeOptions = buyDownFeeCalculationTypeOptions;
+        this.buyDownFeeStrategyOptions = buyDownFeeStrategyOptions;
+        this.buyDownFeeIncomeTypeOptions = buyDownFeeIncomeTypeOptions;
+
+        this.merchantBuyDownFee = productData.isMerchantBuyDownFee();
+        this.capitalizedIncomeClassificationOptions = capitalizedIncomeClassificationOptions;
+        this.buydownFeeClassificationOptions = buydownFeeClassificationOptions;
+        this.buydownFeeClassificationToIncomeAccountMappings = productData.buydownFeeClassificationToIncomeAccountMappings;
+        this.capitalizedIncomeClassificationToIncomeAccountMappings = productData.capitalizedIncomeClassificationToIncomeAccountMappings;
         this.isUssd = productData.isUssd;
     }
 

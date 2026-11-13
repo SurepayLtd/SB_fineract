@@ -74,7 +74,7 @@ public interface SavingsAccountWritePlatformService {
 
     CommandProcessingResult unassignFieldOfficer(Long savingsAccountId, JsonCommand command);
 
-    void applyChargeDue(Long savingsAccountChargeId, Long accountId);
+    LocalDate applyChargeDue(Long savingsAccountChargeId, Long accountId);
 
     void processPostActiveActions(SavingsAccount account, DateTimeFormatter fmt, Set<Long> existingTransactionIds,
             Set<Long> existingReversedTransactionIds);
@@ -91,7 +91,8 @@ public interface SavingsAccountWritePlatformService {
 
     void postInterest(SavingsAccount account, boolean postInterestAs, LocalDate transactionDate, boolean backdatedTxnsAllowedTill);
 
-    // SavingsAccountData postInterest(SavingsAccountData account, boolean postInterestAs, LocalDate transactionDate,
+    // SavingsAccountData postInterest(SavingsAccountData account, boolean
+    // postInterestAs, LocalDate transactionDate,
     // boolean backdatedTxnsAllowedTill);
 
     SavingsAccountData postInterest(SavingsAccountData account, boolean postInterestAs, LocalDate transactionDate,
@@ -111,11 +112,13 @@ public interface SavingsAccountWritePlatformService {
 
     CommandProcessingResult unblockDebits(Long savingsId);
 
-    CommandProcessingResult releaseAmount(Long savingsId, Long transactionId);
+    CommandProcessingResult releaseAmount(Long savingsId, Long transactionId, JsonCommand command);
 
     CommandProcessingResult gsimActivate(Long gsimId, JsonCommand command);
 
     CommandProcessingResult gsimDeposit(Long gsimId, JsonCommand command);
 
     CommandProcessingResult bulkGSIMClose(Long gsimId, JsonCommand command);
+
+    CommandProcessingResult forceWithdrawal(Long savingsId, JsonCommand command);
 }

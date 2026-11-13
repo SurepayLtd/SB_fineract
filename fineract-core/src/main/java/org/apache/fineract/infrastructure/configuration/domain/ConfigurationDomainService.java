@@ -19,11 +19,18 @@
 package org.apache.fineract.infrastructure.configuration.domain;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Set;
 import org.apache.fineract.infrastructure.cache.domain.CacheType;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanStatus;
 
 public interface ConfigurationDomainService {
 
     boolean isMakerCheckerEnabledForTask(String taskPermissionCode);
+
+    List<LoanStatus> getAllowedLoanStatusesForExternalAssetTransfer();
+
+    List<LoanStatus> getAllowedLoanStatusesOfDelayedSettlementForExternalAssetTransfer();
 
     boolean isSameMakerCheckerEnabled();
 
@@ -89,7 +96,7 @@ public interface ConfigurationDomainService {
 
     Long getDailyTPTLimit();
 
-    void removeGlobalConfigurationPropertyDataFromCache(String propertyName);
+    void removeGlobalConfigurationPropertyDataFromCache();
 
     boolean isSMSOTPDeliveryEnabled();
 
@@ -103,8 +110,18 @@ public interface ConfigurationDomainService {
 
     boolean isFirstRepaymentDateAfterRescheduleAllowedOnHoliday();
 
+    /**
+     * Returned as the comma-separated canonical values (e.g. {@code Asset,Liability}) rather than a list of
+     * {@link AccountMappingForPaymentTypeConfig}, because the string is passed through unchanged to the savings product
+     * template response.
+     */
     String getAccountMappingForPaymentType();
 
+    /**
+     * Returned as the comma-separated canonical values (e.g. {@code Income,Expense}) rather than a list of
+     * {@link AccountMappingForChargeConfig}, because the string is passed through unchanged to the charge template
+     * response.
+     */
     String getAccountMappingForCharge();
 
     boolean isNextDayFixedDepositInterestTransferEnabledForPeriodEnd();
@@ -139,13 +156,60 @@ public interface ConfigurationDomainService {
 
     String retrieveReportExportS3FolderName();
 
-    String getAccrualDateConfigForCharge();
+    ChargeAccrualDateConfig getAccrualDateConfigForCharge();
 
-    String getNextPaymentDateConfigForLoan();
+    ChargeAccrualTimeConfig getWclChargeAccrualTime();
+
+    NextPaymentDueDateConfig getNextPaymentDateConfigForLoan();
 
     boolean isImmediateChargeAccrualPostMaturityEnabled();
 
+    boolean isPlChargeAccrualRealTime();
+
+    OutstandingInterestStrategyConfig getAssetOwnerTransferOustandingInterestStrategy();
+
+    boolean isForceWithdrawalOnSavingsAccountEnabled();
+
+    Long getForceWithdrawalOnSavingsAccountLimit();
+
+    Integer getPasswordReuseRestrictionCount();
+
+    boolean isForcePasswordResetOnFirstLoginEnabled();
+
+    boolean isMaxLoginRetriesEnabled();
+
+    Integer retrieveMaxLoginRetries();
+
+    String getIncomeExpenseGlAccounts();
+
+    String getRetainedEarningGlAccount();
+
+    Long getLastDayOfFinancialYear();
+
+    Long getLastMonthOfFinancialYear();
+
+    String getRetainedEarningUsedByReportName();
+
+    String getRetainedEarningWorkingCapitalUsedByReportName();
+
+    Long getOfficeId();
+
+    boolean isAllowCashAndNonCashAccrual();
+
+    boolean isBlockTransactionsOnClosedOverpaidLoansEnabled();
+
+    boolean isBackdatedTransactionsDisallowed();
+
+    Long retrieveBackdatedTransactionsToleranceDays();
+
+    Long retrievePayoffSchedulePreviewMaxPayoffPeriods();
+
+    Long retrievePayoffSchedulePreviewMaxTermPeriods();
+
+    Set<String> getIdempotencyRecoverableErrorCodes();
+
     Integer retrieveMomoPaymentOtpExpiryMinutes();
+
     Integer retrieveMomoPaymentPinExpiryMonths();
 
     boolean isSelfServiceEnabled();
@@ -159,5 +223,4 @@ public interface ConfigurationDomainService {
     boolean isCRBValidateNINEnabled();
 
     boolean isCRBValidatePhoneEnabled();
-
 }

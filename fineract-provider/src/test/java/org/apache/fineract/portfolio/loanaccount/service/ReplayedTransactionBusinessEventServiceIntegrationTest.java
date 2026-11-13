@@ -23,10 +23,10 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import org.apache.fineract.infrastructure.event.business.domain.loan.LoanAdjustTransactionBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
+import org.apache.fineract.portfolio.loanaccount.data.TransactionChangeData;
 import org.apache.fineract.portfolio.loanaccount.domain.ChangedTransactionDetail;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionRepository;
@@ -38,7 +38,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressFBWarnings(value = "RV_EXCEPTION_NOT_THROWN", justification = "False positive")
+
 class ReplayedTransactionBusinessEventServiceIntegrationTest {
 
     @Mock
@@ -52,6 +52,11 @@ class ReplayedTransactionBusinessEventServiceIntegrationTest {
     @BeforeEach
     public void setUp() {
         underTest = new ReplayedTransactionBusinessEventServiceImpl(businessEventNotifierService, loanTransactionRepository);
+        // The recording window runs its action; the notifier owns opening and closing it.
+        lenient().doAnswer(invocation -> {
+            invocation.getArgument(0, Runnable.class).run();
+            return null;
+        }).when(businessEventNotifierService).withExternalEventRecording(Mockito.any(Runnable.class));
     }
 
     @Test
@@ -61,11 +66,9 @@ class ReplayedTransactionBusinessEventServiceIntegrationTest {
         // when
         underTest.raiseTransactionReplayedEvents(changedTransactionDetail);
         // then
-        verify(businessEventNotifierService, Mockito.times(0)).startExternalEventRecording();
+        verify(businessEventNotifierService, Mockito.times(0)).withExternalEventRecording(Mockito.any(Runnable.class));
         verify(businessEventNotifierService, Mockito.times(0))
                 .notifyPostBusinessEvent(Mockito.any(LoanAdjustTransactionBusinessEvent.class));
-        verify(businessEventNotifierService, Mockito.times(0)).stopExternalEventRecording();
-        verify(businessEventNotifierService, Mockito.times(0)).resetEventRecording();
     }
 
     @Test
@@ -75,11 +78,9 @@ class ReplayedTransactionBusinessEventServiceIntegrationTest {
         // when
         underTest.raiseTransactionReplayedEvents(changedTransactionDetail);
         // then
-        verify(businessEventNotifierService, Mockito.times(0)).startExternalEventRecording();
+        verify(businessEventNotifierService, Mockito.times(0)).withExternalEventRecording(Mockito.any(Runnable.class));
         verify(businessEventNotifierService, Mockito.times(0))
                 .notifyPostBusinessEvent(Mockito.any(LoanAdjustTransactionBusinessEvent.class));
-        verify(businessEventNotifierService, Mockito.times(0)).stopExternalEventRecording();
-        verify(businessEventNotifierService, Mockito.times(0)).resetEventRecording();
     }
 
     @Test
@@ -88,36 +89,36 @@ class ReplayedTransactionBusinessEventServiceIntegrationTest {
         LoanTransaction oldLoanTransaction = Mockito.mock(LoanTransaction.class);
         LoanTransaction newLoanTransaction = Mockito.mock(LoanTransaction.class);
         lenient().when(loanTransactionRepository.findById(1L)).thenReturn(Optional.of(oldLoanTransaction));
+        lenient().when(oldLoanTransaction.getId()).thenReturn(1L);
         ChangedTransactionDetail changedTransactionDetail = new ChangedTransactionDetail();
-        changedTransactionDetail.getNewTransactionMappings().put(1L, newLoanTransaction);
+        changedTransactionDetail.addTransactionChange(new TransactionChangeData(oldLoanTransaction, newLoanTransaction));
         // when
         underTest.raiseTransactionReplayedEvents(changedTransactionDetail);
         // then
-        verify(businessEventNotifierService, Mockito.times(1)).startExternalEventRecording();
+        verify(businessEventNotifierService, Mockito.times(1)).withExternalEventRecording(Mockito.any(Runnable.class));
         verify(businessEventNotifierService, Mockito.times(1))
                 .notifyPostBusinessEvent(Mockito.any(LoanAdjustTransactionBusinessEvent.class));
-        verify(businessEventNotifierService, Mockito.times(1)).stopExternalEventRecording();
-        verify(businessEventNotifierService, Mockito.times(0)).resetEventRecording();
     }
 
     @Test
     public void testWhenParamHasTwoNewTransaction() {
         // given
-        LoanTransaction oldLoanTransaction = Mockito.mock(LoanTransaction.class);
+        LoanTransaction oldLoanTransaction1 = Mockito.mock(LoanTransaction.class);
+        LoanTransaction oldLoanTransaction2 = Mockito.mock(LoanTransaction.class);
         LoanTransaction newLoanTransaction = Mockito.mock(LoanTransaction.class);
-        lenient().when(loanTransactionRepository.findById(1L)).thenReturn(Optional.of(oldLoanTransaction));
-        lenient().when(loanTransactionRepository.findById(2L)).thenReturn(Optional.of(oldLoanTransaction));
+        lenient().when(loanTransactionRepository.findById(1L)).thenReturn(Optional.of(oldLoanTransaction1));
+        lenient().when(loanTransactionRepository.findById(2L)).thenReturn(Optional.of(oldLoanTransaction2));
+        lenient().when(oldLoanTransaction1.getId()).thenReturn(1L);
+        lenient().when(oldLoanTransaction2.getId()).thenReturn(2L);
         ChangedTransactionDetail changedTransactionDetail = new ChangedTransactionDetail();
-        changedTransactionDetail.getNewTransactionMappings().put(1L, newLoanTransaction);
-        changedTransactionDetail.getNewTransactionMappings().put(2L, newLoanTransaction);
+        changedTransactionDetail.addTransactionChange(new TransactionChangeData(oldLoanTransaction1, newLoanTransaction));
+        changedTransactionDetail.addTransactionChange(new TransactionChangeData(oldLoanTransaction2, newLoanTransaction));
         // when
         underTest.raiseTransactionReplayedEvents(changedTransactionDetail);
         // then
-        verify(businessEventNotifierService, Mockito.times(1)).startExternalEventRecording();
+        verify(businessEventNotifierService, Mockito.times(1)).withExternalEventRecording(Mockito.any(Runnable.class));
         verify(businessEventNotifierService, Mockito.times(2))
                 .notifyPostBusinessEvent(Mockito.any(LoanAdjustTransactionBusinessEvent.class));
-        verify(businessEventNotifierService, Mockito.times(1)).stopExternalEventRecording();
-        verify(businessEventNotifierService, Mockito.times(0)).resetEventRecording();
     }
 
     @Test
@@ -128,15 +129,14 @@ class ReplayedTransactionBusinessEventServiceIntegrationTest {
         LoanTransaction oldLoanTransaction = Mockito.mock(LoanTransaction.class);
         LoanTransaction newLoanTransaction = Mockito.mock(LoanTransaction.class);
         lenient().when(loanTransactionRepository.findById(1L)).thenReturn(Optional.of(oldLoanTransaction));
+        lenient().when(oldLoanTransaction.getId()).thenReturn(1L);
         ChangedTransactionDetail changedTransactionDetail = new ChangedTransactionDetail();
-        changedTransactionDetail.getNewTransactionMappings().put(1L, newLoanTransaction);
+        changedTransactionDetail.addTransactionChange(new TransactionChangeData(oldLoanTransaction, newLoanTransaction));
         // when
         assertThrows(RuntimeException.class, () -> underTest.raiseTransactionReplayedEvents(changedTransactionDetail));
         // then
-        verify(businessEventNotifierService, Mockito.times(1)).startExternalEventRecording();
+        verify(businessEventNotifierService, Mockito.times(1)).withExternalEventRecording(Mockito.any(Runnable.class));
         verify(businessEventNotifierService, Mockito.times(1))
                 .notifyPostBusinessEvent(Mockito.any(LoanAdjustTransactionBusinessEvent.class));
-        verify(businessEventNotifierService, Mockito.times(0)).stopExternalEventRecording();
-        verify(businessEventNotifierService, Mockito.times(1)).resetEventRecording();
     }
 }

@@ -14,6 +14,8 @@
  */
 package org.apache.fineract.selfservice.security.starter;
 
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.apache.fineract.infrastructure.businessdate.service.BusinessDateReadPlatformService;
 import org.apache.fineract.infrastructure.cache.service.CacheWritePlatformService;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
@@ -30,7 +32,7 @@ import org.apache.fineract.infrastructure.jobs.filter.LoanCOBApiFilter;
 import org.apache.fineract.infrastructure.jobs.filter.LoanCOBFilterHelper;
 import org.apache.fineract.infrastructure.security.data.PlatformRequestLog;
 import org.apache.fineract.infrastructure.security.filter.TwoFactorAuthenticationFilter;
-import org.apache.fineract.infrastructure.security.service.BasicAuthTenantDetailsService;
+import org.apache.fineract.infrastructure.security.service.AuthTenantDetailsService;
 import org.apache.fineract.infrastructure.security.service.TwoFactorService;
 import org.apache.fineract.notification.service.UserNotificationService;
 import org.apache.fineract.selfservice.security.filter.SelfServiceAuthenticationConverter;
@@ -58,7 +60,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.ExceptionTranslationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
-import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -67,6 +68,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Order(1) // Very important: Must have higher priority than main security config
 public class SelfServiceSecurityConfiguration {
 
+  private static final PathPatternRequestMatcher.Builder SELF_SERVICE_MATCHER = PathPatternRequestMatcher.withDefaults();
+
+  private static RequestMatcher antMatcher(final String pattern) {
+    return SELF_SERVICE_MATCHER.matcher(pattern);
+  }
+
+  private static RequestMatcher antMatcher(final HttpMethod method, final String pattern) {
+    return SELF_SERVICE_MATCHER.matcher(method, pattern);
+  }
+
   @Autowired private ApplicationContext applicationContext;
   @Autowired private TenantAwareJpaPlatformSelfServiceUserDetailsService userDetailsService;
   @Autowired private FineractProperties fineractProperties;
@@ -74,7 +85,7 @@ public class SelfServiceSecurityConfiguration {
   @Autowired private ConfigurationDomainService configurationDomainService;
   @Autowired private CacheWritePlatformService cacheWritePlatformService;
   @Autowired private UserNotificationService userNotificationService;
-  @Autowired private BasicAuthTenantDetailsService basicAuthTenantDetailsService;
+  @Autowired private AuthTenantDetailsService basicAuthTenantDetailsService;
   @Autowired private BusinessDateReadPlatformService businessDateReadPlatformService;
   @Autowired private MDCWrapper mdcWrapper;
   @Autowired private FineractRequestContextHolder fineractRequestContextHolder;
@@ -236,8 +247,8 @@ public class SelfServiceSecurityConfiguration {
     // the /api prefix, so authentication filter must cover both patterns.
     filter.setRequestMatcher(
         new org.springframework.security.web.util.matcher.OrRequestMatcher(
-            new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/api/v1/self/**"),
-            new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/v1/self/**")));
+            antMatcher("/api/v1/self/**"),
+            antMatcher("/v1/self/**")));
     return filter;
   }
 
@@ -256,8 +267,7 @@ public class SelfServiceSecurityConfiguration {
 
   @Bean(name = "selfServiceAuthenticationProvider")
   public DaoAuthenticationProvider selfServiceAuthProvider() {
-    DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-    authProvider.setUserDetailsService(userDetailsService);
+    DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
     authProvider.setPasswordEncoder(selfServicePasswordEncoder());
     authProvider.setPreAuthenticationChecks(
         new org.apache.fineract.selfservice.security.service.SelfServiceUserDetailsChecker(

@@ -16,77 +16,133 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.fineract.integrationtests;
 
-import io.restassured.builder.RequestSpecBuilder;
-import io.restassured.builder.ResponseSpecBuilder;
-import io.restassured.http.ContentType;
-import io.restassured.specification.RequestSpecification;
-import io.restassured.specification.ResponseSpecification;
-import org.apache.fineract.client.models.DeletePaymentTypesPaymentTypeIdResponse;
-import org.apache.fineract.client.models.GetPaymentTypesPaymentTypeIdResponse;
-import org.apache.fineract.client.models.PostPaymentTypesRequest;
-import org.apache.fineract.client.models.PostPaymentTypesResponse;
-import org.apache.fineract.client.models.PutPaymentTypesPaymentTypeIdRequest;
-import org.apache.fineract.integrationtests.common.PaymentTypeHelper;
+import static org.apache.fineract.client.feign.util.FeignCalls.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import feign.Headers;
+import feign.Param;
+import feign.RequestLine;
+import org.apache.fineract.client.feign.util.CallFailedRuntimeException;
+import org.apache.fineract.client.models.PaymentTypeCreateRequest;
+import org.apache.fineract.client.models.PaymentTypeData;
+import org.apache.fineract.client.models.PaymentTypeUpdateRequest;
+import org.apache.fineract.client.models.PaymentTypeUpdateResponse;
+import org.apache.fineract.integrationtests.client.FeignIntegrationTest;
+import org.apache.fineract.integrationtests.client.feign.helpers.FeignPaymentTypeHelper;
 import org.apache.fineract.integrationtests.common.Utils;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-public class PaymentTypeIntegrationTest {
+public class PaymentTypeIntegrationTest extends FeignIntegrationTest {
 
-    private ResponseSpecification responseSpec;
-    private RequestSpecification requestSpec;
-    private PaymentTypeHelper paymentTypeHelper;
+    private FeignPaymentTypeHelper paymentTypeHelper;
 
-    @BeforeEach
+    @BeforeAll
     public void setup() {
-        Utils.initializeRESTAssured();
-        this.requestSpec = new RequestSpecBuilder().setContentType(ContentType.JSON).build();
-        this.requestSpec.header("Authorization", "Basic " + Utils.loginIntoServerAndGetBase64EncodedAuthenticationKey());
-        this.responseSpec = new ResponseSpecBuilder().expectStatusCode(200).build();
-        this.paymentTypeHelper = new PaymentTypeHelper();
+        paymentTypeHelper = new FeignPaymentTypeHelper(fineractClient());
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Test
     public void testPaymentType() {
-        String name = PaymentTypeHelper.randomNameGenerator("P_T", 5);
-        String description = PaymentTypeHelper.randomNameGenerator("PT_Desc", 15);
+        // 1. Setup Data
+        String name = Utils.randomStringGenerator("P_T", 5);
+        String description = Utils.randomStringGenerator("PT_Desc", 15);
         Boolean isCashPayment = true;
-        Integer position = 1;
+        Long position = 1L;
 
-        PostPaymentTypesResponse paymentTypesResponse = paymentTypeHelper.createPaymentType(
-                new PostPaymentTypesRequest().name(name).description(description).isCashPayment(isCashPayment).position(position));
+        // 2. Create Payment Type
+        var paymentTypesResponse = paymentTypeHelper.createPaymentType(
+                new PaymentTypeCreateRequest().name(name).description(description).isCashPayment(isCashPayment).position(position));
+
         Long paymentTypeId = paymentTypesResponse.getResourceId();
-        Assertions.assertNotNull(paymentTypeId);
-        paymentTypeHelper.verifyPaymentTypeCreatedOnServer(paymentTypeId);
-        GetPaymentTypesPaymentTypeIdResponse paymentTypeResponse = paymentTypeHelper.retrieveById(paymentTypeId);
-        Assertions.assertEquals(name, paymentTypeResponse.getName());
-        Assertions.assertEquals(description, paymentTypeResponse.getDescription());
-        Assertions.assertEquals(isCashPayment, paymentTypeResponse.getIsCashPayment());
-        Assertions.assertEquals(position, paymentTypeResponse.getPosition());
+        Assertions.assertNotNull(paymentTypeId, "Payment Type Resource ID should not be null");
 
-        // Update Payment Type
-        String newName = PaymentTypeHelper.randomNameGenerator("P_TU", 5);
-        String newDescription = PaymentTypeHelper.randomNameGenerator("PTU_Desc", 15);
-        Boolean isCashPaymentUpdatedValue = false;
-        Integer newPosition = 2;
+        // 3. Verify Creation
+        assertEquals(paymentTypeId, paymentTypeHelper.retrievePaymentType(paymentTypeId).getId(), "ERROR IN CREATING THE PAYMENT TYPE");
 
-        paymentTypeHelper.updatePaymentType(paymentTypeId, new PutPaymentTypesPaymentTypeIdRequest().name(newName)
-                .description(newDescription).isCashPayment(isCashPaymentUpdatedValue).position(newPosition));
-        GetPaymentTypesPaymentTypeIdResponse paymentTypeUpdatedResponse = paymentTypeHelper.retrieveById(paymentTypeId);
-        Assertions.assertEquals(newName, paymentTypeUpdatedResponse.getName());
-        Assertions.assertEquals(newDescription, paymentTypeUpdatedResponse.getDescription());
-        Assertions.assertEquals(isCashPaymentUpdatedValue, paymentTypeUpdatedResponse.getIsCashPayment());
-        Assertions.assertEquals(newPosition, paymentTypeUpdatedResponse.getPosition());
+        // 4. Retrieve and Assert
+        PaymentTypeData paymentTypeResponse = paymentTypeHelper.retrievePaymentType(paymentTypeId);
+        Assertions.assertEquals(name, paymentTypeResponse.getName(), "Name mismatch after creation");
 
-        // Delete
-        DeletePaymentTypesPaymentTypeIdResponse responseDelete = paymentTypeHelper.deletePaymentType(paymentTypeId);
-        Long deletedPaymentTypeId = responseDelete.getResourceId();
-        Assertions.assertEquals(paymentTypeId, deletedPaymentTypeId);
-        ResponseSpecification responseSpecification = new ResponseSpecBuilder().expectStatusCode(404).build();
-        paymentTypeHelper.retrieveById(requestSpec, responseSpecification, paymentTypeId);
+        // 5. Update Payment Type
+        String newName = Utils.randomStringGenerator("P_TU", 5);
+        paymentTypeHelper.updatePaymentType(paymentTypeId, new PaymentTypeUpdateRequest().name(newName).description(description)
+                .isCashPayment(isCashPayment).position(position).isSystemDefined(false));
+
+        // 6. Verify Update
+        var paymentTypeUpdatedResponse = paymentTypeHelper.retrievePaymentType(paymentTypeId);
+        Assertions.assertEquals(newName, paymentTypeUpdatedResponse.getName(), "Name mismatch after update");
+
+        // 7. Delete Payment Type
+        var responseDelete = paymentTypeHelper.deletePaymentType(paymentTypeId);
+        Assertions.assertEquals(paymentTypeId, responseDelete.getResourceId(), "Deleted Resource ID mismatch");
+
+        final CallFailedRuntimeException exception = paymentTypeHelper.retrievePaymentTypeExpectingError(paymentTypeId);
+
+        assertEquals(404, exception.getStatus());
+    }
+
+    @Test
+    public void testUpdateWithExplicitNullIsSystemDefinedLeavesItUnchanged() {
+        Long paymentTypeId = createPaymentType(true);
+        try {
+            String newName = Utils.randomStringGenerator("P_TN", 5);
+
+            ok(() -> fineractClient().create(ExplicitNullIsSystemDefinedPaymentTypeApi.class).updatePaymentType(paymentTypeId,
+                    new ExplicitNullIsSystemDefinedUpdateRequest(newName, 1L)));
+
+            PaymentTypeData updated = paymentTypeHelper.retrievePaymentType(paymentTypeId);
+            assertEquals(newName, updated.getName());
+            assertTrue(updated.getIsSystemDefined(), "isSystemDefined must not change when the request sends null");
+        } finally {
+            paymentTypeHelper.deletePaymentType(paymentTypeId);
+        }
+    }
+
+    @Test
+    public void testUpdateViolatingNotNullConstraintIsDataIntegrityErrorNotNotFound() {
+        Long paymentTypeId = createPaymentType(false);
+        try {
+            // position is omitted, so the update writes NULL into the NOT NULL order_position column
+            CallFailedRuntimeException exception = fail(() -> fineractClient().paymentType().updatePaymentType(paymentTypeId,
+                    new PaymentTypeUpdateRequest().name(Utils.randomStringGenerator("P_TC", 5)).isSystemDefined(false)));
+
+            assertEquals(403, exception.getStatus());
+            assertEquals("error.msg.paymenttypes.unknown.data.integrity.issue", exception.getUserMessageGlobalisationCode());
+        } finally {
+            paymentTypeHelper.deletePaymentType(paymentTypeId);
+        }
+    }
+
+    private Long createPaymentType(boolean isSystemDefined) {
+        return paymentTypeHelper.createPaymentType(new PaymentTypeCreateRequest().name(Utils.randomStringGenerator("P_T", 5))
+                .description(Utils.randomStringGenerator("PT_Desc", 15)).isCashPayment(true).position(1L).isSystemDefined(isSystemDefined))
+                .getResourceId();
+    }
+
+    /**
+     * The generated {@code PaymentTypeUpdateRequest} cannot send <code>"isSystemDefined": null</code>: the mapper's
+     * global {@code NON_NULL} drops it.
+     */
+    @Headers({ "Accept: application/json", "Content-Type: application/json" })
+    interface ExplicitNullIsSystemDefinedPaymentTypeApi {
+
+        @RequestLine("PUT /v1/paymenttypes/{paymentTypeId}")
+        PaymentTypeUpdateResponse updatePaymentType(@Param("paymentTypeId") Long paymentTypeId,
+                ExplicitNullIsSystemDefinedUpdateRequest request);
+    }
+
+    record ExplicitNullIsSystemDefinedUpdateRequest(String name, Long position,
+            @JsonInclude(JsonInclude.Include.ALWAYS) Boolean isSystemDefined) {
+
+        ExplicitNullIsSystemDefinedUpdateRequest(String name, Long position) {
+            this(name, position, null);
+        }
     }
 }

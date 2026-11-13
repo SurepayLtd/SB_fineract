@@ -20,7 +20,8 @@ package org.apache.fineract.portfolio.client.service;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collection;
+import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.codes.data.CodeValueData;
 import org.apache.fineract.infrastructure.core.domain.JdbcSupport;
@@ -42,7 +43,7 @@ public class ClientIdentifierReadPlatformServiceImpl implements ClientIdentifier
     private final PlatformSecurityContext context;
 
     @Override
-    public Collection<ClientIdentifierData> retrieveClientIdentifiers(final Long clientId) {
+    public List<ClientIdentifierData> retrieveClientIdentifiers(final Long clientId) {
 
         final AppUser currentUser = this.context.authenticatedUser();
         final String hierarchy = currentUser.getOffice().getHierarchy();
@@ -86,8 +87,8 @@ public class ClientIdentifierReadPlatformServiceImpl implements ClientIdentifier
 
         public String schema() {
             return "ci.id as id, ci.client_id as clientId, ci.document_type_id as documentTypeId, ci.status as status, ci.document_key as documentKey,"
-                    + " ci.description as description, cv.code_value as documentType "
-                    + " from m_client_identifier ci, m_client c, m_office o, m_code_value cv"
+                    + " ci.description as description, ci.issuance_date as issuanceDate, ci.expiry_date as expiryDate,"
+                    + " cv.code_value as documentType " + " from m_client_identifier ci, m_client c, m_office o, m_code_value cv"
                     + " where ci.client_id=c.id and c.office_id=o.id" + " and ci.document_type_id=cv.id"
                     + " and ci.client_id = ? and o.hierarchy like ? ";
         }
@@ -100,10 +101,12 @@ public class ClientIdentifierReadPlatformServiceImpl implements ClientIdentifier
             final Long documentTypeId = JdbcSupport.getLong(rs, "documentTypeId");
             final String documentKey = rs.getString("documentKey");
             final String description = rs.getString("description");
+            final LocalDate issuanceDate = JdbcSupport.getLocalDate(rs, "issuanceDate");
+            final LocalDate expiryDate = JdbcSupport.getLocalDate(rs, "expiryDate");
             final String documentTypeName = rs.getString("documentType");
             final CodeValueData documentType = CodeValueData.instance(documentTypeId, documentTypeName);
             final String status = ClientIdentifierStatus.fromInt(rs.getInt("status")).getCode();
-            return ClientIdentifierData.singleItem(id, clientId, documentType, documentKey, status, description);
+            return ClientIdentifierData.singleItem(id, clientId, documentType, documentKey, status, description, issuanceDate, expiryDate);
         }
 
     }

@@ -1,20 +1,14 @@
 = Step 15: Announcement Email
 
+Use ATR to announce the release.
+
 == Description
 
-Send an email to `announce@apache.org` (sender address must be `@apache.org`):
+Send the email To: dev@fineract.apache.org, Cc: announce@apache.org. These should be selected by default, per our https://releases.apache.org/projects/fineract?tab=finish[project settings].
 
-[source,text]
-----
-include::{rootdir}/buildSrc/src/main/resources/email/release.step15.announce.subject.ftl[lines=21..]
+Replace each `FIXME` with the actual value.
 
-include::{rootdir}/buildSrc/src/main/resources/email/release.step15.announce.message.ftl[lines=21..]
-----
+. For `This release addressed FIXME issues.`, sub in the count of JIRA issues with Fix Version/s: {revnumber}. You can find this JIRA query under the "Issues resolved" list on the release page on confluence. Don't try to get this count from github -- the github release page includes unresolved issues since issues can span multiple PRs.
+. For `Release wiki page, issues: FIXME`, sub in the short/convenient link to the release wiki page on confluence.
 
-== Gradle Task
-
-.Command
-[source,bash,subs="attributes+,+macros"]
-----
-% ./gradlew fineractReleaseStep15 -Pfineract.release.version={revnumber}
-----
+You may also draft and send an email directly from your email client using your Apache email address. Use plain text since the Apache announcements list rejects HTML. Use `format=flowed` for readability, following instructions at https://useplaintext.email.

@@ -19,7 +19,6 @@
 package org.apache.fineract.infrastructure.report.service;
 
 import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toJdbcUrl;
-import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toProtocol;
 
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
@@ -98,7 +97,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
     @Override
     public Response processRequest(final String reportName, final MultivaluedMap<String, String> queryParams) {
         final var outputTypeParam = queryParams.getFirst("output-type");
-        final var reportParams = getReportParams(queryParams);
+        final var reportParams = getReportParams(reportName, queryParams);
         final var locale = ApiParameterHelper.extractLocale(queryParams);
         final var language = "en";
 
@@ -337,7 +336,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
     }
 
     @Override
-    public Map<String, String> getReportParams(final MultivaluedMap<String, String> queryParams) {
+    public Map<String, String> getReportParams(final String reportName, final MultivaluedMap<String, String> queryParams) {
         final Map<String, String> reportParams = new HashMap<>();
         final var keys = queryParams.keySet();
         String pKey;
@@ -350,5 +349,14 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
             }
         }
         return reportParams;
+    }
+
+    private static String toProtocol(final DataSource dataSource) {
+        try (java.sql.Connection connection = dataSource.getConnection()) {
+            final String url = connection.getMetaData().getURL();
+            return url.substring(0, url.indexOf("://"));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

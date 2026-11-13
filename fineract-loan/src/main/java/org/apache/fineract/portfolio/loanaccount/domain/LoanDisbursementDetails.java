@@ -26,10 +26,12 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
+import lombok.Getter;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.portfolio.loanaccount.data.DisbursementData;
 
+@Getter
 @Entity
 @Table(name = "m_loan_disbursement_detail")
 public class LoanDisbursementDetails extends AbstractPersistableCustom<Long> {
@@ -75,13 +77,13 @@ public class LoanDisbursementDetails extends AbstractPersistableCustom<Long> {
         if (!(obj instanceof LoanDisbursementDetails loanDisbursementDetails)) {
             return false;
         }
-        return loanDisbursementDetails.principal.equals(this.principal)
+        return loanDisbursementDetails.principal.compareTo(this.principal) == 0
                 && DateUtils.isEqual(loanDisbursementDetails.expectedDisbursementDate, this.expectedDisbursementDate);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(expectedDisbursementDate, principal);
+        return Objects.hash(expectedDisbursementDate, principal.stripTrailingZeros());
     }
 
     public void copy(final LoanDisbursementDetails disbursementDetails) {
@@ -107,10 +109,6 @@ public class LoanDisbursementDetails extends AbstractPersistableCustom<Long> {
         return this.actualDisbursementDate;
     }
 
-    public BigDecimal principal() {
-        return this.principal;
-    }
-
     public void updatePrincipal(BigDecimal principal) {
         this.principal = principal;
     }
@@ -119,11 +117,15 @@ public class LoanDisbursementDetails extends AbstractPersistableCustom<Long> {
         return this.actualDisbursementDate;
     }
 
+    public LocalDate actualOrExpectedDisbursementDate() {
+        return this.actualDisbursementDate != null ? this.actualDisbursementDate : this.expectedDisbursementDate;
+    }
+
     public DisbursementData toData() {
         LocalDate expectedDisburseDate = expectedDisbursementDateAsLocalDate();
         BigDecimal waivedChargeAmount = null;
-        return new DisbursementData(getId(), expectedDisburseDate, this.actualDisbursementDate, this.principal, this.netDisbursalAmount,
-                null, null, waivedChargeAmount);
+        return new DisbursementData(getId(), loan.getId(), expectedDisburseDate, this.actualDisbursementDate, this.principal,
+                this.netDisbursalAmount, null, null, waivedChargeAmount);
     }
 
     public void updateActualDisbursementDate(LocalDate actualDisbursementDate) {

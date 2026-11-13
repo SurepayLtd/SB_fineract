@@ -19,15 +19,33 @@
 package org.apache.fineract.portfolio.loanaccount.api;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
+import org.apache.fineract.portfolio.loanproduct.api.LoanProductsApiResourceSwagger.GetLoanProductsChargeOffReasonOptions;
+import org.springframework.data.domain.Page;
 
 /**
  * Created by Chirag Gupta on 12/30/17.
  */
-final class LoanTransactionsApiResourceSwagger {
+public final class LoanTransactionsApiResourceSwagger {
 
     private LoanTransactionsApiResourceSwagger() {}
+
+    static final class GetCodeValuesDataResponse {
+
+        private GetCodeValuesDataResponse() {}
+
+        @Schema(example = "1")
+        public Long id;
+        @Schema(example = "Passport")
+        public String name;
+        @Schema(example = "Passport information")
+        public String description;
+        @Schema(example = "0")
+        public Integer position;
+    }
 
     @Schema(description = "GetLoansLoanIdTransactionsTemplateResponse")
     public static final class GetLoansLoanIdTransactionsTemplateResponse {
@@ -72,7 +90,19 @@ final class LoanTransactionsApiResourceSwagger {
             public String displaySymbolValue;
         }
 
-        public GetLoansTransactionType transactionType;
+        static final class GetPaymentTypeOptions {
+
+            private GetPaymentTypeOptions() {}
+
+            @Schema(example = "10")
+            public Long id;
+            @Schema(example = "check")
+            public String name;
+            @Schema(example = "1")
+            public Integer position;
+        }
+
+        public GetLoansTransactionType type;
         @Schema(example = "[2009, 8, 1]")
         public LocalDate date;
         public GetLoansTotal total;
@@ -89,6 +119,40 @@ final class LoanTransactionsApiResourceSwagger {
         public Double penaltyChargesPortion;
 
         public GetLoanCurrency currency;
+
+        public List<GetLoanProductsChargeOffReasonOptions> chargeOffReasonOptions;
+
+        public List<GetPaymentTypeOptions> paymentTypeOptions;
+        @Schema(example = "200.000000")
+        public Double netDisbursalAmount;
+
+        public List<GetCodeValuesDataResponse> classificationOptions;
+
+        @Schema(example = "2")
+        public Integer numberOfPastInstallments;
+        @Schema(example = "3")
+        public Integer numberOfFutureInstallments;
+        @Schema(example = "[2009, 8, 1]")
+        public LocalDate nextInstallmentDueDate;
+        @Schema(example = "[2009, 8, 1]")
+        public LocalDate calculatedStartDate;
+        @Schema(description = "Disburse template only: the repayment schedule installments the disbursement will produce")
+        public List<GetLoansLoanIdRepaymentScheduleInstallment> loanRepaymentScheduleInstallments;
+
+        @Schema(description = "A repayment schedule installment of a loan transaction template")
+        static final class GetLoansLoanIdRepaymentScheduleInstallment {
+
+            private GetLoansLoanIdRepaymentScheduleInstallment() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "1")
+            public Integer installmentId;
+            @Schema(example = "[2012, 5, 4]")
+            public LocalDate date;
+            @Schema(example = "1600.00")
+            public BigDecimal amount;
+        }
     }
 
     public static final class GetLoanCurrency {
@@ -242,6 +306,7 @@ final class LoanTransactionsApiResourceSwagger {
         public Set<GetLoanTransactionRelation> transactionRelations;
         public Set<GetLoansLoanIdLoanChargePaidByData> loanChargePaidByList;
         public PaymentDetailData paymentDetailData;
+        public GetCodeValuesDataResponse classification;
 
         static final class PaymentDetailData {
 
@@ -281,6 +346,7 @@ final class LoanTransactionsApiResourceSwagger {
         private GetLoansLoanIdPenaltyTemplateResponse() {}
 
 
+        @Schema(name = "PenaltyGetLoansTotal")
         static final class GetLoansTotal {
 
             private GetLoansTotal() {}
@@ -324,6 +390,12 @@ final class LoanTransactionsApiResourceSwagger {
         public Double totalPenaltiesOutstanding;
 
         public GetLoanCurrency currency;
+    }
+
+    @Schema(description = "GetLoansLoanIdTransactionsResponse")
+    public abstract static class GetLoansLoanIdTransactionsResponse implements Page<GetLoansLoanIdTransactionsTransactionIdResponse> {
+
+        private GetLoansLoanIdTransactionsResponse() {}
     }
 
     @Schema(description = "PostLoansLoanIdTransactionsRequest")
@@ -375,7 +447,18 @@ final class LoanTransactionsApiResourceSwagger {
         public String startDate;
         @Schema(example = "numberOfInstallments")
         public Integer numberOfInstallments;
+        @Schema(example = "DEFAULT")
+        public String reAgeInterestHandling;
+        @Schema(example = "DEFAULT")
+        public String reAmortizationInterestHandling;
+        @Schema(example = "1")
+        public Long reasonCodeValueId;
+
         // command=reAge END
+        @Schema(description = "Optional. Controls whether Interest Refund transaction should be created for this refund. If not provided, loan product config is used.", example = "false")
+        public Boolean interestRefundCalculation;
+        @Schema(example = "1")
+        public Long classificationId;
     }
 
     @Schema(description = "PostLoansLoanIdTransactionsResponse")
@@ -397,6 +480,19 @@ final class LoanTransactionsApiResourceSwagger {
         public Long subResourceId;
         @Schema(example = "95174ff9-1a75-4d72-a413-6f9b1cb988b7")
         public String subResourceExternalId;
+
+        static final class PostLoansLoanIdTransactionsSubResource {
+
+            private PostLoansLoanIdTransactionsSubResource() {}
+
+            @Schema(example = "22")
+            public Long resourceId;
+            @Schema(example = "95174ff9-1a75-4d72-a413-6f9b1cb988b7")
+            public String resourceExternalId;
+        }
+
+        @Schema(description = "Derived transactions created with the refund (interest and/or fee refund)")
+        public List<PostLoansLoanIdTransactionsSubResource> subResources;
         public PostLoansLoanIdTransactionsResponse.PostLoansLoanIdTransactionsResponseChanges changes;
 
         static final class PostLoansLoanIdTransactionsResponseChanges {

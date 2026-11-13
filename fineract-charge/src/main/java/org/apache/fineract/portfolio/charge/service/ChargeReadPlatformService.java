@@ -18,34 +18,45 @@
  */
 package org.apache.fineract.portfolio.charge.service;
 
-import java.util.Collection;
 import java.util.List;
 import org.apache.fineract.portfolio.charge.data.ChargeData;
 import org.apache.fineract.portfolio.charge.domain.ChargeTimeType;
 
 public interface ChargeReadPlatformService {
 
-    Collection<ChargeData> retrieveAllCharges();
+    List<ChargeData> retrieveAllCharges();
 
-    Collection<ChargeData> retrieveAllChargesForCurrency(String currencyCode);
+    List<ChargeData> retrieveAllChargesForCurrency(String currencyCode);
 
     ChargeData retrieveCharge(Long chargeId);
 
     ChargeData retrieveNewChargeDetails();
+
+    ChargeData retrieveNewChargeDetails(Long chargeAppliesTo, Long chargeTimeType);
 
     /**
      * Returns all charges that can be applied to Cients
      *
      * @return
      */
-    Collection<ChargeData> retrieveAllChargesApplicableToClients();
+    List<ChargeData> retrieveAllChargesApplicableToClients();
+
+    /**
+     * Office-scoped variant used by client/group-level templates.
+     */
+    List<ChargeData> retrieveAllChargesApplicableToClients(Long officeId);
 
     /**
      * Returns all Fees (excluding penalties) applicable for loans
      *
      * @return
      */
-    Collection<ChargeData> retrieveLoanApplicableFees();
+    List<ChargeData> retrieveLoanApplicableFees();
+
+    /**
+     * Office-scoped variant used by client/group-level templates.
+     */
+    List<ChargeData> retrieveLoanApplicableFees(Long officeId);
 
     /**
      * Returns all charges applicable for a given loan account
@@ -63,14 +74,25 @@ public interface ChargeReadPlatformService {
      *            Excludes Given List of Charge Types from the response
      * @return
      */
-    Collection<ChargeData> retrieveLoanProductApplicableCharges(Long loanProductId, ChargeTimeType[] excludeChargeTimes);
+    List<ChargeData> retrieveLoanProductApplicableCharges(Long loanProductId, ChargeTimeType[] excludeChargeTimes);
+
+    /**
+     * Office-scoped variant: filters by product currency AND the given office's visibility (for client-level templates
+     * where a product is already selected).
+     */
+    List<ChargeData> retrieveLoanProductApplicableCharges(Long loanProductId, ChargeTimeType[] excludeChargeTimes, Long officeId);
 
     /**
      * Returns all Penalties applicable for loans
      *
      * @return
      */
-    Collection<ChargeData> retrieveLoanApplicablePenalties();
+    List<ChargeData> retrieveLoanApplicablePenalties();
+
+    /**
+     * Office-scoped variant used by client/group-level templates.
+     */
+    List<ChargeData> retrieveLoanApplicablePenalties(Long officeId);
 
     /**
      * Returns all Charges associated with a given Loan Product
@@ -78,7 +100,14 @@ public interface ChargeReadPlatformService {
      * @param loanProductId
      * @return
      */
-    Collection<ChargeData> retrieveLoanProductCharges(Long loanProductId);
+    List<ChargeData> retrieveLoanProductCharges(Long loanProductId);
+
+    /**
+     * Office-scoped variant: returns pre-selected charges for a loan product filtered by what the given office can see.
+     * Used when rendering a new-loan template for a specific client so that pre-selected product charges are restricted
+     * to the client's own office, not the logged-in user's office.
+     */
+    List<ChargeData> retrieveLoanProductCharges(Long loanProductId, Long officeId);
 
     /**
      * Returns all charges applicable for a given loan product
@@ -88,7 +117,9 @@ public interface ChargeReadPlatformService {
      *            Filters based on the type of the charge to be returned
      * @return
      */
-    Collection<ChargeData> retrieveLoanProductCharges(Long loanProductId, ChargeTimeType chargeTime);
+    List<ChargeData> retrieveLoanProductCharges(Long loanProductId, ChargeTimeType chargeTime);
+
+    List<ChargeData> retrieveLoanProductCharges(Long loanProductId, ChargeTimeType chargeTime, Long officeId);
 
     /**
      * Returns all charges applicable for savings
@@ -96,14 +127,24 @@ public interface ChargeReadPlatformService {
      * @param feeChargesOnly
      * @return
      */
-    Collection<ChargeData> retrieveSavingsProductApplicableCharges(boolean feeChargesOnly);
+    List<ChargeData> retrieveSavingsProductApplicableCharges(boolean feeChargesOnly);
+
+    /**
+     * Office-scoped variant used by client/group-level templates.
+     */
+    List<ChargeData> retrieveSavingsProductApplicableCharges(boolean feeChargesOnly, Long officeId);
 
     /**
      * Returns all penalties applicable for savings
      *
      * @return
      */
-    Collection<ChargeData> retrieveSavingsApplicablePenalties();
+    List<ChargeData> retrieveSavingsApplicablePenalties();
+
+    /**
+     * Office-scoped variant used by client/group-level templates.
+     */
+    List<ChargeData> retrieveSavingsApplicablePenalties(Long officeId);
 
     /**
      * Returns all charges applicable for a given savings product
@@ -111,15 +152,35 @@ public interface ChargeReadPlatformService {
      * @param savingsProductId
      * @return
      */
-    Collection<ChargeData> retrieveSavingsProductCharges(Long savingsProductId);
+    List<ChargeData> retrieveSavingsProductCharges(Long savingsProductId);
+
+    /**
+     * Office-scoped variant: returns pre-selected charges for a savings product filtered by what the given office can
+     * see. Used when rendering a new savings/deposit account template for a specific client so that pre-selected
+     * product charges are restricted to the client's own office, not the logged-in user's office.
+     */
+    List<ChargeData> retrieveSavingsProductCharges(Long savingsProductId, Long officeId);
 
     /** Retrieve savings account charges **/
-    Collection<ChargeData> retrieveSavingsAccountApplicableCharges(Long savingsId);
+    List<ChargeData> retrieveSavingsAccountApplicableCharges(Long savingsId);
 
     /**
      * Returns charge definitions which are applicable for shares
      */
-    Collection<ChargeData> retrieveSharesApplicableCharges();
+    List<ChargeData> retrieveSharesApplicableCharges();
 
-    Collection<ChargeData> retrieveShareProductCharges(Long shareProductId);
+    /**
+     * Office-scoped variant used by client/group-level templates.
+     */
+    List<ChargeData> retrieveSharesApplicableCharges(Long officeId);
+
+    List<ChargeData> retrieveShareProductCharges(Long shareProductId);
+
+    /**
+     * Office-scoped variant: filters share product charges by product AND the given office's visibility. Used by
+     * client-level share account templates where both clientId and productId are provided.
+     */
+    List<ChargeData> retrieveShareProductCharges(Long shareProductId, Long officeId);
+
+    List<ChargeData> retrieveWorkingCapitalLoanAccountApplicableCharges(Long resolvedLoanId);
 }

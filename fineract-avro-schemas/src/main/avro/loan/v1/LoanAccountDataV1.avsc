@@ -722,6 +722,22 @@
         },
         {
             "default": null,
+            "name": "daysInYearCustomStrategy",
+            "type": [
+                "null",
+                "org.apache.fineract.avro.generic.v1.StringEnumOptionDataV1"
+            ]
+        },
+        {
+            "default": null,
+            "name": "monthEndDueDateStrategy",
+            "type": [
+                "null",
+                "org.apache.fineract.avro.generic.v1.StringEnumOptionDataV1"
+            ]
+        },
+        {
+            "default": null,
             "name": "isInterestRecalculationEnabled",
             "type": [
                 "null",
@@ -818,10 +834,48 @@
         },
         {
             "default": null,
+            "name": "repaymentStartDateType",
+            "type": [
+                "null",
+                "org.apache.fineract.avro.generic.v1.EnumOptionDataV1"
+            ]
+        },
+        {
+            "default": null,
             "name": "interestRecognitionOnDisbursementDate",
             "type": [
                 "null",
                 "boolean"
+            ]
+        },
+        {
+            "default": null,
+            "name": "customData",
+            "type": [
+                "null",
+                {
+                    "values": "bytes",
+                    "type": "map"
+                }
+            ]
+        },
+        {
+            "default": null,
+            "name": "originators",
+            "type": [
+                "null",
+                {
+                    "type": "array",
+                    "items": "org.apache.fineract.avro.loan.v1.OriginatorDetailsV1"
+                }
+            ]
+        },
+        {
+            "default": null,
+            "name": "actualNoTerm",
+            "type": [
+                "null",
+                "int"
             ]
         }
     ]

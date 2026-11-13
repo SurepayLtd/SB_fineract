@@ -19,6 +19,7 @@
 package org.apache.fineract.portfolio.loanaccount.loanschedule.domain;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -32,12 +33,18 @@ import org.apache.fineract.portfolio.loanaccount.loanschedule.data.LoanScheduleP
 import org.apache.fineract.portfolio.loanaccount.loanschedule.data.LoanSchedulePlanDisbursementPeriod;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.data.LoanSchedulePlanDownPaymentPeriod;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.data.LoanSchedulePlanRepaymentPeriod;
+import org.apache.fineract.portfolio.loanaccount.service.InterestScheduleModelRepositoryWrapper;
+import org.apache.fineract.portfolio.loanaccount.service.LoanTransactionProcessingService;
 import org.apache.fineract.portfolio.loanproduct.calc.ProgressiveEMICalculator;
+import org.apache.fineract.portfolio.loanproduct.domain.InterestMethod;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class LoanScheduleGeneratorTest {
 
-    private static final ProgressiveEMICalculator emiCalculator = new ProgressiveEMICalculator();
+    private static final ProgressiveEMICalculator emiCalculator = new ProgressiveEMICalculator(mock(ScheduledDateGenerator.class));
     private static final ApplicationCurrency APPLICATION_CURRENCY = new ApplicationCurrency("USD", "USD", 2, 1, "USD", "$");
     private static final CurrencyData CURRENCY = APPLICATION_CURRENCY.toData();
     private static final BigDecimal DISBURSEMENT_AMOUNT = BigDecimal.valueOf(192.22);
@@ -49,15 +56,21 @@ class LoanScheduleGeneratorTest {
     private static final LocalDate DISBURSEMENT_DATE = LocalDate.of(2024, 1, 15);
     private static final MathContext mc = new MathContext(12, RoundingMode.HALF_EVEN);
     private static final BigDecimal DOWN_PAYMENT_PORTION = BigDecimal.valueOf(25);
+    private static final LoanTransactionProcessingService loanTransactionProcessingService = mock(LoanTransactionProcessingService.class);
+    private static final InterestScheduleModelRepositoryWrapper interestScheduleModelRepositoryWrapperMock = mock(
+            InterestScheduleModelRepositoryWrapper.class);
 
     @Test
     void testGenerateLoanSchedule() {
         LoanRepaymentScheduleModelData modelData = new LoanRepaymentScheduleModelData(LocalDate.of(2024, 1, 1), CURRENCY,
                 DISBURSEMENT_AMOUNT, DISBURSEMENT_DATE, NUMBER_OF_REPAYMENTS, REPAYMENT_FREQUENCY, REPAYMENT_FREQUENCY_TYPE,
-                NOMINAL_INTEREST_RATE, false, DaysInMonthType.DAYS_30, DaysInYearType.DAYS_360, null, null, null);
+                NOMINAL_INTEREST_RATE, false, DaysInMonthType.DAYS_30, DaysInYearType.DAYS_360, null, null, null, false, null,
+                InterestMethod.DECLINING_BALANCE, true, false, null);
 
         ScheduledDateGenerator scheduledDateGenerator = new DefaultScheduledDateGenerator();
-        ProgressiveLoanScheduleGenerator generator = new ProgressiveLoanScheduleGenerator(scheduledDateGenerator, emiCalculator);
+        ProgressiveLoanScheduleGenerator generator = new ProgressiveLoanScheduleGenerator(scheduledDateGenerator, emiCalculator,
+                interestScheduleModelRepositoryWrapperMock);
+        generator.setLoanTransactionProcessingService(loanTransactionProcessingService);
 
         LoanSchedulePlan loanSchedule = generator.generate(mc, modelData);
 
@@ -85,14 +98,51 @@ class LoanScheduleGeneratorTest {
                 LocalDate.of(2024, 7, 1), BigDecimal.valueOf(32.60), BigDecimal.valueOf(0.27), BigDecimal.valueOf(32.87), BigDecimal.ZERO);
     }
 
+    /**
+     * The model data carries the semi-monthly due days, which multi-disbursement loans rely on when a charge is
+     * calculated on the interest of the first disbursement. 30-day months make every period 15 days, so 24% a year is
+     * 1% per period.
+     */
+    @Test
+    void testGenerateSemiMonthlyLoanSchedule() {
+        final LocalDate disbursementDate = LocalDate.of(2023, 1, 15);
+        LoanRepaymentScheduleModelData modelData = new LoanRepaymentScheduleModelData(disbursementDate, CURRENCY, BigDecimal.valueOf(1000),
+                disbursementDate, 4, REPAYMENT_FREQUENCY, "SEMI_MONTHLY", BigDecimal.valueOf(24), false, DaysInMonthType.DAYS_30,
+                DaysInYearType.DAYS_360, null, null, null, false, null, InterestMethod.DECLINING_BALANCE, true, false, null, 15, 31);
+
+        ScheduledDateGenerator scheduledDateGenerator = new DefaultScheduledDateGenerator();
+        ProgressiveLoanScheduleGenerator generator = new ProgressiveLoanScheduleGenerator(scheduledDateGenerator,
+                new ProgressiveEMICalculator(scheduledDateGenerator), interestScheduleModelRepositoryWrapperMock);
+        generator.setLoanTransactionProcessingService(loanTransactionProcessingService);
+
+        LoanSchedulePlan loanSchedule = generator.generate(mc, modelData);
+
+        assertEquals(5, loanSchedule.getPeriods().size(), "Expected the disbursement and 4 repayment periods.");
+        checkRepaymentPeriod((LoanSchedulePlanRepaymentPeriod) loanSchedule.getPeriods().get(1), 1, LocalDate.of(2023, 1, 15),
+                LocalDate.of(2023, 1, 31), BigDecimal.valueOf(246.28), BigDecimal.valueOf(10.00), BigDecimal.valueOf(256.28),
+                BigDecimal.valueOf(753.72));
+        checkRepaymentPeriod((LoanSchedulePlanRepaymentPeriod) loanSchedule.getPeriods().get(2), 2, LocalDate.of(2023, 1, 31),
+                LocalDate.of(2023, 2, 15), BigDecimal.valueOf(248.74), BigDecimal.valueOf(7.54), BigDecimal.valueOf(256.28),
+                BigDecimal.valueOf(504.98));
+        checkRepaymentPeriod((LoanSchedulePlanRepaymentPeriod) loanSchedule.getPeriods().get(3), 3, LocalDate.of(2023, 2, 15),
+                LocalDate.of(2023, 2, 28), BigDecimal.valueOf(251.23), BigDecimal.valueOf(5.05), BigDecimal.valueOf(256.28),
+                BigDecimal.valueOf(253.75));
+        checkRepaymentPeriod((LoanSchedulePlanRepaymentPeriod) loanSchedule.getPeriods().get(4), 4, LocalDate.of(2023, 2, 28),
+                LocalDate.of(2023, 3, 15), BigDecimal.valueOf(253.75), BigDecimal.valueOf(2.54), BigDecimal.valueOf(256.29),
+                BigDecimal.ZERO);
+    }
+
     @Test
     void testGenerateLoanScheduleWithDownPayment() {
         LoanRepaymentScheduleModelData modelData = new LoanRepaymentScheduleModelData(LocalDate.of(2024, 1, 1), CURRENCY,
                 DISBURSEMENT_AMOUNT_100, LocalDate.of(2024, 1, 1), NUMBER_OF_REPAYMENTS, REPAYMENT_FREQUENCY, REPAYMENT_FREQUENCY_TYPE,
-                NOMINAL_INTEREST_RATE, true, DaysInMonthType.DAYS_30, DaysInYearType.DAYS_360, DOWN_PAYMENT_PORTION, null, null);
+                NOMINAL_INTEREST_RATE, true, DaysInMonthType.DAYS_30, DaysInYearType.DAYS_360, DOWN_PAYMENT_PORTION, null, null, false,
+                null, InterestMethod.DECLINING_BALANCE, true, false, null);
 
         ScheduledDateGenerator scheduledDateGenerator = new DefaultScheduledDateGenerator();
-        ProgressiveLoanScheduleGenerator generator = new ProgressiveLoanScheduleGenerator(scheduledDateGenerator, emiCalculator);
+        ProgressiveLoanScheduleGenerator generator = new ProgressiveLoanScheduleGenerator(scheduledDateGenerator, emiCalculator,
+                interestScheduleModelRepositoryWrapperMock);
+        generator.setLoanTransactionProcessingService(loanTransactionProcessingService);
 
         LoanSchedulePlan loanSchedule = generator.generate(mc, modelData);
 

@@ -24,6 +24,7 @@ import com.google.gson.JsonObject;
 import jakarta.persistence.PersistenceException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -60,7 +61,8 @@ public class EntityDatatableChecksWritePlatformServiceImpl implements EntityData
     private final PlatformSecurityContext context;
     private final EntityDatatableChecksDataValidator fromApiJsonDeserializer;
     private final EntityDatatableChecksRepository entityDatatableChecksRepository;
-    private final ReadWriteNonCoreDataService readWriteNonCoreDataService;
+    private final DatatableReadService datatableReadService;
+    private final DatatableWriteService datatableWriteService;
     private final LoanProductReadPlatformService loanProductReadPlatformService;
     private final SavingsProductReadPlatformService savingsProductReadPlatformService;
     private final FromJsonHelper fromApiJsonHelper;
@@ -77,7 +79,7 @@ public class EntityDatatableChecksWritePlatformServiceImpl implements EntityData
             // check if the datatable is linked to the entity
 
             String datatableName = command.stringValueOfParameterNamed("datatableName");
-            DatatableData datatableData = this.readWriteNonCoreDataService.retrieveDatatable(datatableName);
+            DatatableData datatableData = this.datatableReadService.retrieveDatatable(datatableName);
 
             if (datatableData == null) {
                 throw new DatatableNotFoundException(datatableName);
@@ -146,7 +148,7 @@ public class EntityDatatableChecksWritePlatformServiceImpl implements EntityData
             tableRequiredBeforeClientActivation = entityDatatableChecksRepository.findByEntityAndStatus(entityName, status);
         } else {
             tableRequiredBeforeClientActivation = entityDatatableChecksRepository.findByEntityAndStatusAndSubtype(entityName, status,
-                    entitySubtype.toUpperCase());
+                    entitySubtype.toUpperCase(Locale.ROOT));
         }
 
         if (tableRequiredBeforeClientActivation != null) {
@@ -154,7 +156,7 @@ public class EntityDatatableChecksWritePlatformServiceImpl implements EntityData
             for (EntityDatatableChecks t : tableRequiredBeforeClientActivation) {
 
                 final String datatableName = t.getDatatableName();
-                final Long countEntries = readWriteNonCoreDataService.countDatatableEntries(datatableName, entityId, foreignKeyColumn);
+                final Long countEntries = datatableReadService.countDatatableEntries(datatableName, entityId, foreignKeyColumn);
 
                 log.debug("The are {} entries in the table {}", countEntries, datatableName);
                 if (countEntries.intValue() == 0) {
@@ -162,7 +164,7 @@ public class EntityDatatableChecksWritePlatformServiceImpl implements EntityData
                 }
             }
             if (!reqDatatables.isEmpty()) {
-                throw new DatatableEntryRequiredException(reqDatatables.toString());
+                throw new DatatableEntryRequiredException(reqDatatables, entityName, status);
             }
         }
     }
@@ -182,7 +184,7 @@ public class EntityDatatableChecksWritePlatformServiceImpl implements EntityData
             for (EntityDatatableChecks t : tableRequiredBeforAction) {
 
                 final String datatableName = t.getDatatableName();
-                final Long countEntries = readWriteNonCoreDataService.countDatatableEntries(datatableName, entityId, foreignKeyColumn);
+                final Long countEntries = datatableReadService.countDatatableEntries(datatableName, entityId, foreignKeyColumn);
 
                 log.debug("The are {} entries in the table {}", countEntries, datatableName);
                 if (countEntries.intValue() == 0) {
@@ -190,7 +192,7 @@ public class EntityDatatableChecksWritePlatformServiceImpl implements EntityData
                 }
             }
             if (!reqDatatables.isEmpty()) {
-                throw new DatatableEntryRequiredException(reqDatatables.toString());
+                throw new DatatableEntryRequiredException(reqDatatables, entityName, status);
             }
         }
     }
@@ -220,7 +222,7 @@ public class EntityDatatableChecksWritePlatformServiceImpl implements EntityData
                     isMakerCheckerEnabled = true;
                 }
                 try {
-                    this.readWriteNonCoreDataService.createNewDatatableEntry(datatableName, entityId, datatableData.toString());
+                    datatableWriteService.createNewDatatableEntry(datatableName, entityId, datatableData.toString());
                 } catch (PlatformApiDataValidationException e) {
                     for (ApiParameterError error : e.getErrors()) {
                         error.setParameterName("datatables." + datatableName + "." + error.getParameterName());
@@ -270,7 +272,7 @@ public class EntityDatatableChecksWritePlatformServiceImpl implements EntityData
             msgCode += ".unknown.data.integrity.issue";
             msgArgs = new Object[] { dae };
         }
-        log.error("Error occured.", dae);
+        log.error("Error occurred.", dae);
         throw ErrorHandler.getMappable(dae, msgCode, msg, param, msgArgs);
     }
 }

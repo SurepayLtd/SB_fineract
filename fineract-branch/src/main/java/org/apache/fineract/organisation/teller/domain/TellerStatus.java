@@ -28,8 +28,11 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum TellerStatus {
 
-    INVALID(0, "tellerStatusType.invalid"), PENDING(100, "tellerStatusType.pending"), ACTIVE(300, "tellerStatusType.active"), INACTIVE(400,
-            "tellerStatusType.inactive"), CLOSED(600, "tellerStatusType.closed");
+    INVALID(0, "tellerStatusType.invalid"), //
+    PENDING(100, "tellerStatusType.pending"), //
+    ACTIVE(300, "tellerStatusType.active"), //
+    INACTIVE(400, "tellerStatusType.inactive"), //
+    CLOSED(600, "tellerStatusType.closed"); //
 
     private final Integer value;
     private final String code;
@@ -52,26 +55,6 @@ public enum TellerStatus {
             break;
         }
         return status;
-    }
-
-    public boolean hasStateOf(final TellerStatus state) {
-        return this.value.equals(state.getValue());
-    }
-
-    public boolean isPending() {
-        return this.value.equals(TellerStatus.PENDING.getValue());
-    }
-
-    public boolean isActive() {
-        return this.value.equals(TellerStatus.ACTIVE.getValue());
-    }
-
-    public boolean isClosed() {
-        return this.value.equals(TellerStatus.CLOSED.getValue());
-    }
-
-    public boolean isInactive() {
-        return this.value.equals(TellerStatus.INACTIVE.getValue());
     }
 
 }

@@ -34,6 +34,9 @@ import org.apache.fineract.organisation.monetary.data.CurrencyData;
 public class LoanSummaryData {
 
     private final CurrencyData currency;
+    private final BigDecimal totalPrincipal;
+    private final BigDecimal totalCapitalizedIncome;
+    private final BigDecimal totalCapitalizedIncomeAdjustment;
     private final BigDecimal principalDisbursed;
     private final BigDecimal principalAdjustments;
     private final BigDecimal principalPaid;
@@ -90,6 +93,7 @@ public class LoanSummaryData {
     private BigDecimal totalRepaymentTransactionReversed;
     private BigDecimal totalInterestPaymentWaiver;
     private BigDecimal totalInterestRefund;
+    private BigDecimal totalFeeRefund;
     private final Long chargeOffReasonId;
     private final String chargeOffReason;
 

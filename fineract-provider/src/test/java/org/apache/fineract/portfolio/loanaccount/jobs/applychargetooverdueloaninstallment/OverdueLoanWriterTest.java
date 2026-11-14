@@ -10,7 +10,7 @@ import org.apache.fineract.portfolio.loanaccount.loanschedule.data.OverdueLoanSc
 import org.apache.fineract.portfolio.loanaccount.service.LoanChargeWritePlatformService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.batch.item.Chunk;
+import org.springframework.batch.infrastructure.item.Chunk;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;

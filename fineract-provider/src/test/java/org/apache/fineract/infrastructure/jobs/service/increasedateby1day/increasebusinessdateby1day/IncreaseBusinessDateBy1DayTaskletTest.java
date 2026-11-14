@@ -18,14 +18,14 @@
  */
 package org.apache.fineract.infrastructure.jobs.service.increasedateby1day.increasebusinessdateby1day;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import org.apache.fineract.infrastructure.businessdate.domain.BusinessDateType;
+import org.apache.fineract.infrastructure.businessdate.service.BusinessDateWritePlatformService;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
-import org.apache.fineract.infrastructure.jobs.service.increasedateby1day.IncreaseDateBy1DayService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -34,9 +34,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -52,7 +52,7 @@ class IncreaseBusinessDateBy1DayTaskletTest {
     private ConfigurationDomainService configurationDomainService;
 
     @Mock
-    private IncreaseDateBy1DayService increaseDateBy1DayService;
+    private BusinessDateWritePlatformService businessDateWritePlatformService;
 
     @InjectMocks
     private IncreaseBusinessDateBy1DayTasklet underTest;
@@ -73,7 +73,7 @@ class IncreaseBusinessDateBy1DayTaskletTest {
 
         RepeatStatus repeatStatus = underTest.execute(stepContribution, chunkContext);
 
-        verify(increaseDateBy1DayService, times(1)).increaseDateByTypeByOneDay(BusinessDateType.BUSINESS_DATE);
+        verify(businessDateWritePlatformService, times(1)).increaseDateByTypeByOneDay(BusinessDateType.BUSINESS_DATE);
         assertEquals(RepeatStatus.FINISHED, repeatStatus);
     }
 

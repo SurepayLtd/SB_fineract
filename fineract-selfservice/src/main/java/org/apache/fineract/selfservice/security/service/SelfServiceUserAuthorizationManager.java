@@ -27,8 +27,8 @@ public class SelfServiceUserAuthorizationManager
     implements AuthorizationManager<RequestAuthorizationContext> {
 
   @Override
-  public AuthorizationDecision check(
-      Supplier<Authentication> authentication, RequestAuthorizationContext fi) {
+  public AuthorizationDecision authorize(
+      Supplier<? extends Authentication> authentication, RequestAuthorizationContext fi) {
     if (!"OPTIONS".equalsIgnoreCase(fi.getRequest().getMethod())) {
       Authentication auth = authentication.get();
       if (auth == null || auth.getPrincipal() == null) {

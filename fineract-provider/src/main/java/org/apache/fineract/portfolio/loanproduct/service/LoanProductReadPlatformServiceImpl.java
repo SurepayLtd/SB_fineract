@@ -30,14 +30,16 @@ import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.accounting.common.AccountingEnumerations;
+import org.apache.fineract.infrastructure.core.api.ApiFacingEnum;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.core.data.StringEnumOptionData;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.infrastructure.core.domain.JdbcSupport;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
-import org.apache.fineract.infrastructure.entityaccess.domain.FineractEntityType;
+import org.apache.fineract.infrastructure.entityaccess.domain.FineractEntityAccessType;
 import org.apache.fineract.infrastructure.entityaccess.service.FineractEntityAccessUtil;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
@@ -45,9 +47,18 @@ import org.apache.fineract.portfolio.accountdetails.domain.LoanChannel;
 import org.apache.fineract.portfolio.charge.data.ChargeData;
 import org.apache.fineract.portfolio.charge.service.ChargeEnumerations;
 import org.apache.fineract.portfolio.charge.service.ChargeReadPlatformService;
+import org.apache.fineract.portfolio.common.domain.DaysInYearCustomStrategyType;
+import org.apache.fineract.portfolio.common.domain.MonthEndDueDateStrategy;
 import org.apache.fineract.portfolio.common.service.CommonEnumerations;
 import org.apache.fineract.portfolio.delinquency.data.DelinquencyBucketData;
+import org.apache.fineract.portfolio.delinquency.domain.DelinquencyBucketType;
 import org.apache.fineract.portfolio.delinquency.service.DelinquencyReadPlatformService;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanBuyDownFeeCalculationType;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanBuyDownFeeIncomeType;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanBuyDownFeeStrategy;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanCapitalizedIncomeCalculationType;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanCapitalizedIncomeStrategy;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanCapitalizedIncomeType;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanChargeOffBehaviour;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleProcessingType;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleType;
@@ -57,19 +68,22 @@ import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProductConfigurableAttributes;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProductParamType;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProductRepository;
+import org.apache.fineract.portfolio.loanproduct.domain.LoanSupportedFeeRefundTypes;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanSupportedInterestRefundTypes;
 import org.apache.fineract.portfolio.loanproduct.exception.LoanProductNotFoundException;
 import org.apache.fineract.portfolio.rate.data.RateData;
 import org.apache.fineract.portfolio.rate.service.RateReadService;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatformService {
 
     private static final Logger log = LoggerFactory.getLogger(LoanProductReadPlatformServiceImpl.class);
@@ -93,7 +107,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
             final Collection<AdvancedPaymentData> advancedPaymentData = retrieveAdvancedPaymentData(loanProductId);
             final Collection<CreditAllocationData> creditAllocationData = retrieveCreditAllocationData(loanProductId);
             final Collection<DelinquencyBucketData> delinquencyBucketOptions = this.delinquencyReadPlatformService
-                    .retrieveAllDelinquencyBuckets();
+                    .retrieveDelinquencyBucketsByType(DelinquencyBucketType.REGULAR);
             final LoanProductMapper rm = new LoanProductMapper(charges, borrowerCycleVariationDatas, rates, delinquencyBucketOptions,
                     advancedPaymentData, creditAllocationData);
             final String sql = "select " + rm.loanProductSchema() + " where lp.id = ?";
@@ -137,22 +151,10 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
 
     @Override
     public Collection<LoanProductData> retrieveAllLoanProducts() {
-
         this.context.authenticatedUser();
-
         final LoanProductMapper rm = new LoanProductMapper(null, null, null, null, null, null);
-
-        String sql = "select " + rm.loanProductSchema();
-
-        // Check if branch specific products are enabled. If yes, fetch only
-        // products mapped to current user's office
-        String inClause = fineractEntityAccessUtil
-                .getSQLWhereClauseForProductIDsForUserOffice_ifGlobalConfigEnabled(FineractEntityType.LOAN_PRODUCT);
-        if (inClause != null && !inClause.trim().isEmpty()) {
-            sql += " where lp.id in ( " + inClause + " ) ";
-        }
-
-        return this.jdbcTemplate.query(sql, rm); // NOSONAR
+        final String sql = "select " + rm.loanProductSchema();
+        return visibleToOffice(this.jdbcTemplate.query(sql, rm), null); // NOSONAR
     }
 
     @Override
@@ -204,30 +206,20 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
 
     @Override
     public Collection<LoanProductData> retrieveAllLoanProductsForLookup(final boolean activeOnly) {
+        return retrieveAllLoanProductsForLookup(activeOnly, null);
+    }
+
+    @Override
+    public Collection<LoanProductData> retrieveAllLoanProductsForLookup(final boolean activeOnly, final Long officeId) {
         this.context.authenticatedUser();
-
         final LoanProductLookupMapper rm = new LoanProductLookupMapper(sqlGenerator);
+        final String sql = "select " + (activeOnly ? rm.activeOnlySchema() : rm.schema());
+        return visibleToOffice(this.jdbcTemplate.query(sql, rm), officeId); // NOSONAR
+    }
 
-        String sql = "select ";
-        if (activeOnly) {
-            sql += rm.activeOnlySchema();
-        } else {
-            sql += rm.schema();
-        }
-
-        // Check if branch specific products are enabled. If yes, fetch only
-        // products mapped to current user's office
-        String inClause = fineractEntityAccessUtil
-                .getSQLWhereClauseForProductIDsForUserOffice_ifGlobalConfigEnabled(FineractEntityType.LOAN_PRODUCT);
-        if (inClause != null && !inClause.trim().isEmpty()) {
-            if (activeOnly) {
-                sql += " and id in ( " + inClause + " )";
-            } else {
-                sql += " where id in ( " + inClause + " ) ";
-            }
-        }
-
-        return this.jdbcTemplate.query(sql, rm); // NOSONAR
+    private List<LoanProductData> visibleToOffice(final List<LoanProductData> products, final Long officeId) {
+        return this.fineractEntityAccessUtil.filterVisibleToOffice_ifGlobalConfigEnabled(
+                FineractEntityAccessType.OFFICE_ACCESS_TO_LOAN_PRODUCTS, officeId, products, LoanProductData::getId);
     }
 
     @Override
@@ -266,17 +258,17 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     + "lp.name as name, lp.short_name as shortName, lp.description as description, "
                     + "lp.principal_amount as principal, lp.min_principal_amount as minPrincipal, lp.max_principal_amount as maxPrincipal, lp.currency_code as currencyCode, lp.currency_digits as currencyDigits, lp.currency_multiplesof as inMultiplesOf, "
                     + "lp.nominal_interest_rate_per_period as interestRatePerPeriod, lp.min_nominal_interest_rate_per_period as minInterestRatePerPeriod, lp.max_nominal_interest_rate_per_period as maxInterestRatePerPeriod, lp.interest_period_frequency_enum as interestRatePerPeriodFreq, "
-                    + "lp.annual_nominal_interest_rate as annualInterestRate, lp.interest_method_enum as interestMethod, lp.interest_calculated_in_period_enum as interestCalculationInPeriodMethod,lp.allow_partial_period_interest_calcualtion as allowPartialPeriodInterestCalcualtion, "
-                    + "lp.repay_every as repaidEvery, lp.repayment_period_frequency_enum as repaymentPeriodFrequency, lp.number_of_repayments as numberOfRepayments, lp.min_number_of_repayments as minNumberOfRepayments, lp.max_number_of_repayments as maxNumberOfRepayments, "
+                    + "lp.annual_nominal_interest_rate as annualInterestRate, lp.interest_method_enum as interestMethod, lp.interest_calculated_in_period_enum as interestCalculationInPeriodMethod,lp.allow_partial_period_interest_calcualtion as allowPartialPeriodInterestCalculation, "
+                    + "lp.repay_every as repaidEvery, lp.first_repayment_day_of_month as firstRepaymentDayOfMonth, lp.second_repayment_day_of_month as secondRepaymentDayOfMonth, lp.repayment_period_frequency_enum as repaymentPeriodFrequency, lp.number_of_repayments as numberOfRepayments, lp.min_number_of_repayments as minNumberOfRepayments, lp.max_number_of_repayments as maxNumberOfRepayments, "
                     + "lp.fixed_length as fixedLength, " + "lp.enable_accrual_activity_posting as enableAccrualActivityPosting, "
                     + "lp.grace_on_principal_periods as graceOnPrincipalPayment, lp.recurring_moratorium_principal_periods as recurringMoratoriumOnPrincipalPeriods, lp.grace_on_interest_periods as graceOnInterestPayment, lp.grace_interest_free_periods as graceOnInterestCharged,lp.grace_on_arrears_ageing as graceOnArrearsAgeing,lp.overdue_days_for_npa as overdueDaysForNPA, "
                     + "lp.min_days_between_disbursal_and_first_repayment As minimumDaysBetweenDisbursalAndFirstRepayment, "
                     + "lp.amortization_method_enum as amortizationMethod, lp.arrearstolerance_amount as tolerance, "
                     + "lp.accounting_type as accountingType, lp.include_in_borrower_cycle as includeInBorrowerCycle,lp.use_borrower_cycle as useBorrowerCycle, lp.start_date as startDate, lp.close_date as closeDate,  "
-                    + "lp.allow_multiple_disbursals as multiDisburseLoan, lp.max_disbursals as maxTrancheCount, lp.max_outstanding_loan_balance as outstandingLoanBalance, "
+                    + "lp.allow_multiple_disbursals as multiDisburseLoan, lp.max_disbursals as maxTrancheCount, lp.max_outstanding_loan_balance as outstandingLoanBalance, lp.allow_full_term_for_tranche as allowFullTermForTranche, "
                     + "lp.disallow_expected_disbursements as disallowExpectedDisbursements, lp.allow_approved_disbursed_amounts_over_applied as allowApprovedDisbursedAmountsOverApplied, lp.over_applied_calculation_type as overAppliedCalculationType, over_applied_number as overAppliedNumber, "
                     + "lp.days_in_month_enum as daysInMonth, lp.days_in_year_enum as daysInYear, lp.interest_recalculation_enabled as isInterestRecalculationEnabled, "
-                    + "lp.can_define_fixed_emi_amount as canDefineInstallmentAmount, lp.instalment_amount_in_multiples_of as installmentAmountInMultiplesOf, "
+                    + "lp.can_define_fixed_emi_amount as canDefineInstallmentAmount, lp.installment_amount_in_multiples_of as installmentAmountInMultiplesOf, "
                     + "lp.due_days_for_repayment_event as dueDaysForRepaymentEvent, lp.overdue_days_for_repayment_event as overDueDaysForRepaymentEvent, lp.enable_down_payment as enableDownPayment, lp.disbursed_amount_percentage_for_down_payment as disbursedAmountPercentageForDownPayment, lp.enable_auto_repayment_for_down_payment as enableAutoRepaymentForDownPayment, lp.repayment_start_date_type_enum as repaymentStartDateType, "
                     + "lp.enable_installment_level_delinquency as enableInstallmentLevelDelinquency, "
                     + "lpr.pre_close_interest_calculation_strategy as preCloseInterestCalculationStrategy, "
@@ -297,6 +289,8 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     + "lp.fixed_principal_percentage_per_installment fixedPrincipalPercentagePerInstallment, "
                     + "lp.sync_expected_with_disbursement_date as syncExpectedWithDisbursementDate, "
                     + "lpg.id as lpgId, lpg.mandatory_guarantee as mandatoryGuarantee, "
+                    + "lp.days_in_year_custom_strategy as daysInYearCustomStrategy, "
+                    + "lp.month_end_due_date_strategy as monthEndDueDateStrategy, "
                     + "lpg.minimum_guarantee_from_own_funds as minimumGuaranteeFromOwnFunds, lpg.minimum_guarantee_from_guarantor_funds as minimumGuaranteeFromGuarantor, "
                     + "lp.account_moves_out_of_npa_only_on_arrears_completion as accountMovesOutOfNPAOnlyOnArrearsCompletion, "
                     + "curr.name as currencyName, curr.internationalized_name_code as currencyNameCode, curr.display_symbol as currencyDisplaySymbol, lp.external_id as externalId, "
@@ -312,9 +306,16 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     + "lfr.is_floating_interest_rate_calculation_allowed as isFloatingInterestRateCalculationAllowed, "
                     + "lp.allow_variabe_installments as isVariableIntallmentsAllowed, " + "lvi.minimum_gap as minimumGap, "
                     + "lvi.maximum_gap as maximumGap, dbuc.id as delinquencyBucketId, dbuc.name as delinquencyBucketName, "
-                    + "lp.can_use_for_topup as canUseForTopup, lp.is_equal_amortization as isEqualAmortization, lp.loan_schedule_type as loanScheduleType, lp.loan_schedule_processing_type as loanScheduleProcessingType, lp.supported_interest_refund_types as supportedInterestRefundTypes, "
-                    + "lp.charge_off_behaviour as chargeOffBehaviour, lp.is_ussd as isUssd" + " from m_product_loan lp "
-                    + " left join m_fund f on f.id = lp.fund_id "
+                    + "lp.can_use_for_topup as canUseForTopup, lp.is_equal_amortization as isEqualAmortization, lp.loan_schedule_type as loanScheduleType, lp.loan_schedule_processing_type as loanScheduleProcessingType, lp.supported_interest_refund_types as supportedInterestRefundTypes, lp.supported_fee_refund_types as supportedFeeRefundTypes, "
+                    + "lp.charge_off_behaviour as chargeOffBehaviour, " //
+                    + "lp.enable_income_capitalization as enableIncomeCapitalization, " //
+                    + "lp.capitalized_income_calculation_type as capitalizedIncomeCalculationType, " //
+                    + "lp.capitalized_income_strategy as capitalizedIncomeStrategy, " //
+                    + "lp.capitalized_income_type as capitalizedIncomeType, lp.is_merchant_buy_down_fee as merchantBuyDownFee, " //
+                    + "lp.enable_buy_down_fee as enableBuyDownFee, " + "lp.buy_down_fee_calculation_type as buyDownFeeCalculationType, "
+                    + "lp.buy_down_fee_strategy as buyDownFeeStrategy, " + "lp.buy_down_fee_income_type as buyDownFeeIncomeType, "
+                    + "lp.is_ussd as isUssd " //
+                    + " from m_product_loan lp " + " left join m_fund f on f.id = lp.fund_id "
                     + " left join m_product_loan_recalculation_details lpr on lpr.product_id=lp.id "
                     + " left join m_product_loan_guarantee_details lpg on lpg.loan_product_id=lp.id "
                     + " left join m_product_loan_configurable_attributes lca on lca.loan_product_id = lp.id "
@@ -327,7 +328,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
         }
 
         @Override
-        public LoanProductData mapRow(@NotNull final ResultSet rs, @SuppressWarnings("unused") final int rowNum) throws SQLException {
+        public LoanProductData mapRow(@NonNull final ResultSet rs, @SuppressWarnings("unused") final int rowNum) throws SQLException {
 
             final Long id = JdbcSupport.getLong(rs, "id");
             final String name = rs.getString("name");
@@ -357,6 +358,8 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
             final Integer minNumberOfRepayments = JdbcSupport.getInteger(rs, "minNumberOfRepayments");
             final Integer maxNumberOfRepayments = JdbcSupport.getInteger(rs, "maxNumberOfRepayments");
             final Integer repaymentEvery = JdbcSupport.getInteger(rs, "repaidEvery");
+            final Integer firstRepaymentDayOfMonth = JdbcSupport.getInteger(rs, "firstRepaymentDayOfMonth");
+            final Integer secondRepaymentDayOfMonth = JdbcSupport.getInteger(rs, "secondRepaymentDayOfMonth");
             final Integer fixedLength = JdbcSupport.getInteger(rs, "fixedLength");
 
             final Integer graceOnPrincipalPayment = JdbcSupport.getIntegerDefaultToNullIfZero(rs, "graceOnPrincipalPayment");
@@ -405,7 +408,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
             final EnumOptionData interestType = LoanEnumerations.interestType(interestTypeId);
 
             final int interestCalculationPeriodTypeId = JdbcSupport.getInteger(rs, "interestCalculationInPeriodMethod");
-            final Boolean allowPartialPeriodInterestCalcualtion = rs.getBoolean("allowPartialPeriodInterestCalcualtion");
+            final Boolean allowPartialPeriodInterestCalculation = rs.getBoolean("allowPartialPeriodInterestCalculation");
             final EnumOptionData interestCalculationPeriodType = LoanEnumerations
                     .interestCalculationPeriodType(interestCalculationPeriodTypeId);
 
@@ -452,10 +455,15 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
             final Boolean allowApprovedDisbursedAmountsOverApplied = rs.getBoolean("allowApprovedDisbursedAmountsOverApplied");
             final String overAppliedCalculationType = rs.getString("overAppliedCalculationType");
             final Integer overAppliedNumber = rs.getInt("overAppliedNumber");
+            final Boolean allowFullTermForTranche = rs.getBoolean("allowFullTermForTranche");
 
             final int daysInMonth = JdbcSupport.getInteger(rs, "daysInMonth");
             final EnumOptionData daysInMonthType = CommonEnumerations.daysInMonthType(daysInMonth);
             final int daysInYear = JdbcSupport.getInteger(rs, "daysInYear");
+            final StringEnumOptionData daysInYearCustomStrategy = ApiFacingEnum.getStringEnumOptionData(DaysInYearCustomStrategyType.class,
+                    rs.getString("daysInYearCustomStrategy"));
+            final StringEnumOptionData monthEndDueDateStrategy = ApiFacingEnum.getStringEnumOptionData(MonthEndDueDateStrategy.class,
+                    rs.getString("monthEndDueDateStrategy"));
             final EnumOptionData daysInYearType = CommonEnumerations.daysInYearType(daysInYear);
             final Integer installmentAmountInMultiplesOf = JdbcSupport.getInteger(rs, "installmentAmountInMultiplesOf");
             final boolean canDefineInstallmentAmount = rs.getBoolean("canDefineInstallmentAmount");
@@ -559,7 +567,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
             final Long delinquencyBucketId = JdbcSupport.getLong(rs, "delinquencyBucketId");
             final String delinquencyBucketName = rs.getString("delinquencyBucketName");
             final DelinquencyBucketData delinquencyBucket = new DelinquencyBucketData(delinquencyBucketId, delinquencyBucketName,
-                    new ArrayList<>());
+                    new ArrayList<>(), DelinquencyBucketType.REGULAR, null);
 
             final String loanScheduleTypeStr = rs.getString("loanScheduleType");
             final LoanScheduleType loanScheduleType = LoanScheduleType.valueOf(loanScheduleTypeStr);
@@ -573,33 +581,58 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                         .map(LoanSupportedInterestRefundTypes::valueOf)
                         .map(LoanSupportedInterestRefundTypes::getValueAsStringEnumOptionData).toList();
             }
+            final String supportedFeeRefundTypesString = rs.getString("supportedFeeRefundTypes");
+            List<StringEnumOptionData> supportedFeeRefundTypes = List.of();
+            if (supportedFeeRefundTypesString != null && !supportedFeeRefundTypesString.isEmpty()) {
+                supportedFeeRefundTypes = Arrays.stream(supportedFeeRefundTypesString.split(",")).map(LoanSupportedFeeRefundTypes::valueOf)
+                        .map(LoanSupportedFeeRefundTypes::getValueAsStringEnumOptionData).toList();
+            }
             final String chargeOffBehaviourStr = rs.getString("chargeOffBehaviour");
             final LoanChargeOffBehaviour loanChargeOffBehaviour = LoanChargeOffBehaviour.valueOf(chargeOffBehaviourStr);
             final boolean interestRecognitionOnDisbursementDate = rs.getBoolean("interestRecognitionOnDisbursementDate");
+            final boolean enableIncomeCapitalization = rs.getBoolean("enableIncomeCapitalization");
+            final StringEnumOptionData capitalizedIncomeCalculationType = ApiFacingEnum
+                    .getStringEnumOptionData(LoanCapitalizedIncomeCalculationType.class, rs.getString("capitalizedIncomeCalculationType"));
+            final StringEnumOptionData capitalizedIncomeStrategy = ApiFacingEnum
+                    .getStringEnumOptionData(LoanCapitalizedIncomeStrategy.class, rs.getString("capitalizedIncomeStrategy"));
+            final StringEnumOptionData capitalizedIncome = ApiFacingEnum.getStringEnumOptionData(LoanCapitalizedIncomeType.class,
+                    rs.getString("capitalizedIncomeType"));
+            final boolean enableBuyDownFee = rs.getBoolean("enableBuyDownFee");
+            final StringEnumOptionData buyDownFeeCalculationType = ApiFacingEnum
+                    .getStringEnumOptionData(LoanBuyDownFeeCalculationType.class, rs.getString("buyDownFeeCalculationType"));
+            final StringEnumOptionData buyDownFeeStrategy = ApiFacingEnum.getStringEnumOptionData(LoanBuyDownFeeStrategy.class,
+                    rs.getString("buyDownFeeStrategy"));
+            final StringEnumOptionData buyDownFeeIncomeType = ApiFacingEnum.getStringEnumOptionData(LoanBuyDownFeeIncomeType.class,
+                    rs.getString("buyDownFeeIncomeType"));
+            final boolean merchantBuyDownFee = rs.getBoolean("merchantBuyDownFee");
 
             return new LoanProductData(id, name, shortName, description, currency, principal, minPrincipal, maxPrincipal, tolerance,
                     numberOfRepayments, minNumberOfRepayments, maxNumberOfRepayments, repaymentEvery, interestRatePerPeriod,
                     minInterestRatePerPeriod, maxInterestRatePerPeriod, annualInterestRate, repaymentFrequencyType,
-                    interestRateFrequencyType, amortizationType, interestType, interestCalculationPeriodType,
-                    allowPartialPeriodInterestCalcualtion, fundId, fundName, transactionStrategyCode, transactionStrategyName,
-                    graceOnPrincipalPayment, recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment, graceOnInterestCharged,
-                    this.charges, accountingRuleType, includeInBorrowerCycle, useBorrowerCycle, startDate, closeDate, status, externalId,
-                    principalVariationsForBorrowerCycle, interestRateVariationsForBorrowerCycle,
+                    firstRepaymentDayOfMonth, secondRepaymentDayOfMonth, interestRateFrequencyType, amortizationType, interestType,
+                    interestCalculationPeriodType, allowPartialPeriodInterestCalculation, fundId, fundName, transactionStrategyCode,
+                    transactionStrategyName, graceOnPrincipalPayment, recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment,
+                    graceOnInterestCharged, this.charges, accountingRuleType, includeInBorrowerCycle, useBorrowerCycle, startDate,
+                    closeDate, status, externalId, principalVariationsForBorrowerCycle, interestRateVariationsForBorrowerCycle,
                     numberOfRepaymentVariationsForBorrowerCycle, multiDisburseLoan, maxTrancheCount, outstandingLoanBalance,
                     disallowExpectedDisbursements, allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType, overAppliedNumber,
-                    graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType, isInterestRecalculationEnabled,
-                    interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds, loanProductGuaranteeData,
-                    principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion, canDefineInstallmentAmount,
-                    installmentAmountInMultiplesOf, allowAttributeOverrides, isLinkedToFloatingInterestRates, floatingRateId,
-                    floatingRateName, interestRateDifferential, minDifferentialLendingRate, defaultDifferentialLendingRate,
-                    maxDifferentialLendingRate, isFloatingInterestRateCalculationAllowed, isVariableIntallmentsAllowed, minimumGap,
-                    maximumGap, syncExpectedWithDisbursementDate, canUseForTopup, isEqualAmortization, rateOptions, this.rates,
-                    isRatesEnabled, fixedPrincipalPercentagePerInstallment, delinquencyBucketOptions, delinquencyBucket,
-                    dueDaysForRepaymentEvent, overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageForDownPayment,
+                    allowFullTermForTranche, graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType,
+                    isInterestRecalculationEnabled, interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment,
+                    holdGuaranteeFunds, loanProductGuaranteeData, principalThresholdForLastInstallment,
+                    accountMovesOutOfNPAOnlyOnArrearsCompletion, canDefineInstallmentAmount, installmentAmountInMultiplesOf,
+                    allowAttributeOverrides, isLinkedToFloatingInterestRates, floatingRateId, floatingRateName, interestRateDifferential,
+                    minDifferentialLendingRate, defaultDifferentialLendingRate, maxDifferentialLendingRate,
+                    isFloatingInterestRateCalculationAllowed, isVariableIntallmentsAllowed, minimumGap, maximumGap,
+                    syncExpectedWithDisbursementDate, canUseForTopup, isEqualAmortization, rateOptions, this.rates, isRatesEnabled,
+                    fixedPrincipalPercentagePerInstallment, delinquencyBucketOptions, delinquencyBucket, dueDaysForRepaymentEvent,
+                    overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageForDownPayment,
                     enableAutoRepaymentForDownPayment, advancedPaymentData, creditAllocationData, repaymentStartDateType,
                     enableInstallmentLevelDelinquency, loanScheduleType.asEnumOptionData(), loanScheduleProcessingType.asEnumOptionData(),
-                    fixedLength, enableAccrualActivityPosting, supportedInterestRefundTypes,
-                    loanChargeOffBehaviour.getValueAsStringEnumOptionData(), interestRecognitionOnDisbursementDate, isUssd);
+                    fixedLength, enableAccrualActivityPosting, supportedInterestRefundTypes, supportedFeeRefundTypes,
+                    loanChargeOffBehaviour.getValueAsStringEnumOptionData(), interestRecognitionOnDisbursementDate,
+                    daysInYearCustomStrategy, enableIncomeCapitalization, capitalizedIncomeCalculationType, capitalizedIncomeStrategy,
+                    capitalizedIncome, enableBuyDownFee, buyDownFeeCalculationType, buyDownFeeStrategy, buyDownFeeIncomeType,
+                    merchantBuyDownFee, null, null, monthEndDueDateStrategy, isUssd);
         }
     }
 
@@ -670,17 +703,21 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
     private static final class CreditAllocationDataMapper implements RowMapper<CreditAllocationData> {
 
         public String schema() {
-            return "transaction_type, allocation_types from m_loan_product_credit_allocation_rule";
+            return "transaction_type, allocation_strategy, allocation_types from m_loan_product_credit_allocation_rule";
         }
 
         @Override
         public CreditAllocationData mapRow(ResultSet rs, int rowNum) throws SQLException {
             final String transactionType = rs.getString("transaction_type");
+            final String allocationStrategy = rs.getString("allocation_strategy");
             final String allocationTypes = rs.getString("allocation_types");
-            return new CreditAllocationData(transactionType, convert(allocationTypes));
+            return new CreditAllocationData(transactionType, allocationStrategy, convert(allocationTypes));
         }
 
         private List<CreditAllocationData.CreditAllocationOrder> convert(String allocationOrders) {
+            if (StringUtils.isBlank(allocationOrders)) {
+                return List.of();
+            }
             String[] allocationRule = allocationOrders.split(",");
             AtomicInteger order = new AtomicInteger(1);
             return Arrays.stream(allocationRule) //
@@ -723,17 +760,8 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
 
         final LoanProductMapper rm = new LoanProductMapper(null, null, null, null, null, null);
 
-        String sql = "select " + rm.loanProductSchema() + " where lp.currency_code= ? ";
-
-        // Check if branch specific products are enabled. If yes, fetch only
-        // products mapped to current user's office
-        String inClause = fineractEntityAccessUtil
-                .getSQLWhereClauseForProductIDsForUserOffice_ifGlobalConfigEnabled(FineractEntityType.LOAN_PRODUCT);
-        if (inClause != null && !inClause.trim().isEmpty()) {
-            sql += " and id in (" + inClause + ") ";
-        }
-
-        return this.jdbcTemplate.query(sql, rm, currencyCode); // NOSONAR
+        final String sql = "select " + rm.loanProductSchema() + " where lp.currency_code= ? ";
+        return visibleToOffice(this.jdbcTemplate.query(sql, rm, currencyCode), null); // NOSONAR
     }
 
     @Override
@@ -743,17 +771,8 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
 
         final LoanProductLookupMapper rm = new LoanProductLookupMapper(sqlGenerator);
 
-        String sql = "Select " + rm.productMixSchema();
-
-        // Check if branch specific products are enabled. If yes, fetch only
-        // products mapped to current user's office
-        String inClause = fineractEntityAccessUtil
-                .getSQLWhereClauseForProductIDsForUserOffice_ifGlobalConfigEnabled(FineractEntityType.LOAN_PRODUCT);
-        if (inClause != null && !inClause.trim().isEmpty()) {
-            sql += " and lp.id in ( " + inClause + " ) ";
-        }
-
-        return this.jdbcTemplate.query(sql, rm); // NOSONAR
+        final String sql = "Select " + rm.productMixSchema();
+        return visibleToOffice(this.jdbcTemplate.query(sql, rm), null); // NOSONAR
     }
 
     @Override
@@ -763,26 +782,9 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
 
         final LoanProductLookupMapper rm = new LoanProductLookupMapper(sqlGenerator);
 
-        String sql = "Select " + rm.restrictedProductsSchema() + " where pm.product_id=? ";
-        // Check if branch specific products are enabled. If yes, fetch only
-        // products mapped to current user's office
-        String inClause1 = fineractEntityAccessUtil
-                .getSQLWhereClauseForProductIDsForUserOffice_ifGlobalConfigEnabled(FineractEntityType.LOAN_PRODUCT);
-        if (inClause1 != null && !inClause1.trim().isEmpty()) {
-            sql += " and rp.id in ( " + inClause1 + " ) ";
-        }
-
-        sql += " UNION Select " + rm.derivedRestrictedProductsSchema() + " where pm.restricted_product_id=?";
-
-        // Check if branch specific products are enabled. If yes, fetch only
-        // products mapped to current user's office
-        String inClause2 = fineractEntityAccessUtil
-                .getSQLWhereClauseForProductIDsForUserOffice_ifGlobalConfigEnabled(FineractEntityType.LOAN_PRODUCT);
-        if (inClause2 != null && !inClause2.trim().isEmpty()) {
-            sql += " and lp.id in ( " + inClause2 + " ) ";
-        }
-
-        return this.jdbcTemplate.query(sql, rm, productId, productId); // NOSONAR
+        final String sql = "Select " + rm.restrictedProductsSchema() + " where pm.product_id=? UNION Select "
+                + rm.derivedRestrictedProductsSchema() + " where pm.restricted_product_id=?";
+        return visibleToOffice(this.jdbcTemplate.query(sql, rm, productId, productId), null); // NOSONAR
     }
 
     @Override
@@ -792,20 +794,10 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
 
         final LoanProductLookupMapper rm = new LoanProductLookupMapper(sqlGenerator);
 
-        String sql = "Select " + rm.schema() + " where ";
-
-        // Check if branch specific products are enabled. If yes, fetch only
-        // products mapped to current user's office
-        String inClause = fineractEntityAccessUtil
-                .getSQLWhereClauseForProductIDsForUserOffice_ifGlobalConfigEnabled(FineractEntityType.LOAN_PRODUCT);
-        if (inClause != null && !inClause.trim().isEmpty()) {
-            sql += " lp.id in ( " + inClause + " ) and ";
-        }
-
-        sql += "lp.id not in (" + "Select pm.restricted_product_id from m_product_mix pm where pm.product_id=? " + "UNION "
+        final String sql = "Select " + rm.schema() + " where lp.id not in ("
+                + "Select pm.restricted_product_id from m_product_mix pm where pm.product_id=? " + "UNION "
                 + "Select pm.product_id from m_product_mix pm where pm.restricted_product_id=?)";
-
-        return this.jdbcTemplate.query(sql, rm, productId, productId); // NOSONAR
+        return visibleToOffice(this.jdbcTemplate.query(sql, rm, productId, productId), null); // NOSONAR
     }
 
     @Override
@@ -839,7 +831,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
         }
 
         @Override
-        public LoanProductData mapRow(@NotNull final ResultSet rs, @SuppressWarnings("unused") final int rowNum) throws SQLException {
+        public LoanProductData mapRow(@NonNull final ResultSet rs, @SuppressWarnings("unused") final int rowNum) throws SQLException {
 
             final Long id = JdbcSupport.getLong(rs, "id");
             final String name = rs.getString("name");

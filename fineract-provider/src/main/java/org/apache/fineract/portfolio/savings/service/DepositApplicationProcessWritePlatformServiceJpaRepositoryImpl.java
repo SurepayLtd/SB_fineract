@@ -131,13 +131,14 @@ public class DepositApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
         String param = null;
         Object[] msgArgs;
         Throwable checkEx = realCause == null ? dve : realCause;
-        if (checkEx.getMessage().contains("sa_account_no_UNIQUE")) {
+        if (checkEx.getMessage().contains("sa_account_no_UNIQUE") || checkEx.getMessage().contains("m_savings_account_account_no_key")) {
             final String accountNo = command.stringValueOfParameterNamed("accountNo");
             msgCode += ".duplicate.accountNo";
             msg = "Savings account with accountNo " + accountNo + " already exists";
             param = "accountNo";
             msgArgs = new Object[] { accountNo, dve };
-        } else if (checkEx.getMessage().contains("sa_external_id_UNIQUE")) {
+        } else if (checkEx.getMessage().contains("sa_external_id_UNIQUE")
+                || checkEx.getMessage().contains("m_savings_account_external_id_key")) {
             final String externalId = command.stringValueOfParameterNamed("externalId");
             msgCode += ".duplicate.externalId";
             msg = "Savings account with externalId " + externalId + " already exists";
@@ -147,7 +148,7 @@ public class DepositApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
             msgCode += ".unknown.data.integrity.issue";
             msgArgs = new Object[] { dve };
         }
-        log.error("Error occured.", dve);
+        log.error("Error occurred.", dve);
         throw ErrorHandler.getMappable(dve, msgCode, msg, param, msgArgs);
     }
 
@@ -173,7 +174,7 @@ public class DepositApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
             this.fixedDepositAccountRepository.saveAndFlush(account);
 
             if (account.isAccountNumberRequiresAutoGeneration()) {
-                AccountNumberFormat accountNumberFormat = this.accountNumberFormatRepository.findByAccountType(EntityAccountType.CLIENT);
+                AccountNumberFormat accountNumberFormat = this.accountNumberFormatRepository.findByAccountType(EntityAccountType.SAVINGS);
                 account.updateAccountNo(this.accountNumberGenerator.generate(account, accountNumberFormat));
 
                 this.savingAccountRepository.save(account);
@@ -350,6 +351,10 @@ public class DepositApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
 
             if (!changes.isEmpty()) {
                 updateFDAndRDCommonChanges(changes, command, account);
+                if (changes.containsKey(org.apache.fineract.portfolio.savings.SavingsApiConstants.productIdParamName)
+                        || changes.containsKey(org.apache.fineract.portfolio.savings.SavingsApiConstants.submittedOnDateParamName)) {
+                    this.depositAccountAssembler.validateProductApplicationDate(account.getSubmittedOnDate(), account.savingsProduct());
+                }
                 final MathContext mc = MathContext.DECIMAL64;
                 final boolean isPreMatureClosure = false;
                 account.updateMaturityDateAndAmountBeforeAccountActivation(mc, isPreMatureClosure,
@@ -440,6 +445,10 @@ public class DepositApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
 
             if (!changes.isEmpty()) {
                 updateFDAndRDCommonChanges(changes, command, account);
+                if (changes.containsKey(org.apache.fineract.portfolio.savings.SavingsApiConstants.productIdParamName)
+                        || changes.containsKey(org.apache.fineract.portfolio.savings.SavingsApiConstants.submittedOnDateParamName)) {
+                    this.depositAccountAssembler.validateProductApplicationDate(account.getSubmittedOnDate(), account.savingsProduct());
+                }
                 final MathContext mc = MathContext.DECIMAL64;
                 final CalendarInstance calendarInstance = this.calendarInstanceRepository.findByEntityIdAndEntityTypeIdAndCalendarTypeId(
                         accountId, CalendarEntityType.SAVINGS.getValue(), CalendarType.COLLECTION.getValue());
@@ -729,19 +738,17 @@ public class DepositApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
 
     private void checkClientOrGroupActive(final SavingsAccount account) {
         final Client client = account.getClient();
-        if (client != null) {
-            if (client.isNotActive()) {
-                throw new ClientNotActiveException(client.getId());
-            }
+        if (client != null && client.isNotActive()) {
+            throw new ClientNotActiveException(client.getId());
         }
+
         final Group group = account.group();
-        if (group != null) {
-            if (group.isNotActive()) {
-                if (group.isCenter()) {
-                    throw new CenterNotActiveException(group.getId());
-                }
-                throw new GroupNotActiveException(group.getId());
+        if (group != null && group.isNotActive()) {
+            if (group.isCenter()) {
+                throw new CenterNotActiveException(group.getId());
             }
+            throw new GroupNotActiveException(group.getId());
         }
+
     }
 }

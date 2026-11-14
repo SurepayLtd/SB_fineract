@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
+import org.apache.fineract.infrastructure.core.service.ExternalIdFactory;
 import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
 import org.apache.fineract.organisation.monetary.domain.Money;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanCharge;
@@ -30,6 +31,8 @@ import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionToRepaymentScheduleMapping;
 import org.apache.fineract.portfolio.loanaccount.domain.transactionprocessor.AbstractLoanRepaymentScheduleTransactionProcessor;
 import org.apache.fineract.portfolio.loanaccount.domain.transactionprocessor.LoanRepaymentScheduleTransactionProcessor;
+import org.apache.fineract.portfolio.loanaccount.serialization.LoanChargeValidator;
+import org.apache.fineract.portfolio.loanaccount.service.LoanBalanceService;
 
 /**
  * Heavensfamily style {@link LoanRepaymentScheduleTransactionProcessor}.
@@ -47,6 +50,11 @@ public class HeavensFamilyLoanRepaymentScheduleTransactionProcessor extends Abst
     public static final String STRATEGY_CODE = "heavensfamily-strategy";
 
     public static final String STRATEGY_NAME = "HeavensFamily Unique";
+
+    public HeavensFamilyLoanRepaymentScheduleTransactionProcessor(final ExternalIdFactory externalIdFactory,
+            final LoanChargeValidator loanChargeValidator, final LoanBalanceService loanBalanceService) {
+        super(externalIdFactory, loanChargeValidator, loanBalanceService);
+    }
 
     @Override
     public String getCode() {
@@ -108,7 +116,6 @@ public class HeavensFamilyLoanRepaymentScheduleTransactionProcessor extends Abst
         if (loanTransaction.isInterestWaiver()) {
             interestPortion = currentInstallment.waiveInterestComponent(transactionDate, transactionAmountRemaining);
             transactionAmountRemaining = transactionAmountRemaining.minus(interestPortion);
-            loanTransaction.updateComponents(principalPortion, interestPortion, feeChargesPortion, penaltyChargesPortion);
         } else if (loanTransaction.isChargePayment()) {
             if (loanTransaction.isPenaltyPayment()) {
                 penaltyChargesPortion = currentInstallment.payPenaltyChargesComponent(transactionDate, transactionAmountRemaining);
@@ -126,15 +133,8 @@ public class HeavensFamilyLoanRepaymentScheduleTransactionProcessor extends Abst
                     // another transaction to handle this.
                     currentInstallment.waiveInterestComponent(transactionDate, currentInstallment.getInterestCharged(currency));
                 }
-
-                loanTransaction.updateComponents(principalPortion, interestPortion, feeChargesPortion, penaltyChargesPortion);
-
                 transactionAmountRemaining = transactionAmountRemaining.minus(principalPortion);
             }
-
-            // 1. pay of principal with over payment.
-            principalPortion = currentInstallment.payPrincipalComponent(transactionDate, transactionAmountRemaining);
-            transactionAmountRemaining = transactionAmountRemaining.minus(principalPortion);
 
             interestPortion = currentInstallment.payInterestComponent(transactionDate, transactionAmountRemaining);
             transactionAmountRemaining = transactionAmountRemaining.minus(interestPortion);
@@ -182,7 +182,6 @@ public class HeavensFamilyLoanRepaymentScheduleTransactionProcessor extends Abst
         } else if (loanTransaction.isInterestWaiver()) {
             interestPortion = currentInstallment.waiveInterestComponent(transactionDate, transactionAmountRemaining);
             transactionAmountRemaining = transactionAmountRemaining.minus(interestPortion);
-            loanTransaction.updateComponents(principalPortion, interestPortion, feeChargesPortion, penaltyChargesPortion);
         } else if (loanTransaction.isChargePayment()) {
             if (loanTransaction.isPenaltyPayment()) {
                 penaltyChargesPortion = currentInstallment.payPenaltyChargesComponent(transactionDate, transactionAmountRemaining);

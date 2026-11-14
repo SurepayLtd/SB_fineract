@@ -61,19 +61,13 @@ public class TaxAssembler {
         final BigDecimal percentage = this.fromApiJsonHelper.extractBigDecimalWithLocaleNamed(TaxApiConstants.percentageParamName, element);
         final Integer debitAccountType = this.fromApiJsonHelper.extractIntegerSansLocaleNamed(TaxApiConstants.debitAccountTypeParamName,
                 element);
-        final Long debitAccountId = this.fromApiJsonHelper.extractLongNamed(TaxApiConstants.debitAcountIdParamName, element);
+        final Long debitAccountId = this.fromApiJsonHelper.extractLongNamed(TaxApiConstants.debitAccountIdParamName, element);
         GLAccountType debitGlAccountType = null;
         if (debitAccountType != null) {
             debitGlAccountType = GLAccountType.fromInt(debitAccountType);
         }
-        GLAccount debitGlAccount = null;
-        if (debitAccountId != null) {
-            debitGlAccount = this.glAccountRepositoryWrapper.findOneWithNotFoundDetection(debitAccountId);
-            if (!debitGlAccount.getType().equals(debitAccountType) || debitGlAccount.isHeaderAccount()) {
-                baseDataValidator.parameter(TaxApiConstants.debitAcountIdParamName).value(debitAccountId)
-                        .failWithCode("not.a.valid.account");
-            }
-        }
+        final GLAccount debitGlAccount = assembleGlAccount(debitAccountType, debitAccountId, TaxApiConstants.debitAccountIdParamName,
+                baseDataValidator);
 
         final Integer creditAccountType = this.fromApiJsonHelper.extractIntegerSansLocaleNamed(TaxApiConstants.creditAccountTypeParamName,
                 element);
@@ -81,15 +75,9 @@ public class TaxAssembler {
         if (creditAccountType != null) {
             creditGlAccountType = GLAccountType.fromInt(creditAccountType);
         }
-        final Long creditAccountId = this.fromApiJsonHelper.extractLongNamed(TaxApiConstants.creditAcountIdParamName, element);
-        GLAccount creditGlAccount = null;
-        if (creditAccountId != null) {
-            creditGlAccount = this.glAccountRepositoryWrapper.findOneWithNotFoundDetection(creditAccountId);
-            if (!creditGlAccount.getType().equals(creditAccountType) || creditGlAccount.isHeaderAccount()) {
-                baseDataValidator.parameter(TaxApiConstants.creditAcountIdParamName).value(creditAccountId)
-                        .failWithCode("not.a.valid.account");
-            }
-        }
+        final Long creditAccountId = this.fromApiJsonHelper.extractLongNamed(TaxApiConstants.creditAccountIdParamName, element);
+        final GLAccount creditGlAccount = assembleGlAccount(creditAccountType, creditAccountId, TaxApiConstants.creditAccountIdParamName,
+                baseDataValidator);
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
         LocalDate startDate = this.fromApiJsonHelper.extractLocalDateNamed(TaxApiConstants.startDateParamName, element);
         if (startDate == null) {
@@ -98,6 +86,27 @@ public class TaxAssembler {
 
         return TaxComponent.createTaxComponent(name, percentage, debitGlAccountType, debitGlAccount, creditGlAccountType, creditGlAccount,
                 startDate);
+    }
+
+    public GLAccount assembleGlAccountFrom(final JsonCommand command, final String accountTypeParamName, final String accountIdParamName) {
+        final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("tax.component");
+        final GLAccount glAccount = assembleGlAccount(command.integerValueSansLocaleOfParameterNamed(accountTypeParamName),
+                command.longValueOfParameterNamed(accountIdParamName), accountIdParamName, baseDataValidator);
+        throwExceptionIfValidationWarningsExist(dataValidationErrors);
+        return glAccount;
+    }
+
+    private GLAccount assembleGlAccount(final Integer accountType, final Long accountId, final String accountIdParamName,
+            final DataValidatorBuilder baseDataValidator) {
+        if (accountId == null) {
+            return null;
+        }
+        final GLAccount glAccount = this.glAccountRepositoryWrapper.findOneWithNotFoundDetection(accountId);
+        if (!glAccount.getType().equals(accountType) || glAccount.isHeaderAccount()) {
+            baseDataValidator.parameter(accountIdParamName).value(accountId).failWithCode("not.a.valid.account");
+        }
+        return glAccount;
     }
 
     public TaxGroup assembleTaxGroupFrom(final JsonCommand command) {
@@ -131,12 +140,13 @@ public class TaxAssembler {
                         dateFormat, locale);
                 final LocalDate endDate = this.fromApiJsonHelper.extractLocalDateNamed(TaxApiConstants.endDateParamName, taxComponent,
                         dateFormat, locale);
-                if (endDate == null && startDate == null) {
+                final boolean isExistingMapping = isUpdate && mappingId != null;
+                if (endDate == null && startDate == null && !isExistingMapping) {
                     startDate = DateUtils.getBusinessLocalDate();
                 }
                 TaxGroupMappings mappings = null;
-                if (isUpdate && mappingId != null) {
-                    mappings = TaxGroupMappings.createTaxGroupMappings(mappingId, component, endDate);
+                if (isExistingMapping) {
+                    mappings = TaxGroupMappings.createTaxGroupMappings(mappingId, component, startDate, endDate);
                 } else {
                     mappings = TaxGroupMappings.createTaxGroupMappings(component, startDate);
                 }

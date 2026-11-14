@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.notification.service.SmsNotificationWritePlatformService;
 import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentReminderData;
-import org.springframework.batch.item.Chunk;
-import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.infrastructure.item.Chunk;
+import org.springframework.batch.infrastructure.item.ItemWriter;
 
 @RequiredArgsConstructor
 @Slf4j

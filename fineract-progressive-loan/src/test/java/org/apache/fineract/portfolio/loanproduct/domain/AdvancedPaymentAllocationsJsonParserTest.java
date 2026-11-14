@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -220,18 +220,15 @@ class AdvancedPaymentAllocationsJsonParserTest {
 
     private static List<Pair<Integer, PaymentAllocationType>> createPaymentAllocationTypeList() {
         AtomicInteger i = new AtomicInteger(1);
-        List<Pair<Integer, PaymentAllocationType>> list = EnumSet.allOf(PaymentAllocationType.class).stream()
-                .map(p -> Pair.of(i.getAndIncrement(), p)).toList();
-        return list;
+        return EnumSet.allOf(PaymentAllocationType.class).stream().map(p -> Pair.of(i.getAndIncrement(), p)).toList();
     }
 
-    @NotNull
+    @NonNull
     private JsonCommand createJsonCommand(Map<String, Object> jsonMap) throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonMap);
-        JsonCommand command = JsonCommand.from(json, JsonParser.parseString(json), fromJsonHelper, null, 1L, 2L, 3L, 4L, null, null, null,
-                null, null, null, null, null, null);
-        return command;
+        return JsonCommand.from(json, JsonParser.parseString(json), fromJsonHelper, null, 1L, 2L, 3L, 4L, null, null, null, null, null,
+                null, null, null, null);
     }
 
 }

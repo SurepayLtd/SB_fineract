@@ -23,7 +23,7 @@ final class SelfOfficesApiResourceSwagger {
 
   private SelfOfficesApiResourceSwagger() {}
 
-  @Schema(description = "GetOfficesResponse")
+  @Schema(name = "SelfGetOfficesResponse", description = "GetOfficesResponse")
   public static final class GetOfficesResponse {
 
     @Schema(example = "1")
@@ -53,7 +53,7 @@ final class SelfOfficesApiResourceSwagger {
     public Collection<GetOfficesResponse> allowedParents;
   }
 
-  @Schema(description = "GetOfficesTemplateResponse")
+  @Schema(name = "SelfGetOfficesTemplateResponse", description = "GetOfficesTemplateResponse")
   public static final class GetOfficesTemplateResponse {
 
     private GetOfficesTemplateResponse() {}
@@ -64,7 +64,7 @@ final class SelfOfficesApiResourceSwagger {
     public Collection<GetOfficesResponse> allowedParents;
   }
 
-  @Schema(description = "PostOfficesRequest")
+  @Schema(name = "SelfPostOfficesRequest", description = "PostOfficesRequest")
   public static final class PostOfficesRequest {
 
     private PostOfficesRequest() {}
@@ -88,7 +88,7 @@ final class SelfOfficesApiResourceSwagger {
     public String externalId;
   }
 
-  @Schema(description = "PostOfficesResponse")
+  @Schema(name = "SelfPostOfficesResponse", description = "PostOfficesResponse")
   public static final class PostOfficesResponse {
 
     private PostOfficesResponse() {}
@@ -100,7 +100,7 @@ final class SelfOfficesApiResourceSwagger {
     public Long resourceId;
   }
 
-  @Schema(description = "PutOfficesOfficeIdRequest")
+  @Schema(name = "SelfPutOfficesOfficeIdRequest", description = "PutOfficesOfficeIdRequest")
   public static final class PutOfficesOfficeIdRequest {
 
     private PutOfficesOfficeIdRequest() {}
@@ -121,9 +121,10 @@ final class SelfOfficesApiResourceSwagger {
     public String externalId;
   }
 
-  @Schema(description = "PutOfficesOfficeIdResponse")
+  @Schema(name = "SelfPutOfficesOfficeIdResponse", description = "PutOfficesOfficeIdResponse")
   public static final class PutOfficesOfficeIdResponse {
 
+    @Schema(name = "SelfPutOfficesOfficeIdResponseChanges")
     public static final class PutOfficesOfficeIdResponseChanges {
 
       @Schema(example = "Name is updated")

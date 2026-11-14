@@ -134,7 +134,12 @@
                 newDataType="VARCHAR(255)"/>
     </changeSet>
 
-    <changeSet id="Add_Job_To_Process_Loan_Transactions_On_Momo_Payment" author="bosco">
+    <!-- Renamed from "Add_Job_To_Process_Loan_Transactions_On_Momo_Payment": its checksum changed after the
+         Liquibase upgrade. Databases where the job already exists mark this changeset as ran. -->
+    <changeSet id="Add_Job_To_Process_Loan_Transactions_On_Momo_Payment_v2" author="bosco">
+    <preConditions onFail="MARK_RAN">
+        <sqlCheck expectedResult="0">SELECT COUNT(*) FROM job WHERE name = 'Process Loan Transactions On Momo Payment'</sqlCheck>
+    </preConditions>
     <insert tableName="job">
         <column name="name" value="Process Loan Transactions On Momo Payment"/>
         <column name="display_name" value="Process Loan Transactions On Momo Payment"/>

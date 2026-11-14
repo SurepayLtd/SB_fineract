@@ -18,10 +18,42 @@
  */
 package org.apache.fineract.integrationtests.common.error;
 
-import lombok.Data;
+import java.util.List;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@NoArgsConstructor
+@Getter
+@Setter
 public class ErrorResponse {
 
-    private String httpStatusCode;
+    private String developerMessage;
+    private Integer httpStatusCode;
+    private List<Error> errors;
+
+    public Error getSingleError() {
+        if (errors.size() != 1) {
+            throw new IllegalStateException("Multiple errors found");
+        } else {
+            return errors.iterator().next();
+        }
+    }
+
+    @NoArgsConstructor
+    @Getter
+    @Setter
+    public static class Error {
+
+        private String developerMessage;
+        private List<ErrorMessageArg> args;
+    }
+
+    @NoArgsConstructor
+    @Getter
+    @Setter
+    public static class ErrorMessageArg {
+
+        private Object value;
+    }
 }

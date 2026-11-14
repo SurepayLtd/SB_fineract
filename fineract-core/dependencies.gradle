@@ -23,16 +23,16 @@ dependencies {
     // Note that we never use 'api', because Fineract at least currently is a simple monolithic application ("WAR"), not a library.
     // We also (normally should have) no need to ever use 'compileOnly'.
 
-    implementation(
-            project(path: ':fineract-avro-schemas')
-            )
+    implementation(project(path: ':fineract-avro-schemas'))
+    implementation(project(path: ':fineract-command'))
+    implementation(project(path: ':fineract-validation'))
+
 
     // implementation dependencies are directly used (compiled against) in src/main (and src/test)
     implementation(
-            'org.springframework.boot:spring-boot-starter-web',
+            'org.springframework.boot:spring-boot-starter-webmvc',
             'org.springframework.boot:spring-boot-starter-security',
             'org.springframework.boot:spring-boot-starter-validation',
-            'org.springframework.boot:spring-boot-starter-batch',
             'org.springframework.batch:spring-batch-integration',
             'jakarta.ws.rs:jakarta.ws.rs-api',
             'org.glassfish.jersey.media:jersey-media-multipart',
@@ -45,7 +45,6 @@ dependencies {
 
             'com.jayway.jsonpath:json-path',
 
-            'com.github.spotbugs:spotbugs-annotations',
             'io.swagger.core.v3:swagger-annotations-jakarta',
 
             'com.squareup.retrofit2:converter-gson',
@@ -53,7 +52,7 @@ dependencies {
             'org.springdoc:springdoc-openapi-starter-webmvc-ui',
             'org.mapstruct:mapstruct',
 
-            'io.github.resilience4j:resilience4j-spring-boot3',
+            'io.github.resilience4j:resilience4j-spring-boot4',
             'org.apache.httpcomponents:httpcore',
             )
     implementation ('org.springframework.boot:spring-boot-starter-data-jpa') {
@@ -86,13 +85,13 @@ dependencies {
 
     // runtimeOnly dependencies are things that Fineract code has no direct compile time dependency on, but which must be present at run-time
     runtimeOnly(
-            'org.apache.bval:org.apache.bval.bundle',
 
             // Although fineract (at the time of writing) doesn't have any compile time dep. on httpclient,
             // it's useful to have this for the Spring Boot TestRestTemplate http://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#boot-features-rest-templates-test-utility
             'org.apache.httpcomponents:httpclient'
             )
 
+    compileOnly 'com.github.spotbugs:spotbugs-annotations'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.mapstruct:mapstruct-processor'
@@ -123,7 +122,6 @@ dependencies {
     implementation ('org.quartz-scheduler:quartz') {
         exclude group: 'com.zaxxer', module: 'HikariCP-java7'
     }
-    testImplementation ('org.mockito:mockito-inline')
     implementation('org.apache.avro:avro')
     implementation(
             project(path: ':fineract-avro-schemas')

@@ -33,7 +33,6 @@ public class ClientApiConstants {
     public static final String CLIENT_CHARGE_ACTION_DELETE = "DELETE";
     public static final String CLIENT_CHARGE_ACTION_WAIVE = "WAIVE";
     public static final String CLIENT_CHARGE_ACTION_PAY = "PAY";
-    public static final String CLIENT_CHARGE_ACTION_INACTIVATE = "INACTIVATE";
 
     // Client charge associations and query parameters
     public static final String CLIENT_CHARGE_QUERY_PARAM_STATUS = "chargeStatus";
@@ -49,7 +48,6 @@ public class ClientApiConstants {
     // Commands
     public static final String CLIENT_CHARGE_COMMAND_WAIVE_CHARGE = "waive";
     public static final String CLIENT_CHARGE_COMMAND_PAY_CHARGE = "paycharge";
-    public static final String CLIENT_CHARGE_COMMAND_INACTIVATE_CHARGE = "inactivate";
     public static final String CLIENT_TRANSACTION_COMMAND_UNDO = "undo";
 
     public static final String ACTIVATE_MOMO_PAYMENT_COMMAND = "activateMomoPayment";
@@ -200,7 +198,7 @@ public class ClientApiConstants {
     public static final String clientEntityName = "clients";
 
     public static final Set<String> CLIENT_ACCOUNTS_DATA_PARAMETERS = new HashSet<>(
-            Arrays.asList("loanAccounts", "savingsAccounts", "shareAccounts"));
+            Arrays.asList("loanAccounts", "savingsAccounts", "shareAccounts", "workingCapitalLoanAccounts"));
 
     public static final Set<String> SMS_TRIGGER_FIELDS = new HashSet<>(Arrays.asList(
             firstnameParamName, lastnameParamName, emailAddressParamName,
@@ -217,7 +215,7 @@ public class ClientApiConstants {
             officeNameParamName, transferToOfficeIdParamName, transferToOfficeNameParamName, hierarchyParamName, imageIdParamName,
             imagePresentParamName, staffIdParamName, staffNameParamName, timelineParamName, groupsParamName, officeOptionsParamName,
             staffOptionsParamName, dateOfBirthParamName, genderParamName, clientTypeParamName, clientClassificationParamName,
-            legalFormParamName, clientNonPersonDetailsParamName, isStaffParamName, ninNoParamName, cardNoParamName));
+            legalFormParamName, clientNonPersonDetailsParamName, isStaffParamName, legalFormParamName, ninNoParamName, cardNoParamName));
 
     protected static final Set<String> CLIENT_CHARGES_RESPONSE_DATA_PARAMETERS = new HashSet<>(Arrays.asList(chargeIdParamName,
             clientIdParamName, chargeNameParamName, penaltyParamName, chargeTimeTypeParamName, dueAsOfDateParamName,

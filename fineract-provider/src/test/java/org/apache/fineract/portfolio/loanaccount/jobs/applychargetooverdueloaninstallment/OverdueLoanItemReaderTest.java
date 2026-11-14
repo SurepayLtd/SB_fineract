@@ -23,8 +23,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.JobInstance;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.step.StepExecution;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,7 +46,7 @@ public class OverdueLoanItemReaderTest {
 
         reader = new OverdueLoanItemReader(readService, configurationDomainService, PAGE_SIZE);
 
-        StepExecution stepExecution = new StepExecution(ExecuteBatchJobConstant.APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT_WORKER_STEP, new JobExecution(1L));
+        StepExecution stepExecution = new StepExecution(ExecuteBatchJobConstant.APPLY_CHARGE_TO_OVERDUE_LOAN_INSTALLMENT_WORKER_STEP, new JobExecution(1L, new JobInstance(1L, "test"), new JobParameters()));
 
         stepExecution.getExecutionContext().putLong(ExecuteBatchJobConstant.MIN_ACCOUNT_KEY, 1L);
         stepExecution.getExecutionContext().putLong(ExecuteBatchJobConstant.MAX_ACCOUNT_KEY, 100L);

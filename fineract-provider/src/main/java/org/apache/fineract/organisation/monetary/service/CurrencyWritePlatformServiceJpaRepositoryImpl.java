@@ -20,53 +20,36 @@ package org.apache.fineract.organisation.monetary.service;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
-import org.apache.fineract.infrastructure.core.api.JsonCommand;
-import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
-import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
-import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.organisation.monetary.data.CurrencyUpdateRequest;
+import org.apache.fineract.organisation.monetary.data.CurrencyUpdateResponse;
 import org.apache.fineract.organisation.monetary.domain.ApplicationCurrency;
 import org.apache.fineract.organisation.monetary.domain.ApplicationCurrencyRepositoryWrapper;
 import org.apache.fineract.organisation.monetary.domain.OrganisationCurrency;
 import org.apache.fineract.organisation.monetary.domain.OrganisationCurrencyRepository;
 import org.apache.fineract.organisation.monetary.exception.CurrencyInUseException;
-import org.apache.fineract.organisation.monetary.serialization.CurrencyCommandFromApiJsonDeserializer;
-import org.apache.fineract.portfolio.charge.service.ChargeReadPlatformService;
-import org.apache.fineract.portfolio.loanproduct.service.LoanProductReadPlatformService;
-import org.apache.fineract.portfolio.savings.service.SavingsProductReadPlatformService;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
 public class CurrencyWritePlatformServiceJpaRepositoryImpl implements CurrencyWritePlatformService {
 
-    private final PlatformSecurityContext context;
     private final ApplicationCurrencyRepositoryWrapper applicationCurrencyRepository;
     private final OrganisationCurrencyRepository organisationCurrencyRepository;
-    private final CurrencyCommandFromApiJsonDeserializer fromApiJsonDeserializer;
-    private final LoanProductReadPlatformService loanProductService;
-    private final SavingsProductReadPlatformService savingsProductService;
-    private final ChargeReadPlatformService chargeService;
+    private final JdbcTemplate jdbcTemplate;
 
     @Transactional
     @Override
-    public CommandProcessingResult updateAllowedCurrencies(final JsonCommand command) {
+    public CurrencyUpdateResponse updateAllowedCurrencies(final CurrencyUpdateRequest request) {
+        final var currencies = request.getCurrencies();
 
-        this.context.authenticatedUser();
-
-        this.fromApiJsonDeserializer.validateForUpdate(command.json());
-
-        final String[] currencies = command.arrayValueOfParameterNamed("currencies");
-
-        final Map<String, Object> changes = new LinkedHashMap<>();
         final List<String> allowedCurrencyCodes = new ArrayList<>();
         final Set<OrganisationCurrency> allowedCurrencies = new HashSet<>();
         for (final String currencyCode : currencies) {
 
-            final ApplicationCurrency currency = this.applicationCurrencyRepository.findOneWithNotFoundDetection(currencyCode);
+            final ApplicationCurrency currency = applicationCurrencyRepository.findOneWithNotFoundDetection(currencyCode);
 
             final OrganisationCurrency allowedCurrency = currency.toOrganisationCurrency();
 
@@ -74,25 +57,33 @@ public class CurrencyWritePlatformServiceJpaRepositoryImpl implements CurrencyWr
             allowedCurrencies.add(allowedCurrency);
         }
 
-        for (OrganisationCurrency priorCurrency : this.organisationCurrencyRepository.findAll()) {
+        for (OrganisationCurrency priorCurrency : organisationCurrencyRepository.findAll()) {
             if (!allowedCurrencyCodes.contains(priorCurrency.getCode())) {
-                // Check if it's safe to remove this currency.
-                if (!loanProductService.retrieveAllLoanProductsForCurrency(priorCurrency.getCode()).isEmpty()
-                        || !savingsProductService.retrieveAllForCurrency(priorCurrency.getCode()).isEmpty()
-                        || !chargeService.retrieveAllChargesForCurrency(priorCurrency.getCode()).isEmpty()) {
+                // check if it's safe to remove this currency.
+                if (isCurrencyUsedInExistingData(priorCurrency.getCode())) {
                     throw new CurrencyInUseException(priorCurrency.getCode());
                 }
             }
         }
 
-        changes.put("currencies", allowedCurrencyCodes.toArray(new String[allowedCurrencyCodes.size()]));
+        organisationCurrencyRepository.deleteAll();
+        organisationCurrencyRepository.saveAll(allowedCurrencies);
 
-        this.organisationCurrencyRepository.deleteAll();
-        this.organisationCurrencyRepository.saveAll(allowedCurrencies);
+        return CurrencyUpdateResponse.builder().currencies(allowedCurrencyCodes).build();
+    }
 
-        return new CommandProcessingResultBuilder() //
-                .withCommandId(command.commandId()) //
-                .with(changes) //
-                .build();
+    private boolean isCurrencyUsedInExistingData(final String currencyCode) {
+        return hasCurrencyUsage("m_product_loan", currencyCode) || hasCurrencyUsage("m_savings_product", currencyCode)
+                || hasCurrencyUsage("m_share_product", currencyCode) || hasCurrencyUsage("m_charge", currencyCode)
+                || hasCurrencyUsage("m_loan", currencyCode) || hasCurrencyUsage("m_savings_account", currencyCode)
+                || hasCurrencyUsage("m_share_account", currencyCode) || hasCurrencyUsage("m_client_transaction", currencyCode)
+                || hasCurrencyUsage("m_account_transfer_transaction", currencyCode)
+                || hasCurrencyUsage("m_cashier_transactions", currencyCode) || hasCurrencyUsage("acc_gl_journal_entry", currencyCode);
+    }
+
+    private boolean hasCurrencyUsage(final String tableName, final String currencyCode) {
+        final Integer usageCount = jdbcTemplate.queryForObject("select count(1) from " + tableName + " where currency_code = ?",
+                Integer.class, currencyCode);
+        return usageCount != null && usageCount > 0;
     }
 }

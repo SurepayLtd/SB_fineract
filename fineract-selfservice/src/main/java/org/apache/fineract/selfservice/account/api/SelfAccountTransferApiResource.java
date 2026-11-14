@@ -24,6 +24,9 @@ import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.fineract.portfolio.account.data.AccountTransferData;
+import org.apache.fineract.portfolio.account.data.request.AccountTransferRequest;
+import org.apache.fineract.portfolio.account.data.request.AccountTransSearchParam;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
@@ -91,7 +94,7 @@ public class SelfAccountTransferApiResource {
               + " to the authenticated self-service user's own accounts.\n\n"
               + "Example Requests:\n\n"
               + "self/accounttransfers/template?fromAccountId=1&fromAccountType=2")
-  public String template(
+  public AccountTransferData template(
       @QueryParam("fromOfficeId") final Long fromOfficeId,
       @QueryParam("fromClientId") final Long fromClientId,
       @QueryParam("fromAccountId") final Long fromAccountId,
@@ -111,15 +114,15 @@ public class SelfAccountTransferApiResource {
     }
 
     return accountTransfersApiResource.template(
-        fromOfficeId,
-        fromClientId,
-        fromAccountId,
-        fromAccountType,
-        toOfficeId,
-        toClientId,
-        toAccountId,
-        toAccountType,
-        uriInfo);
+        new AccountTransSearchParam(
+            fromOfficeId,
+            fromClientId,
+            fromAccountId,
+            fromAccountType,
+            toOfficeId,
+            toClientId,
+            toAccountId,
+            toAccountType));
   }
 
   @POST
@@ -131,11 +134,12 @@ public class SelfAccountTransferApiResource {
           "Ability to create a new transfer of monetary funds between the authenticated"
               + " self-service user's own accounts (e.g. paying a loan from a linked savings"
               + " account).")
-  public String create(
+  public CommandProcessingResult create(
       @DefaultValue("self") @QueryParam("type") final String type,
       final String apiRequestBodyAsJson) {
     selfAccountTransferDataValidator.validateCreate(type, apiRequestBodyAsJson);
-    return accountTransfersApiResource.create(apiRequestBodyAsJson);
+    return accountTransfersApiResource.create(
+        new Gson().fromJson(apiRequestBodyAsJson, AccountTransferRequest.class));
   }
 
   private void validateAccountOwnership(

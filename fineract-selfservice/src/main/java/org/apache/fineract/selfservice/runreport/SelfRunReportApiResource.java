@@ -149,7 +149,7 @@ public class SelfRunReportApiResource {
     }
 
     return this.runreportsApiResource.runReport(
-        reportName, new UriInfoWithQueryParams(uriInfo, qp), true);
+        reportName, new UriInfoWithQueryParams(uriInfo, qp));
   }
 
   /** Minimal UriInfo wrapper overriding query parameters only. */

@@ -29,6 +29,7 @@ final class SelfLoansApiResourceSwagger {
 
     private GetSelfLoansLoanIdResponse() {}
 
+    @Schema(name = "SelfGetLoansLoanIdStatus")
     static final class GetLoansLoanIdStatus {
 
       private GetLoansLoanIdStatus() {}
@@ -67,6 +68,7 @@ final class SelfLoansApiResourceSwagger {
       public Boolean overpaid;
     }
 
+    @Schema(name = "SelfGetLoansLoanIdLoanType")
     static final class GetLoansLoanIdLoanType {
 
       private GetLoansLoanIdLoanType() {}
@@ -81,6 +83,7 @@ final class SelfLoansApiResourceSwagger {
       public String description;
     }
 
+    @Schema(name = "SelfGetLoansLoanIdCurrency")
     static final class GetLoansLoanIdCurrency {
 
       private GetLoansLoanIdCurrency() {}
@@ -104,6 +107,7 @@ final class SelfLoansApiResourceSwagger {
       public String displayLabel;
     }
 
+    @Schema(name = "SelfGetLoansLoanIdTermPeriodFrequencyType")
     static final class GetLoansLoanIdTermPeriodFrequencyType {
 
       private GetLoansLoanIdTermPeriodFrequencyType() {}
@@ -118,6 +122,7 @@ final class SelfLoansApiResourceSwagger {
       public String description;
     }
 
+    @Schema(name = "SelfGetLoansLoanIdRepaymentFrequencyType")
     static final class GetLoansLoanIdRepaymentFrequencyType {
 
       private GetLoansLoanIdRepaymentFrequencyType() {}
@@ -132,6 +137,7 @@ final class SelfLoansApiResourceSwagger {
       public String description;
     }
 
+    @Schema(name = "SelfGetLoansLoanIdInterestRateFrequencyType")
     static final class GetLoansLoanIdInterestRateFrequencyType {
 
       private GetLoansLoanIdInterestRateFrequencyType() {}
@@ -146,6 +152,7 @@ final class SelfLoansApiResourceSwagger {
       public String description;
     }
 
+    @Schema(name = "SelfGetLoansLoanIdAmortizationType")
     static final class GetLoansLoanIdAmortizationType {
 
       private GetLoansLoanIdAmortizationType() {}
@@ -160,6 +167,7 @@ final class SelfLoansApiResourceSwagger {
       public String description;
     }
 
+    @Schema(name = "SelfGetLoansLoanIdInterestType")
     static final class GetLoansLoanIdInterestType {
 
       private GetLoansLoanIdInterestType() {}
@@ -174,6 +182,7 @@ final class SelfLoansApiResourceSwagger {
       public String description;
     }
 
+    @Schema(name = "SelfGetLoansLoanIdInterestCalculationPeriodType")
     static final class GetLoansLoanIdInterestCalculationPeriodType {
 
       private GetLoansLoanIdInterestCalculationPeriodType() {}
@@ -247,6 +256,7 @@ final class SelfLoansApiResourceSwagger {
         private GetLoansLoanIdEmiVariations() {}
       }
 
+      @Schema(name = "SelfGetLoansLoanIdLinkedAccount")
       static final class GetLoansLoanIdLinkedAccount {
 
         private GetLoansLoanIdLinkedAccount() {}
@@ -258,6 +268,7 @@ final class SelfLoansApiResourceSwagger {
         public String accountNo;
       }
 
+      @Schema(name = "SelfGetLoansLoanIdDisbursementDetails")
       static final class GetLoansLoanIdDisbursementDetails {
 
         private GetLoansLoanIdDisbursementDetails() {}
@@ -299,10 +310,12 @@ final class SelfLoansApiResourceSwagger {
         public String note;
       }
 
+      @Schema(name = "SelfGetLoansLoanIdOverdueCharges")
       static final class GetLoansLoanIdOverdueCharges {
 
         private GetLoansLoanIdOverdueCharges() {}
 
+        @Schema(name = "SelfGetLoansLoanIdChargeTimeType")
         static final class GetLoansLoanIdChargeTimeType {
 
           private GetLoansLoanIdChargeTimeType() {}
@@ -317,6 +330,7 @@ final class SelfLoansApiResourceSwagger {
           public String description;
         }
 
+        @Schema(name = "SelfGetLoansLoanIdChargeCalculationType")
         static final class GetLoansLoanIdChargeCalculationType {
 
           private GetLoansLoanIdChargeCalculationType() {}
@@ -331,6 +345,7 @@ final class SelfLoansApiResourceSwagger {
           public String description;
         }
 
+        @Schema(name = "SelfGetLoansLoanIdChargePaymentMode")
         static final class GetLoansLoanIdChargePaymentMode {
 
           private GetLoansLoanIdChargePaymentMode() {}
@@ -345,6 +360,7 @@ final class SelfLoansApiResourceSwagger {
           public String description;
         }
 
+        @Schema(name = "SelfGetLoansLoanIdFeeFrequency")
         static final class GetLoansLoanIdFeeFrequency {
 
           private GetLoansLoanIdFeeFrequency() {}
@@ -359,6 +375,7 @@ final class SelfLoansApiResourceSwagger {
           public String description;
         }
 
+        @Schema(name = "SelfGetLoanCurrency")
         static final class GetLoanCurrency {
 
           private GetLoanCurrency() {}
@@ -382,6 +399,7 @@ final class SelfLoansApiResourceSwagger {
           public String displayLabel;
         }
 
+        @Schema(name = "SelfGetLoanChargeTemplateChargeAppliesTo")
         static final class GetLoanChargeTemplateChargeAppliesTo {
 
           private GetLoanChargeTemplateChargeAppliesTo() {}

@@ -19,14 +19,19 @@
 package org.apache.fineract.infrastructure.jobs.service;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.apache.fineract.infrastructure.businessdate.service.BusinessDateReadPlatformService;
+import org.apache.fineract.infrastructure.core.domain.FineractPlatformTenant;
+import org.apache.fineract.infrastructure.core.service.tenant.TenantDetailsService;
 import org.apache.fineract.infrastructure.jobs.data.JobParameterDTO;
 import org.apache.fineract.infrastructure.jobs.domain.JobParameter;
 import org.apache.fineract.infrastructure.jobs.domain.JobParameterRepository;
@@ -34,6 +39,8 @@ import org.apache.fineract.infrastructure.jobs.domain.ScheduledJobDetail;
 import org.apache.fineract.infrastructure.jobs.service.jobname.JobNameData;
 import org.apache.fineract.infrastructure.jobs.service.jobname.JobNameService;
 import org.apache.fineract.infrastructure.jobs.service.jobparameterprovider.JobParameterProvider;
+import org.apache.fineract.useradministration.domain.AppUser;
+import org.apache.fineract.useradministration.domain.AppUserRepositoryWrapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,31 +55,38 @@ import org.mockito.quality.Strictness;
 import org.quartz.JobExecutionException;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersIncrementer;
-import org.springframework.batch.core.JobParametersInvalidException;
-import org.springframework.batch.core.explore.JobExplorer;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.InvalidJobParametersException;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.launch.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.launch.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.batch.core.launch.JobRestartException;
+import org.springframework.batch.core.repository.JobRepository;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class JobStarterTest {
 
     @Mock
-    private JobExplorer jobExplorer;
+    private JobRepository jobRepository;
     @Mock
-    private JobLauncher jobLauncher;
+    private JobOperator jobOperator;
     @Mock
     private JobParameterRepository jobParameterRepository;
     @Mock
     private List<JobParameterProvider<?>> jobParameterProviders;
     @Mock
     private JobNameService jobNameService;
+
+    @Mock
+    private TenantDetailsService tenantDetailsService;
+    @Mock
+    private AppUserRepositoryWrapper userRepository;
+    @Mock
+    private BusinessDateReadPlatformService businessDateReadPlatformService;
+
     @Captor
     private ArgumentCaptor<Set<JobParameterDTO>> jobParameterDTOCaptor;
 
@@ -85,8 +99,8 @@ public class JobStarterTest {
         when(scheduledJobDetail.getId()).thenReturn(1L);
         when(jobParameterRepository.findJobParametersByJobId(1L))
                 .thenReturn(List.of(new JobParameter().setJobId(1L).setParameterName("testParamKey").setParameterValue("testParamValue")));
-        Map<String, org.springframework.batch.core.JobParameter<?>> result = underTest.getJobParameter(scheduledJobDetail);
-        Assertions.assertEquals("testParamValue", result.get("testParamKey").getValue());
+        Map<String, org.springframework.batch.core.job.parameters.JobParameter<?>> result = underTest.getJobParameter(scheduledJobDetail);
+        Assertions.assertEquals("testParamValue", result.get("testParamKey").value());
     }
 
     @Test
@@ -100,19 +114,19 @@ public class JobStarterTest {
 
     @Test
     public void runWithComplete() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException,
-            JobParametersInvalidException, JobRestartException, JobExecutionException {
+            InvalidJobParametersException, JobRestartException, JobExecutionException {
         JobExecution jobExecution = Mockito.mock(JobExecution.class);
         Job job = Mockito.mock(Job.class);
         ScheduledJobDetail scheduledJobDetail = Mockito.mock(ScheduledJobDetail.class);
         when(jobExecution.getStatus()).thenReturn(BatchStatus.COMPLETED);
         setupMocks(jobExecution, job, scheduledJobDetail);
-        JobExecution result = underTest.run(job, scheduledJobDetail, Set.of());
+        JobExecution result = underTest.run(job, scheduledJobDetail, Set.of(), "default");
         Assertions.assertEquals(jobExecution, result);
     }
 
     @Test
     public void runWithFailed() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException,
-            JobParametersInvalidException, JobRestartException, JobExecutionException {
+            InvalidJobParametersException, JobRestartException, JobExecutionException {
         JobExecution jobExecution = Mockito.mock(JobExecution.class);
         Job job = Mockito.mock(Job.class);
         ScheduledJobDetail scheduledJobDetail = Mockito.mock(ScheduledJobDetail.class);
@@ -122,23 +136,27 @@ public class JobStarterTest {
             when(jobExecution.getStatus()).thenReturn(BatchStatus.FAILED);
             when(jobExecution.getExitStatus()).thenReturn(new ExitStatus(failedStatus.name(), "testException"));
             JobExecutionException exception = Assertions.assertThrows(JobExecutionException.class,
-                    () -> underTest.run(job, scheduledJobDetail, Set.of()));
-            Assertions.assertEquals(String.format("exitCode=%s;exitDescription=%s", failedStatus.name(), "testException"),
+                    () -> underTest.run(job, scheduledJobDetail, Set.of(), "default"));
+            Assertions.assertEquals(
+                    String.format("exitCode=%s;exitDescription=%s;exitException=null", failedStatus.name(), "testException"),
                     exception.getMessage());
         }
     }
 
-    private void setupMocks(JobExecution jobExecution, Job job, ScheduledJobDetail scheduledJobDetail) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+    private void setupMocks(JobExecution jobExecution, Job job, ScheduledJobDetail scheduledJobDetail) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, InvalidJobParametersException, JobRestartException {
         when(scheduledJobDetail.getId()).thenReturn(1L);
         when(scheduledJobDetail.getJobName()).thenReturn("testJobName");
         when(jobParameterRepository.findJobParametersByJobId(1L)).thenReturn(List.of(new JobParameter().setJobId(1L).setParameterName("testParamKey").setParameterValue("testParamValue")));
-        when(jobLauncher.run(any(Job.class), any(JobParameters.class))).thenReturn(jobExecution);
-        JobParametersIncrementer jobParametersIncrementer = Mockito.mock(JobParametersIncrementer.class);
-        when(jobParametersIncrementer.getNext(any(JobParameters.class))).thenReturn(new JobParameters());
-        when(job.getJobParametersIncrementer()).thenReturn(jobParametersIncrementer);
+        when(jobOperator.start(any(Job.class), any(JobParameters.class))).thenReturn(jobExecution);
         JobParameterProvider<?> jobParameterProvider = Mockito.mock(JobParameterProvider.class);
         when(jobParameterProvider.canProvideParametersForJob("testJobName")).thenReturn(true);
         when(jobParameterProviders.stream()).thenReturn(Stream.of(jobParameterProvider));
         when(jobNameService.getJobByHumanReadableName(any(String.class))).thenReturn(new JobNameData("testEnumstyleName", "testHumanReadableName"));
+        when(tenantDetailsService.loadTenantById(anyString())).thenReturn(FineractPlatformTenant.builder().build());
+        AppUser appUser = Mockito.mock(AppUser.class);
+        when(appUser.getPassword()).thenReturn("");
+        when(appUser.getAuthorities()).thenReturn(List.of());
+        when(userRepository.fetchSystemUser()).thenReturn(appUser);
+        when(businessDateReadPlatformService.getBusinessDates()).thenReturn(new HashMap<>());
     }
 }

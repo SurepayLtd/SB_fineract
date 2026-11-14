@@ -18,16 +18,14 @@
  */
 package org.apache.fineract.infrastructure.documentmanagement.service;
 
-import java.io.InputStream;
-import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
-import org.apache.fineract.infrastructure.core.domain.Base64EncodedImage;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.apache.fineract.infrastructure.documentmanagement.data.ImageCreateRequest;
+import org.apache.fineract.infrastructure.documentmanagement.data.ImageCreateResponse;
+import org.apache.fineract.infrastructure.documentmanagement.data.ImageDeleteRequest;
+import org.apache.fineract.infrastructure.documentmanagement.data.ImageDeleteResponse;
 
 public interface ImageWritePlatformService {
 
-    CommandProcessingResult saveOrUpdateImage(String entityName, Long entityId, String imageName, InputStream inputStream, Long fileSize);
+    ImageCreateResponse createImage(ImageCreateRequest request);
 
-    CommandProcessingResult saveOrUpdateImage(String entityName, Long entityId, Base64EncodedImage encodedImage);
-
-    CommandProcessingResult deleteImage(String entityName, Long entityId);
+    ImageDeleteResponse deleteImage(ImageDeleteRequest request);
 }

@@ -24,7 +24,11 @@ public final class AppUserConstants {
 
     }
 
+    public static final String PASSWORD = "password";
+    public static final String REPEAT_PASSWORD = "repeatPassword";
     public static final String PASSWORD_NEVER_EXPIRES = "passwordNeverExpires";
+    public static final String IS_LOGIN_RETRIES_ENABLED = "isLoginRetriesEnabled";
+    public static final String IS_PASSWORD_RESET_ALLOWED = "isPasswordResetAllowed";
     public static final String IS_SELF_SERVICE_USER = "isSelfServiceUser";
     public static final String CLIENTS = "clients";
     public static final String BYPASS_TWO_FACTOR = "bypassTwoFactor";

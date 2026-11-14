@@ -61,7 +61,8 @@ public class CommandWrapperBuilderSelfService {
         this.organisationCreditBureauId,
         this.jobName,
         this.idempotencyKey,
-        this.loanExternalId);
+        this.loanExternalId,
+        this.sanitizeJsonKeys);
   }
 
   public CommandWrapper build(String idempotencyKey) {
@@ -84,7 +85,8 @@ public class CommandWrapperBuilderSelfService {
         this.organisationCreditBureauId,
         this.jobName,
         idempotencyKey,
-        this.loanExternalId);
+        this.loanExternalId,
+        this.sanitizeJsonKeys);
   }
 
   public CommandWrapperBuilderSelfService addSelfServiceBeneficiaryTPT() {

@@ -20,7 +20,10 @@ package org.apache.fineract.useradministration.data;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.fineract.organisation.office.data.OfficeData;
 import org.apache.fineract.organisation.staff.data.StaffData;
 import org.apache.fineract.portfolio.client.data.ClientData;
@@ -30,7 +33,11 @@ import org.apache.fineract.portfolio.client.data.ClientData;
  */
 public final class AppUserData {
 
+    // Getters so Jackson can write the "appUsers" of the audit and maker-checker search templates, which return
+    // AuditSearchData directly instead of going through the Gson based serializer.
+    @Getter
     private final Long id;
+    @Getter
     private final String username;
     private final Long officeId;
     private final String officeName;
@@ -44,6 +51,7 @@ public final class AppUserData {
     private List<Long> roles;
     private Boolean sendPasswordToEmail;
     private Long staffId;
+    @Getter
     private transient Integer rowIndex;
 
     @SuppressWarnings("unused")
@@ -55,6 +63,7 @@ public final class AppUserData {
     private final Boolean isSelfServiceUser;
     private final Boolean bypassTwoFactor;
 
+    @Setter
     @SuppressWarnings("unused")
     private Set<ClientData> clients;
 
@@ -89,10 +98,6 @@ public final class AppUserData {
         this.accountNonLocked = null;
     }
 
-    public Integer getRowIndex() {
-        return rowIndex;
-    }
-
     public static AppUserData template(final AppUserData user, final Collection<OfficeData> officesForDropdown) {
         return new AppUserData(user.id, user.username, user.email, user.officeId, user.officeName, user.firstname, user.lastname,
                 user.availableRoles, user.selfServiceRoles, user.selectedRoles, officesForDropdown, user.staff, user.passwordNeverExpires,
@@ -101,7 +106,12 @@ public final class AppUserData {
 
     public static AppUserData template(final Collection<OfficeData> offices, final Collection<RoleData> availableRoles,
             final Collection<RoleData> selfServiceRoles) {
-        return new AppUserData(null, null, null, null, null, null, null, availableRoles, selfServiceRoles, null, offices, null, null, null, null, null);
+        return new AppUserData(null, null, null, null, null, null, null, availableRoles, selfServiceRoles, null, offices, null, null, null,
+                null, null);
+    }
+
+    public static AppUserData template(final Collection<OfficeData> offices, final Collection<RoleData> availableRoles) {
+        return template(offices, availableRoles, null);
     }
 
     public static AppUserData dropdown(final Long id, final String username) {
@@ -111,9 +121,17 @@ public final class AppUserData {
     public static AppUserData instance(final Long id, final String username, final String email, final Long officeId,
             final String officeName, final String firstname, final String lastname, final Collection<RoleData> availableRoles,
             final Collection<RoleData> selfServiceRoles, final Collection<RoleData> selectedRoles, final StaffData staff,
-            final Boolean passwordNeverExpire, final Boolean isSelfServiceUser, final Boolean bypassTwoFactor, final Boolean accountNonLocked) {
+            final Boolean passwordNeverExpire, final Boolean isSelfServiceUser, final Boolean bypassTwoFactor,
+            final Boolean accountNonLocked) {
         return new AppUserData(id, username, email, officeId, officeName, firstname, lastname, availableRoles, selfServiceRoles,
                 selectedRoles, null, staff, passwordNeverExpire, isSelfServiceUser, bypassTwoFactor, accountNonLocked);
+    }
+
+    public static AppUserData instance(final Long id, final String username, final String email, final Long officeId,
+            final String officeName, final String firstname, final String lastname, final Collection<RoleData> availableRoles,
+            final Collection<RoleData> selectedRoles, final StaffData staff, final Boolean passwordNeverExpire) {
+        return instance(id, username, email, officeId, officeName, firstname, lastname, availableRoles, null, selectedRoles, staff,
+                passwordNeverExpire, null, null, null);
     }
 
     private AppUserData(final Long id, final String username, final String email, final Long officeId, final String officeName,
@@ -152,17 +170,11 @@ public final class AppUserData {
         if (this == o) {
             return true;
         }
-        if (o == null || !(o instanceof AppUserData)) {
+        if (!(o instanceof AppUserData that)) {
             return false;
         }
 
-        AppUserData that = (AppUserData) o;
-
-        if (id != null ? !id.equals(that.id) : that.id != null) {
-            return false;
-        }
-
-        return true;
+        return Objects.equals(id, that.id);
     }
 
     @Override
@@ -170,12 +182,5 @@ public final class AppUserData {
         return id != null ? id.hashCode() : 0;
     }
 
-    public void setClients(Set<ClientData> clients) {
-        this.clients = clients;
-    }
-
-    public boolean isSelfServiceUser() {
-        return this.isSelfServiceUser == null ? false : this.isSelfServiceUser;
-    }
 
 }

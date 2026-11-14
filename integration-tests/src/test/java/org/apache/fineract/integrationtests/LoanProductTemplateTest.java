@@ -21,17 +21,18 @@ package org.apache.fineract.integrationtests;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.fineract.client.models.GetLoanProductsTemplateResponse;
-import org.apache.fineract.integrationtests.common.loans.LoanProductHelper;
+import org.apache.fineract.integrationtests.client.feign.helpers.FeignLoanHelper;
+import org.apache.fineract.integrationtests.common.FineractFeignClientHelper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 public class LoanProductTemplateTest {
 
-    private static LoanProductHelper loanProductHelper;
+    private static FeignLoanHelper loanProductHelper;
 
     @BeforeAll
     public static void setup() {
-        loanProductHelper = new LoanProductHelper();
+        loanProductHelper = new FeignLoanHelper(FineractFeignClientHelper.getFineractFeignClient());
     }
 
     @Test
@@ -93,9 +94,13 @@ public class LoanProductTemplateTest {
                 loanProductsTemplateResponse.getAdvancedPaymentAllocationFutureInstallmentAllocationRules().get(1).getCode());
         assertEquals("Last installment",
                 loanProductsTemplateResponse.getAdvancedPaymentAllocationFutureInstallmentAllocationRules().get(1).getValue());
-        assertEquals("REAMORTIZATION",
+        assertEquals("NEXT_LAST_INSTALLMENT",
                 loanProductsTemplateResponse.getAdvancedPaymentAllocationFutureInstallmentAllocationRules().get(2).getCode());
-        assertEquals("Reamortization",
+        assertEquals("Next/Last installment",
                 loanProductsTemplateResponse.getAdvancedPaymentAllocationFutureInstallmentAllocationRules().get(2).getValue());
+        assertEquals("REAMORTIZATION",
+                loanProductsTemplateResponse.getAdvancedPaymentAllocationFutureInstallmentAllocationRules().get(3).getCode());
+        assertEquals("Reamortization",
+                loanProductsTemplateResponse.getAdvancedPaymentAllocationFutureInstallmentAllocationRules().get(3).getValue());
     }
 }

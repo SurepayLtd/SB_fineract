@@ -18,15 +18,14 @@
  */
 package org.apache.fineract.cob.loan;
 
-import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.google.common.base.Splitter;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.cucumber.java8.En;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -36,39 +35,37 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.fineract.cob.common.CustomJobParameterResolver;
-import org.apache.fineract.cob.data.LoanCOBParameter;
-import org.apache.fineract.cob.domain.LoanAccountLock;
+import org.apache.fineract.cob.data.COBParameter;
 import org.apache.fineract.cob.domain.LockOwner;
-import org.apache.fineract.cob.exceptions.LoanReadException;
+import org.apache.fineract.cob.domain.LockingService;
+import org.apache.fineract.cob.service.BeforeStepLockingItemReaderHelper;
+import org.apache.fineract.cob.service.RetrieveIdService;
 import org.apache.fineract.infrastructure.businessdate.domain.BusinessDateType;
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
-import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepository;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.JobInstance;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 
-@SuppressFBWarnings(value = "RV_EXCEPTION_NOT_THROWN", justification = "False positive")
 public class LoanItemReaderStepDefinitions implements En {
 
     private LoanRepository loanRepository = mock(LoanRepository.class);
 
-    private RetrieveLoanIdService retrieveLoanIdService = mock(RetrieveLoanIdService.class);
+    private RetrieveIdService retrieveIdService = mock(RetrieveIdService.class);
 
     private CustomJobParameterResolver customJobParameterResolver = mock(CustomJobParameterResolver.class);
 
-    private LoanLockingService lockingService = mock(LoanLockingService.class);
+    private LockingService lockingService = mock(LockingService.class);
 
-    private LoanItemReader loanItemReader = new LoanItemReader(loanRepository, retrieveLoanIdService, customJobParameterResolver,
-            lockingService);
+    private LoanItemReader loanItemReader = new LoanItemReader(new BeforeStepLockingItemReaderHelper(retrieveIdService, lockingService));
 
-    private Loan loan = mock(Loan.class);
-
-    private Loan resultItem;
+    private Long resultItem;
 
     public LoanItemReaderStepDefinitions() {
         Given("/^The LoanItemReader.read method with loanIds (.*)$/", (String loanIds) -> {
-            JobExecution jobExecution = new JobExecution(1L);
+            JobExecution jobExecution = new JobExecution(1L, new JobInstance(1L, "test"), new JobParameters());
             ExecutionContext jobExecutionContext = new ExecutionContext();
             jobExecution.setExecutionContext(jobExecutionContext);
             StepExecution stepExecution = new StepExecution("test", jobExecution);
@@ -82,12 +79,12 @@ public class LoanItemReaderStepDefinitions implements En {
                 minLoanId = splitAccounts.get(0);
                 maxLoanId = splitAccounts.get(splitAccounts.size() - 1);
             }
-            LoanCOBParameter loanCOBParameter = new LoanCOBParameter(minLoanId, maxLoanId);
-            stepExecutionContext.put(LoanCOBConstant.LOAN_COB_PARAMETER, loanCOBParameter);
+            COBParameter loanCOBParameter = new COBParameter(minLoanId, maxLoanId);
+            stepExecutionContext.put(LoanCOBConstant.COB_PARAMETER, loanCOBParameter);
             stepExecution.setExecutionContext(stepExecutionContext);
 
             lenient().when(
-                    this.retrieveLoanIdService.retrieveAllNonClosedLoansByLastClosedBusinessDateAndMinAndMaxLoanId(loanCOBParameter, false))
+                    this.retrieveIdService.retrieveAllNonClosedLoansByLastClosedBusinessDateAndMinAndMaxLoanId(loanCOBParameter, false))
                     .thenReturn(splitAccounts);
 
             HashMap<BusinessDateType, LocalDate> businessDates = new HashMap<>();
@@ -95,21 +92,17 @@ public class LoanItemReaderStepDefinitions implements En {
             businessDates.put(BusinessDateType.BUSINESS_DATE, businessDate);
             businessDates.put(BusinessDateType.COB_DATE, businessDate.minusDays(1));
             ThreadLocalContextUtil.setBusinessDates(businessDates);
-            LoanAccountLock loanAccountLock = new LoanAccountLock(1L, LockOwner.LOAN_COB_CHUNK_PROCESSING, businessDate.minusDays(1));
-            LoanAccountLock loanAccountLockNegativeNumberTest = new LoanAccountLock(-1L, LockOwner.LOAN_COB_CHUNK_PROCESSING,
-                    businessDate.minusDays(1));
+            Long loanAccountLock = 1L;
+            Long loanAccountLockNegativeNumberTest = -1L;
             lenient().when(customJobParameterResolver.getCustomJobParameterSet(any())).thenReturn(Optional.empty());
-            lenient().when(lockingService.findAllByLoanIdInAndLockOwner(List.of(1L), LockOwner.LOAN_COB_CHUNK_PROCESSING))
+            lenient().when(lockingService.findLockIdsByLoanIdInAndLockOwner(List.of(1L), LockOwner.LOAN_COB_CHUNK_PROCESSING))
                     .thenReturn(List.of(loanAccountLock));
-            lenient().when(lockingService.findAllByLoanIdInAndLockOwner(List.of(1L, 2L), LockOwner.LOAN_COB_CHUNK_PROCESSING))
+            lenient().when(lockingService.findLockIdsByLoanIdInAndLockOwner(List.of(1L, 2L), LockOwner.LOAN_COB_CHUNK_PROCESSING))
                     .thenReturn(List.of(loanAccountLock));
-            lenient().when(lockingService.findAllByLoanIdInAndLockOwner(List.of(-1L), LockOwner.LOAN_COB_CHUNK_PROCESSING))
+            lenient().when(lockingService.findLockIdsByLoanIdInAndLockOwner(List.of(-1L), LockOwner.LOAN_COB_CHUNK_PROCESSING))
                     .thenReturn(List.of(loanAccountLockNegativeNumberTest));
 
             loanItemReader.beforeStep(stepExecution);
-
-            lenient().when(this.loanRepository.findById(1L)).thenReturn(Optional.of(loan));
-            lenient().when(this.loanRepository.findById(-1L)).thenThrow(new RuntimeException("fail"));
         });
 
         When("LoanItemReader.read method executed", () -> {
@@ -117,17 +110,17 @@ public class LoanItemReaderStepDefinitions implements En {
         });
 
         Then("The LoanItemReader.read result should match", () -> {
-            assertEquals(loan, resultItem);
+            assertEquals(1L, resultItem);
         });
 
         Then("The LoanItemReader.read result null", () -> {
             assertNull(resultItem);
         });
 
-        Then("throw exception LoanItemReader.read method", () -> {
-            assertThrows(LoanReadException.class, () -> {
-                resultItem = this.loanItemReader.read();
-            });
+        Then("The LoanItemReader.read returns the loan id without loading the loan", () -> {
+            assertEquals(-1L, this.loanItemReader.read());
+            // A loan that cannot be loaded must fail in the writer, where scan mode skips it alone.
+            verifyNoInteractions(loanRepository);
         });
     }
 }

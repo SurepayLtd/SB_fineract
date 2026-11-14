@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.portfolio.loanaccount.data.JobPartition;
 import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.ExecuteBatchJobConstant;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.BatchSmSReadService;
-import org.springframework.batch.core.partition.support.Partitioner;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.core.partition.Partitioner;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 
 import java.util.ArrayList;
 import java.util.List;

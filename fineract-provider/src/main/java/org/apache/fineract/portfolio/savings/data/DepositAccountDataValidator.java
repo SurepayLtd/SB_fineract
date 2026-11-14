@@ -30,6 +30,7 @@ import static org.apache.fineract.portfolio.savings.DepositsApiConstants.interes
 import static org.apache.fineract.portfolio.savings.DepositsApiConstants.interestPostingPeriodInMonthsParamName;
 import static org.apache.fineract.portfolio.savings.DepositsApiConstants.isCalendarInheritedParamName;
 import static org.apache.fineract.portfolio.savings.DepositsApiConstants.isMandatoryDepositParamName;
+import static org.apache.fineract.portfolio.savings.DepositsApiConstants.isRateChartOverriddenParamName;
 import static org.apache.fineract.portfolio.savings.DepositsApiConstants.linkedAccountParamName;
 import static org.apache.fineract.portfolio.savings.DepositsApiConstants.mandatoryRecommendedDepositAmountParamName;
 import static org.apache.fineract.portfolio.savings.DepositsApiConstants.maturityInstructionIdParamName;
@@ -306,13 +307,13 @@ public class DepositAccountDataValidator {
             isLockinPeriodFrequencyValidated = true;
             final Integer lockinPeriodFrequency = this.fromApiJsonHelper.extractIntegerWithLocaleNamed(lockinPeriodFrequencyParamName,
                     element);
-            baseDataValidator.reset().parameter(lockinPeriodFrequencyParamName).value(lockinPeriodFrequency).integerZeroOrGreater();
+            baseDataValidator.reset().parameter(lockinPeriodFrequencyParamName).value(lockinPeriodFrequency).ignoreIfNull();
 
             if (lockinPeriodFrequency != null) {
                 isLockinPeriodFrequencyTypeValidated = true;
                 final Integer lockinPeriodFrequencyType = this.fromApiJsonHelper
                         .extractIntegerSansLocaleNamed(lockinPeriodFrequencyTypeParamName, element);
-                baseDataValidator.reset().parameter(lockinPeriodFrequencyTypeParamName).value(lockinPeriodFrequencyType).notNull()
+                baseDataValidator.reset().parameter(lockinPeriodFrequencyTypeParamName).value(lockinPeriodFrequencyType).ignoreIfNull()
                         .inMinMaxRange(0, 3);
             }
         }
@@ -325,7 +326,7 @@ public class DepositAccountDataValidator {
             if (lockinPeriodFrequencyType != null && !isLockinPeriodFrequencyValidated) {
                 final Integer lockinPeriodFrequency = this.fromApiJsonHelper.extractIntegerWithLocaleNamed(lockinPeriodFrequencyParamName,
                         element);
-                baseDataValidator.reset().parameter(lockinPeriodFrequencyParamName).value(lockinPeriodFrequency).notNull()
+                baseDataValidator.reset().parameter(lockinPeriodFrequencyParamName).value(lockinPeriodFrequency).ignoreIfNull()
                         .integerZeroOrGreater();
             }
         }
@@ -562,12 +563,12 @@ public class DepositAccountDataValidator {
 
         // for recurring deposit the total deposit amount is derived from
         // recurring deposit amount * number of deposits.
-        if (depositType.isFixedDeposit()) {
+        if (depositType == DepositAccountType.FIXED_DEPOSIT) {
             final BigDecimal depositAmount = fromApiJsonHelper.extractBigDecimalWithLocaleNamed(depositAmountParamName, element);
             baseDataValidator.reset().parameter(depositAmountParamName).value(depositAmount).notNull().positiveAmount();
         }
 
-        if (depositType.isFixedDeposit() || fromApiJsonHelper.parameterExists(depositPeriodParamName, element)) {
+        if (depositType == DepositAccountType.FIXED_DEPOSIT || fromApiJsonHelper.parameterExists(depositPeriodParamName, element)) {
             final Integer depositPeriod = fromApiJsonHelper.extractIntegerSansLocaleNamed(depositPeriodParamName, element);
             baseDataValidator.reset().parameter(depositPeriodParamName).value(depositPeriod).notNull().integerGreaterThanZero();
         }
@@ -576,6 +577,8 @@ public class DepositAccountDataValidator {
                 element);
         baseDataValidator.reset().parameter(depositPeriodFrequencyIdParamName).value(depositPeriodFrequencyId)
                 .isOneOfTheseValues(SavingsPeriodFrequencyType.integerValues());
+
+        validateRateChartOverride(element, baseDataValidator, false);
     }
 
     private void validateDepositTermDeatilForUpdate(final JsonElement element, final DataValidatorBuilder baseDataValidator,
@@ -589,7 +592,7 @@ public class DepositAccountDataValidator {
 
         if (fromApiJsonHelper.parameterExists(depositPeriodParamName, element)) {
             final Integer depositPeriod = fromApiJsonHelper.extractIntegerSansLocaleNamed(depositPeriodParamName, element);
-            if (depositAccountType.isFixedDeposit()) {
+            if (depositAccountType == DepositAccountType.FIXED_DEPOSIT) {
                 baseDataValidator.reset().parameter(depositPeriodParamName).value(depositPeriod).notNull().integerGreaterThanZero();
             } else {
                 baseDataValidator.reset().parameter(depositPeriodParamName).value(depositPeriod).notNull().integerGreaterThanZero();
@@ -601,6 +604,25 @@ public class DepositAccountDataValidator {
                     element);
             baseDataValidator.reset().parameter(depositPeriodFrequencyIdParamName).value(depositPeriodFrequencyId)
                     .isOneOfTheseValues(SavingsPeriodFrequencyType.integerValues());
+        }
+
+        validateRateChartOverride(element, baseDataValidator, true);
+    }
+
+    private void validateRateChartOverride(final JsonElement element, final DataValidatorBuilder baseDataValidator,
+            final boolean isUpdate) {
+        if (fromApiJsonHelper.parameterExists(isRateChartOverriddenParamName, element)) {
+            final Boolean isRateChartOverridden = this.fromApiJsonHelper.extractBooleanNamed(isRateChartOverriddenParamName, element);
+            baseDataValidator.reset().parameter(isRateChartOverriddenParamName).value(isRateChartOverridden).notNull();
+
+            if (Boolean.TRUE.equals(isRateChartOverridden)) {
+                if (!isUpdate || fromApiJsonHelper.parameterExists(nominalAnnualInterestRateParamName, element)) {
+                    final BigDecimal nominalAnnualInterestRate = this.fromApiJsonHelper
+                            .extractBigDecimalWithLocaleNamed(nominalAnnualInterestRateParamName, element);
+                    baseDataValidator.reset().parameter(nominalAnnualInterestRateParamName).value(nominalAnnualInterestRate).notNull()
+                            .positiveAmount();
+                }
+            }
         }
     }
 

@@ -24,6 +24,7 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.apache.fineract.infrastructure.core.domain.FineractPlatformTenant;
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.portfolio.loanaccount.data.LoanTermVariationsData;
@@ -33,6 +34,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
@@ -57,10 +61,10 @@ public class ChangeOperationTest {
         ChangeOperation interestChange = createInterestRateChange("2023-10-17");
         ChangeOperation charge = createCharge("2023-10-17", "2023-10-17", "2023-10-17T10:15:30+01:00");
         ChangeOperation transaction = createTransaction("2023-10-17", "2023-10-17", "2023-10-17T10:15:30+01:00");
-        Assertions.assertTrue(interestChange.compareTo(transaction) < 0);
-        Assertions.assertTrue(interestChange.compareTo(charge) < 0);
-        Assertions.assertTrue(charge.compareTo(transaction) == 0);
-        Assertions.assertTrue(transaction.compareTo(charge) == 0);
+        Assertions.assertEquals(-1, interestChange.compareTo(transaction));
+        Assertions.assertEquals(-1, interestChange.compareTo(charge));
+        Assertions.assertEquals(0, charge.compareTo(transaction));
+        Assertions.assertEquals(0, transaction.compareTo(charge));
     }
 
     @Test
@@ -68,34 +72,37 @@ public class ChangeOperationTest {
         ChangeOperation interestChange = createInterestRateChange("2023-10-17");
         ChangeOperation charge = createCharge("2023-10-16", "2023-10-17", "2023-10-17T10:15:30+01:00");
         ChangeOperation transaction = createTransaction("2023-10-16", "2023-10-17", "2023-10-17T10:15:30+01:00");
-        Assertions.assertTrue(interestChange.compareTo(transaction) > 0);
-        Assertions.assertTrue(interestChange.compareTo(charge) > 0);
-        Assertions.assertTrue(charge.compareTo(transaction) == 0);
-        Assertions.assertTrue(transaction.compareTo(charge) == 0);
+        Assertions.assertEquals(1, interestChange.compareTo(transaction));
+        Assertions.assertEquals(1, interestChange.compareTo(charge));
+        Assertions.assertEquals(0, charge.compareTo(transaction));
+        Assertions.assertEquals(0, transaction.compareTo(charge));
     }
 
-    @Test
-    public void testCompareToCreatedDateTime() {
-        ChangeOperation charge = createCharge("2023-10-17", "2023-10-17", "2023-10-17T10:15:31+01:00");
-        ChangeOperation transaction = createTransaction("2023-10-17", "2023-10-17", "2023-10-17T10:15:30+01:00");
-        Assertions.assertTrue(charge.compareTo(transaction) > 0);
-        Assertions.assertTrue(transaction.compareTo(charge) < 0);
+    @ParameterizedTest
+    @MethodSource("provideComparisonTestData")
+    public void testComparison(String chargeEffectiveDate, String chargeSubmittedDate, String chargeCreationDateTime,
+            String transactionDate, String transactionSubmittedDate, String transactionCreationDateTime, int expectedChargeVsTransaction,
+            int expectedTransactionVsCharge) {
+        ChangeOperation charge = createCharge(chargeEffectiveDate, chargeSubmittedDate, chargeCreationDateTime);
+        ChangeOperation transaction = createTransaction(transactionDate, transactionSubmittedDate, transactionCreationDateTime);
+
+        Assertions.assertEquals(expectedChargeVsTransaction, charge.compareTo(transaction));
+        Assertions.assertEquals(expectedTransactionVsCharge, transaction.compareTo(charge));
     }
 
-    @Test
-    public void testCompareToSubmittedOnDate() {
-        ChangeOperation charge = createCharge("2023-10-17", "2023-10-17", "2023-10-17T10:15:30+01:00");
-        ChangeOperation transaction = createTransaction("2023-10-17", "2023-10-16", "2023-10-17T10:15:30+01:00");
-        Assertions.assertTrue(charge.compareTo(transaction) > 0);
-        Assertions.assertTrue(transaction.compareTo(charge) < 0);
-    }
+    private static Stream<Arguments> provideComparisonTestData() {
+        return Stream.of(
+                // Test case for createdDateTime comparison
+                Arguments.of("2023-10-17", "2023-10-17", "2023-10-17T10:15:31+01:00", "2023-10-17", "2023-10-17",
+                        "2023-10-17T10:15:30+01:00", 1, -1),
 
-    @Test
-    public void testComparatorEffectiveDate() {
-        ChangeOperation charge = createCharge("2023-10-17", "2023-10-17", "2023-10-17T10:15:30+01:00");
-        ChangeOperation transaction = createTransaction("2023-10-16", "2023-10-17", "2023-10-17T10:15:30+01:00");
-        Assertions.assertTrue(charge.compareTo(transaction) > 0);
-        Assertions.assertTrue(transaction.compareTo(charge) < 0);
+                // Test case for submittedOnDate comparison
+                Arguments.of("2023-10-17", "2023-10-17", "2023-10-17T10:15:30+01:00", "2023-10-17", "2023-10-16",
+                        "2023-10-17T10:15:30+01:00", 1, -1),
+
+                // Test case for effectiveDate comparison
+                Arguments.of("2023-10-17", "2023-10-17", "2023-10-17T10:15:30+01:00", "2023-10-16", "2023-10-17",
+                        "2023-10-17T10:15:30+01:00", 1, -1));
     }
 
     @Test
@@ -134,6 +141,42 @@ public class ChangeOperationTest {
         }
     }
 
+    /**
+     * A down payment fee added after an auto down payment on the same business day must still replay before that
+     * transaction so reverse-replay can allocate the adjusted amount to the fee.
+     */
+    @Test
+    public void testDownPaymentFeeBeforeDownPaymentTransactionEvenIfCreatedLater() {
+        ChangeOperation downPaymentFee = createDownPaymentCharge("2026-01-01", "2026-01-01", "2026-01-01T12:00:00+01:00");
+        ChangeOperation downPaymentTxn = createDownPaymentTransaction("2026-01-01", "2026-01-01", "2026-01-01T10:00:00+01:00");
+        Collection<List<ChangeOperation>> permutations = Collections2.permutations(List.of(downPaymentFee, downPaymentTxn));
+        List<ChangeOperation> expected = List.of(downPaymentFee, downPaymentTxn);
+        for (List<ChangeOperation> permutation : permutations) {
+            Assertions.assertEquals(expected, permutation.stream().sorted().toList());
+        }
+        Assertions.assertEquals(-1, downPaymentFee.compareTo(downPaymentTxn));
+        Assertions.assertEquals(1, downPaymentTxn.compareTo(downPaymentFee));
+    }
+
+    /**
+     * Charges submitted on the same day but due on different dates must replay in due-date order, whatever order they
+     * were created in.
+     */
+    @Test
+    public void testChargesSubmittedOnTheSameDayAreOrderedByDueDateNotByCreation() {
+        ChangeOperation dueLaterCreatedFirst = createCharge("2027-02-14", "2026-09-15", "2026-09-15T07:32:55.566137+00:00");
+        ChangeOperation dueSoonerCreatedLater = createCharge("2026-10-14", "2026-09-15", "2026-09-15T07:32:55.566655+00:00");
+        ChangeOperation paymentBeforeBoth = createTransaction("2026-03-14", "2026-03-14", "2026-09-15T07:32:56.103699+00:00");
+        Collection<List<ChangeOperation>> permutations = Collections2
+                .permutations(List.of(dueLaterCreatedFirst, dueSoonerCreatedLater, paymentBeforeBoth));
+        List<ChangeOperation> expected = List.of(paymentBeforeBoth, dueSoonerCreatedLater, dueLaterCreatedFirst);
+        for (List<ChangeOperation> permutation : permutations) {
+            Assertions.assertEquals(expected, permutation.stream().sorted().toList());
+        }
+        Assertions.assertEquals(-1, dueSoonerCreatedLater.compareTo(dueLaterCreatedFirst));
+        Assertions.assertEquals(1, dueLaterCreatedFirst.compareTo(dueSoonerCreatedLater));
+    }
+
     private ChangeOperation createInterestRateChange(String submittedDate) {
         LoanTermVariationsData interestRateChange = Mockito.mock(LoanTermVariationsData.class);
         Mockito.when(interestRateChange.getTermVariationApplicableFrom()).thenReturn(LocalDate.parse(submittedDate));
@@ -148,6 +191,15 @@ public class ChangeOperationTest {
         return new ChangeOperation(charge);
     }
 
+    private ChangeOperation createDownPaymentCharge(String effectiveDate, String submittedDate, String creationDateTime) {
+        LoanCharge charge = Mockito.mock(LoanCharge.class);
+        Mockito.when(charge.getDueDate()).thenReturn(LocalDate.parse(effectiveDate));
+        Mockito.when(charge.getSubmittedOnDate()).thenReturn(LocalDate.parse(submittedDate));
+        Mockito.when(charge.getCreatedDate()).thenReturn(Optional.of(OffsetDateTime.parse(creationDateTime)));
+        Mockito.when(charge.isDueAtDownPayment()).thenReturn(true);
+        return new ChangeOperation(charge);
+    }
+
     private ChangeOperation createTransaction(String transactionDate, String submittedDate, String creationDateTime) {
         LoanTransaction transaction = Mockito.mock(LoanTransaction.class);
         Mockito.when(transaction.getSubmittedOnDate()).thenReturn(LocalDate.parse(submittedDate));
@@ -156,4 +208,12 @@ public class ChangeOperationTest {
         return new ChangeOperation(transaction);
     }
 
+    private ChangeOperation createDownPaymentTransaction(String transactionDate, String submittedDate, String creationDateTime) {
+        LoanTransaction transaction = Mockito.mock(LoanTransaction.class);
+        Mockito.when(transaction.getSubmittedOnDate()).thenReturn(LocalDate.parse(submittedDate));
+        Mockito.when(transaction.getTransactionDate()).thenReturn(LocalDate.parse(transactionDate));
+        Mockito.when(transaction.getCreatedDate()).thenReturn(Optional.of(OffsetDateTime.parse(creationDateTime)));
+        Mockito.when(transaction.isDownPayment()).thenReturn(true);
+        return new ChangeOperation(transaction);
+    }
 }

@@ -19,15 +19,21 @@
 package org.apache.fineract.portfolio.savings.domain;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
+import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.savings.DepositAccountType;
+import org.apache.fineract.portfolio.savings.data.SavingsAccrualData;
 import org.apache.fineract.portfolio.savings.exception.SavingsAccountNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,19 +49,12 @@ import org.springframework.transaction.annotation.Transactional;
  * </p>
  */
 @Service
+@RequiredArgsConstructor
 public class SavingsAccountRepositoryWrapper {
 
     private final SavingsAccountRepository repository;
     private final SavingsAccountTransactionRepository savingsAccountTransactionRepository;
-    private final JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    public SavingsAccountRepositoryWrapper(final SavingsAccountRepository repository,
-            final SavingsAccountTransactionRepository savingsAccountTransactionRepository, final JdbcTemplate jdbcTemplate) {
-        this.repository = repository;
-        this.savingsAccountTransactionRepository = savingsAccountTransactionRepository;
-        this.jdbcTemplate = jdbcTemplate;
-    }
+    private final PlatformSecurityContext context;
 
     @Transactional(readOnly = true)
     public SavingsAccount findOneWithNotFoundDetection(final Long savingsId) {
@@ -63,6 +62,38 @@ public class SavingsAccountRepositoryWrapper {
                 .orElseThrow(() -> new SavingsAccountNotFoundException(savingsId));
         account.loadLazyCollections();
         return account;
+    }
+
+    /**
+     * Locks the given accounts (SELECT ... FOR UPDATE) in ascending id order. Two transactions that touch the same two
+     * accounts in opposite directions (A to B and B to A) would otherwise each lock one account and wait for the other:
+     * a deadlock, which the database resolves by aborting one of them. With a single global lock order they queue up
+     * instead.
+     *
+     * <p>
+     * MySQL, and MariaDB without innodb_snapshot_isolation, answer the lock with the latest row even when the
+     * transaction already holds an older snapshot, while its plain reads, such as the transactions of the account,
+     * still come from that snapshot. An account changed since the snapshot would then be updated from a stale view and
+     * still pass its version check. The versions are therefore read again with a plain read after the lock, and a
+     * difference fails the transaction, as PostgreSQL does. A transaction that read nothing before the lock takes its
+     * snapshot with that read, so it sees the locked versions.
+     * </p>
+     */
+    @Transactional
+    public void lockInIdOrder(final Long... savingsIds) {
+        final List<Long> ids = Arrays.stream(savingsIds).filter(Objects::nonNull).distinct().sorted().toList();
+        if (!ids.isEmpty()) {
+            final List<SavingsAccount> lockedAccounts = this.repository.findAllLockedOrderedById(ids);
+            final Map<Long, Integer> snapshotVersions = new HashMap<>();
+            for (final Object[] idAndVersion : this.repository.findVersionsById(ids)) {
+                snapshotVersions.put(((Number) idAndVersion[0]).longValue(), ((Number) idAndVersion[1]).intValue());
+            }
+            for (final SavingsAccount lockedAccount : lockedAccounts) {
+                if (!Objects.equals(snapshotVersions.get(lockedAccount.getId()), lockedAccount.getVersion())) {
+                    throw new ObjectOptimisticLockingFailureException(SavingsAccount.class, lockedAccount.getId());
+                }
+            }
+        }
     }
 
     @Transactional
@@ -77,6 +108,13 @@ public class SavingsAccountRepositoryWrapper {
             }
         }
 
+        return account;
+    }
+
+    @Transactional
+    public SavingsAccount findOneInUserScope(final Long savingsId, final boolean backdatedTxnsAllowedTill) {
+        final SavingsAccount account = findSavingsWithNotFoundDetection(savingsId, backdatedTxnsAllowedTill);
+        this.context.validateAccessRights(account.office().getHierarchy());
         return account;
     }
 
@@ -163,7 +201,7 @@ public class SavingsAccountRepositoryWrapper {
     }
 
     private void loadLazyCollections(final List<SavingsAccount> accounts) {
-        if (accounts != null && accounts.size() > 0) {
+        if (accounts != null && !accounts.isEmpty()) {
             for (SavingsAccount account : accounts) {
                 account.loadLazyCollections();
             }
@@ -178,5 +216,15 @@ public class SavingsAccountRepositoryWrapper {
 
     public Long findIdByExternalId(final ExternalId externalId) {
         return this.repository.findIdByExternalId(externalId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SavingsAccrualData> findAccrualData(final LocalDate tillDate, final Long savingsId, final Integer status,
+            final Integer accountingRule) {
+        return this.repository.findAccrualData(tillDate, savingsId, status, accountingRule);
+    }
+
+    public List<Long> findLoanIdsByStatusId(Integer status) {
+        return null;
     }
 }

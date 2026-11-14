@@ -9,6 +9,17 @@ package org.apache.fineract.selfservice.security;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 
+import org.apache.fineract.infrastructure.jobs.filter.WorkingCapitalLoanModelCheckerHelper;
+import org.apache.fineract.portfolio.workingcapitalloan.service.WorkingCapitalLoanModelProcessingService;
+import org.apache.fineract.infrastructure.jobs.filter.ProgressiveLoanModelCheckerHelper;
+import org.apache.fineract.portfolio.loanaccount.service.ProgressiveLoanModelProcessingService;
+import org.apache.fineract.useradministration.domain.AppUserRepository;
+import org.apache.fineract.infrastructure.security.service.PlatformUserDetailsChecker;
+import org.apache.fineract.infrastructure.jobs.filter.WorkingCapitalLoanModelCheckerFilter;
+import org.apache.fineract.infrastructure.jobs.filter.ProgressiveLoanModelCheckerFilter;
+import org.apache.fineract.infrastructure.jobs.filter.WorkingCapitalLoanCOBFilterHelper;
+import org.apache.fineract.infrastructure.jobs.filter.LoanCOBFilterHelper;
+import org.apache.fineract.notification.service.SmsNotificationWritePlatformService;
 import org.apache.fineract.infrastructure.businessdate.service.BusinessDateReadPlatformService;
 import org.apache.fineract.infrastructure.cache.service.CacheWritePlatformService;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
@@ -20,14 +31,14 @@ import org.apache.fineract.infrastructure.core.serialization.ToApiJsonSerializer
 import org.apache.fineract.infrastructure.core.service.MDCWrapper;
 import org.apache.fineract.infrastructure.security.data.PlatformRequestLog;
 import org.apache.fineract.infrastructure.security.domain.PlatformUserRepository;
-import org.apache.fineract.infrastructure.security.service.BasicAuthTenantDetailsService;
+import org.apache.fineract.infrastructure.security.service.AuthTenantDetailsService;
 import org.apache.fineract.infrastructure.security.service.TenantAwareJpaPlatformUserDetailsService;
 import org.apache.fineract.notification.service.UserNotificationService;
 import org.apache.fineract.selfservice.security.domain.PlatformSelfServiceUserRepository;
 import org.apache.fineract.selfservice.security.service.TenantAwareJpaPlatformSelfServiceUserDetailsService;
 import org.apache.fineract.selfservice.security.starter.SelfServiceSecurityConfiguration;
 import org.apache.fineract.selfservice.useradministration.service.SelfServiceRoleReadPlatformService;
-import org.springframework.boot.autoconfigure.web.ServerProperties;
+import org.springframework.boot.web.server.autoconfigure.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -66,8 +77,16 @@ public class SelfServiceSecurityTestConfig {
   }
 
   @Bean
+  public SmsNotificationWritePlatformService smsNotificationWritePlatformService() {
+    return mock(SmsNotificationWritePlatformService.class);
+  }
+
+  @Bean
   public ConfigurationDomainService configurationDomainService() {
-    return mock(ConfigurationDomainService.class);
+    final ConfigurationDomainService service = mock(ConfigurationDomainService.class);
+    // self-service is switched on, otherwise SelfServiceEnablerSecurityFilter rejects every /self request
+    org.mockito.Mockito.when(service.isSelfServiceEnabled()).thenReturn(true);
+    return service;
   }
 
   @Bean
@@ -81,8 +100,8 @@ public class SelfServiceSecurityTestConfig {
   }
 
   @Bean
-  public BasicAuthTenantDetailsService basicAuthTenantDetailsService() {
-    return mock(BasicAuthTenantDetailsService.class);
+  public AuthTenantDetailsService basicAuthTenantDetailsService() {
+    return mock(AuthTenantDetailsService.class);
   }
 
   @Bean
@@ -119,4 +138,39 @@ public class SelfServiceSecurityTestConfig {
   public SelfServiceRoleReadPlatformService selfServiceRoleReadPlatformService() {
     return mock(SelfServiceRoleReadPlatformService.class);
   }
+
+  // Collaborators added to upstream's SecurityConfig. 
+  @Bean
+  public LoanCOBFilterHelper loanCOBFilterHelper() {
+    return mock(LoanCOBFilterHelper.class);
+  }
+
+  @Bean
+  public WorkingCapitalLoanCOBFilterHelper workingCapitalLoanCOBFilterHelper() {
+    return mock(WorkingCapitalLoanCOBFilterHelper.class);
+  }
+
+  @Bean
+  public ProgressiveLoanModelCheckerFilter progressiveLoanModelCheckerFilter() {
+    // a mocked helper never matches its API list, so the real filter just passes requests on
+    return new ProgressiveLoanModelCheckerFilter(
+        mock(ProgressiveLoanModelProcessingService.class), mock(ProgressiveLoanModelCheckerHelper.class));
+  }
+
+  @Bean
+  public WorkingCapitalLoanModelCheckerFilter workingCapitalLoanModelCheckerFilter() {
+    return new WorkingCapitalLoanModelCheckerFilter(
+        mock(WorkingCapitalLoanModelProcessingService.class), mock(WorkingCapitalLoanModelCheckerHelper.class));
+  }
+
+  @Bean
+  public PlatformUserDetailsChecker platformUserDetailsChecker() {
+    return mock(PlatformUserDetailsChecker.class);
+  }
+
+  @Bean
+  public AppUserRepository appUserRepository() {
+    return mock(AppUserRepository.class);
+  }
+
 }

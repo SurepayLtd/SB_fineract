@@ -21,7 +21,9 @@ package org.apache.fineract.portfolio.loanaccount.service;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -45,6 +47,7 @@ import org.apache.fineract.portfolio.loanaccount.data.HolidayDetailDTO;
 import org.apache.fineract.portfolio.loanaccount.data.ScheduleGeneratorDTO;
 import org.apache.fineract.portfolio.loanaccount.domain.ChangedTransactionDetail;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanLifecycleStateMachine;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionRepository;
 import org.apache.fineract.portfolio.loanaccount.domain.transactionprocessor.LoanRepaymentScheduleTransactionProcessor;
@@ -101,12 +104,35 @@ public class LoanDownPaymentHandlerServiceImplTest {
     @Mock
     private LoanRefundValidator loanRefundValidator;
 
+    @Mock
+    private ReprocessLoanTransactionsService reprocessLoanTransactionsService;
+
+    @Mock
+    private LoanTransactionProcessingService loanTransactionProcessingService;
+
+    @Mock
+    private LoanLifecycleStateMachine loanLifecycleStateMachine;
+
+    @Mock
+    private LoanBalanceService loanBalanceService;
+
+    @Mock
+    private LoanTransactionService loanTransactionService;
+
+    @Mock
+    private LoanJournalEntryPoster loanJournalEntryPoster;
+
+    @Mock
+    private LoanChargeService loanChargeService;
+
     private LoanDownPaymentHandlerServiceImpl underTest;
 
     @BeforeEach
     public void setUp() {
         underTest = new LoanDownPaymentHandlerServiceImpl(loanTransactionRepository, businessEventNotifierService,
-                loanDownPaymentTransactionValidator, loanScheduleService, loanRefundService, loanRefundValidator);
+                loanDownPaymentTransactionValidator, loanScheduleService, loanRefundService, loanRefundValidator,
+                reprocessLoanTransactionsService, loanTransactionProcessingService, loanLifecycleStateMachine, loanBalanceService,
+                loanTransactionService, loanJournalEntryPoster, loanChargeService);
         moneyHelper.when(MoneyHelper::getMathContext).thenReturn(new MathContext(12, RoundingMode.UP));
         moneyHelper.when(MoneyHelper::getRoundingMode).thenReturn(RoundingMode.UP);
         tempConfigServiceMock.when(TemporaryConfigurationServiceContainer::isExternalIdAutoGenerationEnabled).thenReturn(true);
@@ -142,25 +168,31 @@ public class LoanDownPaymentHandlerServiceImplTest {
         when(downPaymentMoney.getCurrencyCode()).thenReturn(loanCurrency.getCode());
         when(overPaymentPortionMoney.getCurrencyCode()).thenReturn(loanCurrency.getCode());
 
+        when(loanRepaymentRelatedDetail.getInstallmentAmountInMultiplesOf()).thenReturn(10);
         when(loanForProcessing.getLoanRepaymentScheduleDetail()).thenReturn(loanRepaymentRelatedDetail);
-        when(loanForProcessing.repaymentScheduleDetail()).thenReturn(loanRepaymentRelatedDetail);
+        when(loanForProcessing.getLoanProductRelatedDetail()).thenReturn(loanRepaymentRelatedDetail);
         when(loanRepaymentRelatedDetail.isInterestRecalculationEnabled()).thenReturn(true);
         when(loanForProcessing.isInterestBearingAndInterestRecalculationEnabled()).thenReturn(true);
         when(loanRepaymentRelatedDetail.getDisbursedAmountPercentageForDownPayment()).thenReturn(BigDecimal.valueOf(10));
         when(loanForProcessing.getCurrency()).thenReturn(loanCurrency);
         when(loanForProcessing.loanCurrency()).thenReturn(loanCurrency);
         when(loanForProcessing.getLoanProduct()).thenReturn(loanProduct);
-        when(loanProduct.getInstallmentAmountInMultiplesOf()).thenReturn(10);
         when(loanForProcessing.getLoanProductRelatedDetail()).thenReturn(loanProductRelatedDetail);
-        when(loanForProcessing.getTransactionProcessor()).thenReturn(loanRepaymentScheduleTransactionProcessor);
-        when(loanRepaymentScheduleTransactionProcessor.reprocessLoanTransactions(any(), any(), any(), any(), any()))
+        when(loanTransactionProcessingService.reprocessLoanTransactions(any(), any(), any(), any(), any(), any()))
                 .thenReturn(changedTransactionDetail);
         when(loanProductRelatedDetail.getLoanScheduleType()).thenReturn(LoanScheduleType.PROGRESSIVE);
 
         when(disbursement.getOverPaymentPortion(loanCurrency)).thenReturn(overPaymentPortionMoney);
 
         when(downPaymentMoney.minus(overPaymentPortionMoney)).thenReturn(calculatedMoney);
-        mathUtilMock.when(() -> MathUtil.negativeToZero(any(Money.class))).thenReturn(mockAdjustedDownPaymentMoney);
+        when(command.localDateValueOfParameterNamed(any())).thenReturn(LocalDate.of(2024, 11, 19));
+        when(disbursement.getAmount()).thenReturn(BigDecimal.valueOf(1000));
+        when(loanChargeService.calculateDownPaymentAmount(any(), any(), nullable(Integer.class), any()))
+                .thenReturn(BigDecimal.valueOf(100));
+        mathUtilMock.when(() -> MathUtil.negativeToZero(nullable(Money.class))).thenReturn(mockAdjustedDownPaymentMoney);
+        final Money zeroFees = Mockito.mock(Money.class);
+        doReturn(zeroFees).when(loanChargeService).downPaymentFeesForNewAutoDownPayment(any(Loan.class), nullable(LocalDate.class));
+        when(mockAdjustedDownPaymentMoney.plus(nullable(Money.class))).thenReturn(mockAdjustedDownPaymentMoney);
         when(mockAdjustedDownPaymentMoney.isGreaterThanZero()).thenReturn(true);
 
         dateUtilsMock.when(DateUtils::getBusinessLocalDate).thenReturn(LocalDate.of(2024, 11, 19));
@@ -181,7 +213,6 @@ public class LoanDownPaymentHandlerServiceImplTest {
                 .notifyPreBusinessEvent(Mockito.any(LoanTransactionDownPaymentPreBusinessEvent.class));
         verify(businessEventNotifierService, Mockito.times(1))
                 .notifyPostBusinessEvent(Mockito.any(LoanTransactionDownPaymentPostBusinessEvent.class));
-        verify(businessEventNotifierService, Mockito.times(1)).notifyPostBusinessEvent(Mockito.any(LoanBalanceChangedBusinessEvent.class));
     }
 
     @Test
@@ -215,7 +246,14 @@ public class LoanDownPaymentHandlerServiceImplTest {
         when(disbursement.getOverPaymentPortion(loanCurrency)).thenReturn(overPaymentPortionMoney);
 
         when(downPaymentMoney.minus(overPaymentPortionMoney)).thenReturn(calculatedMoney);
-        mathUtilMock.when(() -> MathUtil.negativeToZero(any(Money.class))).thenReturn(mockAdjustedDownPaymentMoney);
+        when(command.localDateValueOfParameterNamed(any())).thenReturn(LocalDate.of(2024, 11, 19));
+        when(disbursement.getAmount()).thenReturn(BigDecimal.valueOf(1000));
+        when(loanChargeService.calculateDownPaymentAmount(any(), any(), nullable(Integer.class), any()))
+                .thenReturn(BigDecimal.valueOf(100));
+        mathUtilMock.when(() -> MathUtil.negativeToZero(nullable(Money.class))).thenReturn(mockAdjustedDownPaymentMoney);
+        final Money zeroFees = Mockito.mock(Money.class);
+        doReturn(zeroFees).when(loanChargeService).downPaymentFeesForNewAutoDownPayment(any(Loan.class), nullable(LocalDate.class));
+        when(mockAdjustedDownPaymentMoney.plus(nullable(Money.class))).thenReturn(mockAdjustedDownPaymentMoney);
         when(mockAdjustedDownPaymentMoney.isGreaterThanZero()).thenReturn(false);
 
         dateUtilsMock.when(DateUtils::getBusinessLocalDate).thenReturn(LocalDate.of(2024, 11, 19));

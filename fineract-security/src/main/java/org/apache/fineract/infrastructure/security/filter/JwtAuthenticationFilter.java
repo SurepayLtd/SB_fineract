@@ -5,14 +5,15 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.fineract.useradministration.domain.AppUser;
 import org.apache.fineract.useradministration.domain.AppUserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -52,9 +53,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.debug("JWT authentication for user: {} with roles: {}", username, roles);
                     AppUser appUser = appUserRepository.findAppUserByName(username);
                     if (appUser != null) {
-                        // Fetch permissions from DB if needed, or use roles for authorities
-                        List<SimpleGrantedAuthority> grantedAuthorities = roles.stream().map(SimpleGrantedAuthority::new)
-                                .collect(Collectors.toList());
+                        // Permission codes from the DB (as for basic auth): SecurityConfig authorizes API URLs by
+                        // permission (ALL_FUNCTIONS, READ_..., etc.). The token's role names are kept as extra authorities.
+                        List<GrantedAuthority> grantedAuthorities = new ArrayList<>(appUser.getAuthorities());
+                        roles.stream().map(SimpleGrantedAuthority::new).forEach(grantedAuthorities::add);
                         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(appUser, null,
                                 grantedAuthorities);
                         SecurityContextHolder.getContext().setAuthentication(authentication);

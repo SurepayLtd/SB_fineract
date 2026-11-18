@@ -1,5 +1,6 @@
 package org.apache.fineract.portfolio.crb.data;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,17 +11,23 @@ import java.util.List;
 
 @Data
 @NoArgsConstructor
-@Accessors(chain = true)
 @AllArgsConstructor
+@Accessors(chain = true)
 public class KycReportResponseJsonData implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @JsonProperty("message")
     private String message;
+
+    @JsonProperty("status")
     private Integer status;
+
+    @JsonProperty("count")
     private Integer count;
 
-    private KycInformationData kyc_information;
+    @JsonProperty("kyc_information")
+    private KycInformationData kycInformation;
 
     @Data
     @NoArgsConstructor
@@ -29,21 +36,29 @@ public class KycReportResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private List<IdentificationDetailData> identification_details;
+        @JsonProperty("identification_details")
+        private List<IdentificationDetailData> identificationDetails;
 
-        private CustomerDetailsData customer_details;
+        @JsonProperty("customer_details")
+        private CustomerDetailsData customerDetails;
 
-        private BusinessDetailsData business_details;
+        @JsonProperty("business_details")
+        private BusinessDetailsData businessDetails;
 
-        private List<PhysicalAddressData> physical_address_history;
+        @JsonProperty("physical_address_history")
+        private List<PhysicalAddressData> physicalAddressHistory;
 
-        private List<PostalAddressData> postal_address_history;
+        @JsonProperty("postal_address_history")
+        private List<PostalAddressData> postalAddressHistory;
 
-        private ContactHistoryData contact_history;
+        @JsonProperty("contact_history")
+        private ContactHistoryData contactHistory;
 
-        private List<ShareholderDetailData> shareholder_details;
+        @JsonProperty("shareholder_details")
+        private List<ShareholderDetailData> shareholderDetails;
 
-        private List<EmploymentHistoryData> employment_history;
+        @JsonProperty("employment_history")
+        private List<EmploymentHistoryData> employmentHistory;
     }
 
     @Data
@@ -53,9 +68,17 @@ public class KycReportResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String identifier, Identifier_Type, Country_of_Issue;
+        @JsonProperty("Identifier")
+        private String identifier;
+
+        @JsonProperty("Identifier_Type")
+        private String identifierType;
+
+        @JsonProperty("Country_of_Issue")
+        private String countryOfIssue;
     }
 
     @Data
@@ -65,8 +88,29 @@ public class KycReportResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private String Photo, Name, Date_of_Birth, Marital_Status, Gender, Nationality, Contact, Address;
+        @JsonProperty("Photo")
+        private String photo;
 
+        @JsonProperty("Name")
+        private String name;
+
+        @JsonProperty("Date_of_Birth")
+        private String dateOfBirth;
+
+        @JsonProperty("Marital_Status")
+        private String maritalStatus;
+
+        @JsonProperty("Gender")
+        private String gender;
+
+        @JsonProperty("Nationality")
+        private String nationality;
+
+        @JsonProperty("Contact")
+        private String contact;
+
+        @JsonProperty("Address")
+        private String address;
     }
 
     @Data
@@ -76,7 +120,29 @@ public class KycReportResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private String Business_Name, Trading_Name, Industry_Sector, Date_of_Registration, Postal_Address, Business_Type, Contact, Address;
+        @JsonProperty("Business_Name")
+        private String businessName;
+
+        @JsonProperty("Trading_Name")
+        private String tradingName;
+
+        @JsonProperty("Industry_Sector")
+        private String industrySector;
+
+        @JsonProperty("Date_of_Registration")
+        private String dateOfRegistration;
+
+        @JsonProperty("Postal_Address")
+        private String postalAddress;
+
+        @JsonProperty("Business_Type")
+        private String businessType;
+
+        @JsonProperty("Contact")
+        private String contact;
+
+        @JsonProperty("Address")
+        private String address;
     }
 
     @Data
@@ -86,10 +152,17 @@ public class KycReportResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Address, Ownership, Period_at_Address;
+        @JsonProperty("Address")
+        private String address;
 
+        @JsonProperty("Ownership")
+        private String ownership;
+
+        @JsonProperty("Period_at_Address")
+        private String periodAtAddress;
     }
 
     @Data
@@ -99,8 +172,10 @@ public class KycReportResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
+        @JsonProperty("address")
         private String address;
     }
 
@@ -111,9 +186,11 @@ public class KycReportResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private List<PhoneNumberData> Phone_Numbers;
+        @JsonProperty("Phone_Numbers")
+        private List<PhoneNumberData> phoneNumbers;
 
-        private List<EmailData> Emails;
+        @JsonProperty("Emails")
+        private List<EmailData> emails;
     }
 
     @Data
@@ -123,9 +200,11 @@ public class KycReportResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Phone_Number;
+        @JsonProperty("Phone_Number")
+        private String phoneNumber;
     }
 
     @Data
@@ -135,9 +214,11 @@ public class KycReportResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Email;
+        @JsonProperty("Email")
+        private String email;
     }
 
     @Data
@@ -147,10 +228,20 @@ public class KycReportResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Business_Name, stakeholderType, Stakeholder_Category, Shareholder_Percentage;
+        @JsonProperty("Business_Name")
+        private String businessName;
 
+        @JsonProperty("stakeholderType")
+        private String stakeholderType;
+
+        @JsonProperty("Stakeholder_Category")
+        private String stakeholderCategory;
+
+        @JsonProperty("Shareholder_Percentage")
+        private String shareholderPercentage;
     }
 
     @Data
@@ -160,9 +251,19 @@ public class KycReportResponseJsonData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Employer_Name, Occupation, Employment_Date, Income_Band;
+        @JsonProperty("Employer_Name")
+        private String employerName;
 
+        @JsonProperty("Occupation")
+        private String occupation;
+
+        @JsonProperty("Employment_Date")
+        private String employmentDate;
+
+        @JsonProperty("Income_Band")
+        private String incomeBand;
     }
 }

@@ -3,7 +3,7 @@ package org.apache.fineract.portfolio.crb.service;
 import org.apache.fineract.infrastructure.creditbureau.service.CreditBureauIntegrationWritePlatformService;
 import org.apache.fineract.portfolio.crb.data.*;
 
-public interface GnugridNotificationWritePlatformService extends CreditBureauIntegrationWritePlatformService {
+public interface GnugridNotificationWritePlatformService {
 
     ValidatePersonalInformationResponseData validatePersonalInfo(ValidatePersonalInformationRequestData requestData);
 

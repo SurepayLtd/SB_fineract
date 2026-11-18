@@ -142,6 +142,15 @@ public final class CrbDataValidator {
         final Long entityCategoryId = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.entityCategoryIdParamName, element);
         baseDataValidator.reset().parameter(CrbApiConstants.entityCategoryIdParamName).value(entityCategoryId).ignoreIfNull().notExceedingLengthOf(5);
 
+        final Long creditBureauID = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbCreditBureauParamName, element);
+        baseDataValidator.reset().parameter(CrbApiConstants.crbCreditBureauParamName).value(creditBureauID).ignoreIfNull().notExceedingLengthOf(5);
+
+        final Long loanId = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbCreditBureauLoanIdParamName, element);
+        baseDataValidator.reset().parameter(CrbApiConstants.crbCreditBureauLoanIdParamName).value(loanId).ignoreIfNull().notExceedingLengthOf(5);
+
+        final Long clientId = this.fromApiJsonHelper.extractLongNamed(CrbApiConstants.crbCreditBureauClientIdParamName, element);
+        baseDataValidator.reset().parameter(CrbApiConstants.crbCreditBureauClientIdParamName).value(clientId).ignoreIfNull().notExceedingLengthOf(5);
+
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
     }
 

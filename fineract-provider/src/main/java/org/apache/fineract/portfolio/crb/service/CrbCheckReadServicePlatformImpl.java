@@ -47,21 +47,21 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
         StringBuilder sb = new StringBuilder();
         sb.append(" Select ");
         sb.append(mp.schema());
-        sb.append(" WHERE cc.client_id = ? ");
+        sb.append(" WHERE cc.client_id = ? AND cc.validation_type IN (1,2,3)");
         sb.append(" ORDER BY cc.created_at DESC, cc.id DESC ");
         return this.jdbcTemplate.query(sb.toString(), mp, clientId);
     }
 
     @Override
-    public List<CrbCheckData> retrieveKycChecks(Long clientId) {
+    public List<CrbCheckData> retrieveKycChecks(Long clientId, Integer type) {
         this.context.authenticatedUser();
         CheckMapper mp = new CheckMapper(objectMapper);
         StringBuilder sb = new StringBuilder();
         sb.append(" Select ");
         sb.append(mp.schema());
-        sb.append(" WHERE cc.client_id = ? AND cc.validation_type = 100");
+        sb.append(" WHERE cc.client_id = ? AND cc.validation_type = ?");
         sb.append(" ORDER BY cc.created_at DESC, cc.id DESC ");
-        return this.jdbcTemplate.query(sb.toString(), mp, clientId);
+        return this.jdbcTemplate.query(sb.toString(), mp, clientId, type);
     }
 
     @Override

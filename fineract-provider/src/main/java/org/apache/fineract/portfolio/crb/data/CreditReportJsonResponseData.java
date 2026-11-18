@@ -1,6 +1,9 @@
 package org.apache.fineract.portfolio.crb.data;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,11 +22,15 @@ public class CreditReportJsonResponseData implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @JsonProperty("message")
     private String message;
+    @JsonProperty("status")
     private Integer status;
+    @JsonProperty("count")
     private Integer count;
 
-    private CreditInformationData credit_information;
+    @JsonProperty("credit_information")
+    private CreditInformationData creditInformation;
 
     @Data
     @NoArgsConstructor
@@ -32,49 +39,71 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private List<IdentificationDetailData> identification_details;
+        @JsonProperty("identification_details")
+        private List<IdentificationDetailData> identificationDetails;
 
-        private CustomerDetailsData customer_details;
+        @JsonProperty("customer_details")
+        private CustomerDetailsData customerDetails;
 
-        private List<PhysicalAddressData> physical_address_history;
+        @JsonProperty("physical_address_history")
+        private List<PhysicalAddressData> physicalAddressHistory;
 
-        private List<PostalAddressData> postal_address_history;
+        @JsonProperty("postal_address_history")
+        private List<PostalAddressData> postalAddressHistory;
 
-        private ContactHistoryData contact_history;
+        @JsonProperty("contact_history")
+        private ContactHistoryData contactHistory;
 
-        private List<ShareholderDetailData> shareholder_details;
+        @JsonProperty("shareholder_details")
+        private List<ShareholderDetailData> shareholderDetails;
 
-        private List<EmploymentHistoryData> employment_history;
+        @JsonProperty("employment_history")
+        private List<EmploymentHistoryData> employmentHistory;
 
-        private ScoringDetailsData scoring_details;
+        @JsonProperty("scoring_details")
+        private ScoringDetailsData scoringDetails;
 
-        private List<Map<String, Object>> credit_applications_summary;
+        @JsonProperty("credit_applications_summary")
+        private List<Map<String, Object>> creditApplicationsSummary;
 
-        private List<Map<String, Object>> credit_accounts_summary;
+        @JsonProperty("credit_accounts_summary")
+        private List<Map<String, Object>> creditAccountsSummary;
 
-        private List<CreditAccountsClassificationData> credits_accounts_classification_summary;
+        @JsonProperty("credits_accounts_classification_summary")
+        private List<CreditAccountsClassificationData> creditsAccountsClassificationSummary;
 
-        private List<Map<String, Object>> collateral_material_summary;
+        @JsonProperty("collateral_material_summary")
+        private List<Map<String, Object>> collateralMaterialSummary;
 
-        private List<Map<String, Object>> collateral_guarantor_summary;
+        @JsonProperty("collateral_guarantor_summary")
+        private List<Map<String, Object>> collateralGuarantorSummary;
 
-        private List<Map<String, Object>> bounced_cheques_summary;
+        @JsonProperty("bounced_cheques_summary")
+        private List<Map<String, Object>> bouncedChequesSummary;
 
-        private List<Map<String, Object>> financial_fraud_summary;
+        @JsonProperty("financial_fraud_summary")
+        private List<Map<String, Object>> financialFraudSummary;
 
-        private List<CreditApplicationDetailData> credit_applications_details;
+        @JsonProperty("credit_applications_details")
+        private List<CreditApplicationDetailData> creditApplicationsDetails;
 
-        private List<CreditAccountDetailData> credit_account_details;
+        @JsonProperty("credit_account_details")
+        private List<CreditAccountDetailData> creditAccountDetails;
 
-        private List<CollateralMaterialDetailData> collateral_material_details;
+        @JsonProperty("collateral_material_details")
+        private List<CollateralMaterialDetailData> collateralMaterialDetails;
 
-        private List<CollateralGuarantorDetailData> collateral_guarantor_details;
+        @JsonProperty("collateral_guarantor_details")
+        private List<CollateralGuarantorDetailData> collateralGuarantorDetails;
 
-        private List<BouncedChequeDetailData> bounced_cheques_details;
+        @JsonProperty("bounced_cheques_details")
+        private List<BouncedChequeDetailData> bouncedChequesDetails;
 
-        private List<FinancialFraudDetailData> financial_fraud_details;
+        @JsonProperty("financial_fraud_details")
+        private List<FinancialFraudDetailData> financialFraudDetails;
 
-        private List<EnquiryDetailData> enquiries_details;
+        @JsonProperty("enquiries_details")
+        private List<EnquiryDetailData> enquiriesDetails;
     }
 
     @Data
@@ -84,9 +113,14 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
-
-        private String identifier, Identifier_Type, Country_of_Issue;
+        @JsonProperty("SNo")
+        private Integer sNo;
+        @JsonProperty("Identifier")
+        private String identifier;
+        @JsonProperty("Identifier_Type")
+        private String identifierType;
+        @JsonProperty("Country_of_Issue")
+        private String countryOfIssue;
     }
 
     @Data
@@ -96,7 +130,22 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private String Photo, Name, Date_of_Birth, Marital_Status, Gender, Nationality, Contact, Address;
+        @JsonProperty("Photo")
+        private String photo;
+        @JsonProperty("Name")
+        private String name;
+        @JsonProperty("Date_of_Birth")
+        private String dateOfBirth;
+        @JsonProperty("Marital_Status")
+        private String maritalStatus;
+        @JsonProperty("Gender")
+        private String gender;
+        @JsonProperty("Nationality")
+        private String nationality;
+        @JsonProperty("Contact")
+        private String contact;
+        @JsonProperty("Address")
+        private String address;
 
     }
 
@@ -107,9 +156,15 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Address, Ownership, Period_at_Address;
+        @JsonProperty("Address")
+        private String address;
+        @JsonProperty("Ownership")
+        private String ownership;
+        @JsonProperty("Period_at_Address")
+        private String periodAtAddress;
 
     }
 
@@ -120,8 +175,10 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
+        @JsonProperty("address")
         private String address;
     }
 
@@ -132,9 +189,11 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private List<PhoneNumberData> Phone_Numbers;
+        @JsonProperty("Phone_Numbers")
+        private List<PhoneNumberData> phoneNumbers;
 
-        private List<EmailData> Emails;
+        @JsonProperty("Emails")
+        private List<EmailData> emails;
     }
 
     @Data
@@ -144,9 +203,11 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Phone_Number;
+        @JsonProperty("Phone_Number")
+        private String phoneNumber;
     }
 
     @Data
@@ -156,9 +217,11 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Email;
+        @JsonProperty("Email")
+        private String email;
     }
 
     @Data
@@ -168,9 +231,17 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Business_Name, stakeholderType, Stakeholder_Category, Shareholder_Percentage;
+        @JsonProperty("Business_Name")
+        private String businessName;
+        @JsonProperty("stakeholderType")
+        private String stakeholderType;
+        @JsonProperty("Stakeholder_Category")
+        private String stakeholderCategory;
+        @JsonProperty("Shareholder_Percentage")
+        private String shareholderPercentage;
 
     }
 
@@ -181,9 +252,17 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Employer_Name, Occupation, Employment_Date, Income_Band;
+        @JsonProperty("Employer_Name")
+        private String employerName;
+        @JsonProperty("Occupation")
+        private String occupation;
+        @JsonProperty("Employment_Date")
+        private String employmentDate;
+        @JsonProperty("Income_Band")
+        private String incomeBand;
 
     }
 
@@ -194,13 +273,26 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private String Evaluation_Period, Current_Score_Band, Current_Score_Rating, Probability_of_Default, Likelihood_to_Default;
+        @JsonProperty("Evaluation_Period")
+        private String evaluationPeriod;
+        @JsonProperty("Current_Score_Band")
+        private String currentScoreBand;
+        @JsonProperty("Current_Score_Rating")
+        private String currentScoreRating;
+        @JsonProperty("Probability_of_Default")
+        private String probabilityOfDefault;
+        @JsonProperty("Likelihood_to_Default")
+        private String likelihoodToDefault;
 
-        private Integer Current_Score;
+        @JsonProperty("Current_Score")
+        private Integer currentScore;
 
-        private List<String> Score_Explanation;
+        @JsonProperty("Score_Explanation")
+        @JsonDeserialize(using = StringOrStringListDeserializer.class)
+        private List<String> scoreExplanation;
 
-        private List<ScoreHistoryData> Score_History;
+        @JsonProperty("Score_History")
+        private List<ScoreHistoryData> scoreHistory;
     }
 
     @Data
@@ -210,7 +302,10 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private String MonthYear, Score;
+        @JsonProperty("MonthYear")
+        private String monthYear;
+        @JsonProperty("Score")
+        private String score;
 
     }
 
@@ -221,11 +316,18 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private String Institution_Type, Currency;
+        @JsonProperty("Institution_Type")
+        private String institutionType;
+        @JsonProperty("Currency")
+        private String currency;
 
-        private Integer No_of_Accounts;
+        @JsonProperty("No_of_Accounts")
+        private Integer noOfAccounts;
 
-        private BigDecimal Loan_Amount, Loan_Balance;
+        @JsonProperty("Loan_Amount")
+        private BigDecimal loanAmount;
+        @JsonProperty("Loan_Balance")
+        private BigDecimal loanBalance;
 
     }
 
@@ -236,9 +338,25 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Institution, Reference, Product_Type, Application_Date, Currency, Amount, Application_Status, Last_Status_Date;
+        @JsonProperty("Institution")
+        private String institution;
+        @JsonProperty("Reference")
+        private String reference;
+        @JsonProperty("Product_Type")
+        private String productType;
+        @JsonProperty("Application_Date")
+        private String applicationDate;
+        @JsonProperty("Currency")
+        private String currency;
+        @JsonProperty("Amount")
+        private String amount;
+        @JsonProperty("Application_Status")
+        private String applicationStatus;
+        @JsonProperty("Last_Status_Date")
+        private String lastStatusDate;
 
     }
 
@@ -249,17 +367,65 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo, Number_of_Payments;
+        @JsonProperty("SNo")
+        private Integer sNo;
+        @JsonProperty("Number_of_Payments")
+        private Integer numberOfPayments;
 
-        private String Institution, Term, Loan_Purpose, Client_Number, Borrower_Classification, First_Payment_Date, Credit_Account_Reference, Amortization_Type, Type_of_Interest;
+        @JsonProperty("Institution")
+        private String institution;
+        @JsonProperty("Term")
+        private String term;
+        @JsonProperty("Loan_Purpose")
+        private String loanPurpose;
+        @JsonProperty("Client_Number")
+        private String clientNumber;
+        @JsonProperty("Borrower_Classification")
+        private String borrowerClassification;
+        @JsonProperty("First_Payment_Date")
+        private String firstPaymentDate;
+        @JsonProperty("Credit_Account_Reference")
+        private String creditAccountReference;
+        @JsonProperty("Amortization_Type")
+        private String amortizationType;
+        @JsonProperty("Type_of_Interest")
+        private String typeOfInterest;
 
-        private BigDecimal Annual_Interest_Rate_at_Disbursement, Credit_Amount, Facility_Amount, Monthly_Installment_Amount, Provision_Amount;
+        @JsonProperty("Annual_Interest_Rate_at_Disbursement")
+        private BigDecimal annualInterestRateAtDisbursement;
+        @JsonProperty("Credit_Amount")
+        private BigDecimal creditAmount;
+        @JsonProperty("Facility_Amount")
+        private BigDecimal facilityAmount;
+        @JsonProperty("Monthly_Installment_Amount")
+        private BigDecimal monthlyInstallmentAmount;
+        @JsonProperty("Provision_Amount")
+        private BigDecimal provisionAmount;
 
-        private String Credit_Account_Date, Interest_Calculation_Method, Payment_Frequency, Currency, Credit_Account_Type, Group_ID, Client_Consented, Maturity_Date, Client_Given_Notice;
+        @JsonProperty("Credit_Account_Date")
+        private String creditAccountDate;
+        @JsonProperty("Interest_Calculation_Method")
+        private String interestCalculationMethod;
+        @JsonProperty("Payment_Frequency")
+        private String paymentFrequency;
+        @JsonProperty("Currency")
+        private String currency;
+        @JsonProperty("Credit_Account_Type")
+        private String creditAccountType;
+        @JsonProperty("Group_ID")
+        private String groupID;
+        @JsonProperty("Client_Consented")
+        private String clientConsented;
+        @JsonProperty("Maturity_Date")
+        private String maturityDate;
+        @JsonProperty("Client_Given_Notice")
+        private String clientGivenNotice;
 
-        private List<LastTransactionData> Last_Transaction;
+        @JsonProperty("Last_Transaction")
+        private List<LastTransactionData> lastTransaction;
 
-        private List<CreditCycleData> Credit_Cycle_12_Months;
+        @JsonProperty("Credit_Cycle_12_Months")
+        private List<CreditCycleData> creditCycle12Months;
     }
 
     @Data
@@ -269,11 +435,38 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private String Transaction_Date, Currency, Last_Payment_Date, Closure_Reason, Closure_Date, Last_Status_Change_Date, Arrears_Date, Restructured_Credit, Account_Status, Risk_Classification;
+        @JsonProperty("Transaction_Date")
+        private String transactionDate;
+        @JsonProperty("Currency")
+        private String currency;
+        @JsonProperty("Last_Payment_Date")
+        private String lastPaymentDate;
+        @JsonProperty("Closure_Reason")
+        private String closureReason;
+        @JsonProperty("Closure_Date")
+        private String closureDate;
+        @JsonProperty("Last_Status_Change_Date")
+        private String lastStatusChangeDate;
+        @JsonProperty("Arrears_Date")
+        private String arrearsDate;
+        @JsonProperty("Restructured_Credit")
+        private String restructuredCredit;
+        @JsonProperty("Account_Status")
+        private String accountStatus;
+        @JsonProperty("Risk_Classification")
+        private String riskClassification;
 
-        private BigDecimal Last_Payment_Amount, Current_Balance_Amount, Balance_Overdue, Annual_Interest_Rate_at_Reporting;
+        @JsonProperty("Last_Payment_Amount")
+        private BigDecimal lastPaymentAmount;
+        @JsonProperty("Current_Balance_Amount")
+        private BigDecimal currentBalanceAmount;
+        @JsonProperty("Balance_Overdue")
+        private BigDecimal balanceOverdue;
+        @JsonProperty("Annual_Interest_Rate_at_Reporting")
+        private BigDecimal annualInterestRateAtReporting;
 
-        private Integer Days_in_Arrears;
+        @JsonProperty("Days_in_Arrears")
+        private Integer daysInArrears;
 
     }
 
@@ -284,7 +477,16 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private String Month, Year, Days_in_Arrears, Risk_Classification, Account_Status;
+        @JsonProperty("Month")
+        private String month;
+        @JsonProperty("Year")
+        private String year;
+        @JsonProperty("Days_in_Arrears")
+        private String daysInArrears;
+        @JsonProperty("Risk_Classification")
+        private String riskClassification;
+        @JsonProperty("Account_Status")
+        private String accountStatus;
 
     }
 
@@ -295,13 +497,37 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Held_By, Client_Number, Valuation_Date, Account_Number, Expiry_Date, Classification, Currency;
+        @JsonProperty("Held_By")
+        private String heldBy;
+        @JsonProperty("Client_Number")
+        private String clientNumber;
+        @JsonProperty("Valuation_Date")
+        private String valuationDate;
+        @JsonProperty("Account_Number")
+        private String accountNumber;
+        @JsonProperty("Expiry_Date")
+        private String expiryDate;
+        @JsonProperty("Classification")
+        private String classification;
+        @JsonProperty("Currency")
+        private String currency;
 
-        private BigDecimal Open_Market_Value, Forced_Sale_Value;
+        @JsonProperty("Open_Market_Value")
+        private BigDecimal openMarketValue;
+        @JsonProperty("Forced_Sale_Value")
+        private BigDecimal forcedSaleValue;
 
-        private String Maturity_Date, Reference, Instrument_of_Claim, Description;
+        @JsonProperty("Maturity_Date")
+        private String maturityDate;
+        @JsonProperty("Reference")
+        private String reference;
+        @JsonProperty("Instrument_of_Claim")
+        private String instrumentOfClaim;
+        @JsonProperty("Description")
+        private String description;
 
     }
 
@@ -312,11 +538,26 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Institution, Currency, Reference, Maturity_Date, Credit_Account_Date, Credit_Account_Status;
+        @JsonProperty("Institution")
+        private String institution;
+        @JsonProperty("Currency")
+        private String currency;
+        @JsonProperty("Reference")
+        private String reference;
+        @JsonProperty("Maturity_Date")
+        private String maturityDate;
+        @JsonProperty("Credit_Account_Date")
+        private String creditAccountDate;
+        @JsonProperty("Credit_Account_Status")
+        private String creditAccountStatus;
 
-        private BigDecimal Amount_Guaranteed, Current_Balance_Amount;
+        @JsonProperty("Amount_Guaranteed")
+        private BigDecimal amountGuaranteed;
+        @JsonProperty("Current_Balance_Amount")
+        private BigDecimal currentBalanceAmount;
     }
 
     @Data
@@ -326,9 +567,25 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo, Cheque_Number, Amount;
+        @JsonProperty("SNo")
+        private Integer sNo;
+        @JsonProperty("Cheque_Number")
+        private Integer chequeNumber;
+        @JsonProperty("Amount")
+        private Integer amount;
 
-        private String Institution, Reference, Bounced_Date, Beneficiary, Currency, Reason;
+        @JsonProperty("Institution")
+        private String institution;
+        @JsonProperty("Reference")
+        private String reference;
+        @JsonProperty("Bounced_Date")
+        private String bouncedDate;
+        @JsonProperty("Beneficiary")
+        private String beneficiary;
+        @JsonProperty("Currency")
+        private String currency;
+        @JsonProperty("Reason")
+        private String reason;
 
     }
 
@@ -339,11 +596,22 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo;
+        @JsonProperty("SNo")
+        private Integer sNo;
 
-        private String Institution, Category, Subcategory, Currency, Incident_Date;
+        @JsonProperty("Institution")
+        private String institution;
+        @JsonProperty("Category")
+        private String category;
+        @JsonProperty("Subcategory")
+        private String subcategory;
+        @JsonProperty("Currency")
+        private String currency;
+        @JsonProperty("Incident_Date")
+        private String incidentDate;
 
-        private BigDecimal Loss_Amount;
+        @JsonProperty("Loss_Amount")
+        private BigDecimal lossAmount;
 
     }
 
@@ -354,10 +622,17 @@ public class CreditReportJsonResponseData implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
-        private Integer SNo, Count;
+        @JsonProperty("SNo")
+        private Integer sNo;
+        @JsonProperty("Count")
+        private Integer count;
 
-        private String Institution, Reason, Timestamp;
+        @JsonProperty("Institution")
+        private String institution;
+        @JsonProperty("Reason")
+        private String reason;
+        @JsonProperty("Timestamp")
+        private String timestamp;
 
     }
 }
-

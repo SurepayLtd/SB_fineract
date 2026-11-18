@@ -84,6 +84,9 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
     @Column(name = "report_url")
     private String reportUrl;
 
+    @Column(name = "validation_timestamp")
+    private Long validationTimestamp;
+
 
     @PrePersist()
     public void onCreate(){

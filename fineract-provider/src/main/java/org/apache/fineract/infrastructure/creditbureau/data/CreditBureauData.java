@@ -46,4 +46,8 @@ public final class CreditBureauData {
                 .setProductName(productName).setCreditBureauSummary(creditBureauSummary).setImplementationKey(implementationKey);
     }
 
+    public static CreditBureauData display(final long creditBureauId, final String creditBureauName){
+        return new CreditBureauData().setCreditBureauId(creditBureauId).setCreditBureauName(creditBureauName);
+    }
+
 }

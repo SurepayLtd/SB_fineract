@@ -27,8 +27,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 
 
 @Service
@@ -170,7 +174,7 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
 
             CreditValidationType creditValidationType = CreditValidationType.fromInt(type);
 
-            var check = checks(creditValidationType, client, clientConsented, reason, scoreType);
+            var check = checks(creditValidationType, client, clientConsented, reason, scoreType, crbCheck);
 
             var individualId = check != null ? check.getIndividualId() : null;
             var nonIndividualId = check != null ? check.getNonIndividualId() : null;
@@ -210,11 +214,11 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
 
 
 
-    private CrbProviderResult checks(CreditValidationType type, Client client, String consented, String reason, Integer scoreType) {
+    private CrbProviderResult checks(CreditValidationType type, Client client, String consented, String reason, Integer scoreType, CrbCheck crbCheck) {
 
         return switch (type) {
-            case KYC_ENQUIRY -> validateKyc(client, consented, reason);
-            case CREDIT_ENQUIRY -> validateCreditEnquiry(client, consented, reason);
+            case KYC_ENQUIRY -> validateKyc(client, consented, reason, crbCheck);
+            case CREDIT_ENQUIRY -> validateCreditEnquiry(client, consented, reason, crbCheck);
             case CREDIT_SCORE -> validateCreditScoreEnquiry(client, consented, scoreType);
         };
     }
@@ -297,7 +301,7 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
                 .build();
     }
 
-    private CrbProviderResult validateCreditEnquiry(Client client, String consented, String reason){
+    private CrbProviderResult validateCreditEnquiry(Client client, String consented, String reason, CrbCheck crbCheck){
 
         Integer entity = entityType(client);
         String identificationType = identificationType(client);
@@ -314,11 +318,18 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
         var response = gnugridNotificationWritePlatformService.creditEnquiry(request);
 
         final boolean verified = "SUCCESSFUL".equalsIgnoreCase(response.getEnquiry().getStatus())
-                && "1".equalsIgnoreCase(response.getEnquiry().getFormal().getMatches().toString());
+                && Objects.requireNonNull(identifier).equalsIgnoreCase(response.getEnquiry().getSearch_value());
 
         var enquiry = response.getEnquiry();
         var formal = enquiry.getFormal();
 
+        final long validationTimestamp = enquiry.getTimestamp()
+                .atZone(ZoneId.of("Africa/Kampala"))
+                .toEpochSecond();
+
+        // Persist it before making the provider request.
+        crbCheck.setValidationTimestamp(validationTimestamp);
+        this.crbCheckRepository.saveAndFlush(crbCheck);
 
 
         var builder = CrbProviderResult.builder()
@@ -339,7 +350,7 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
         return builder.build();
     }
 
-    private CrbProviderResult validateKyc(Client client, String consented, String reason){
+    private CrbProviderResult validateKyc(Client client, String consented, String reason, CrbCheck crbCheck){
 
         Integer entity = entityType(client);
         String identificationType = identificationType(client);
@@ -355,6 +366,18 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
         var enquiry = response.getEnquiry();
 
         var formal = enquiry.getFormal();
+
+        final long validationTimestamp = LocalDateTime
+                .parse(
+                        enquiry.getTimestamp(),
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                )
+                .atZone(ZoneId.of("Africa/Kampala"))
+                .toEpochSecond();
+
+        // Persist it before making the provider request.
+        crbCheck.setValidationTimestamp(validationTimestamp);
+        this.crbCheckRepository.saveAndFlush(crbCheck);
 
 
         var builder = CrbProviderResult.builder()

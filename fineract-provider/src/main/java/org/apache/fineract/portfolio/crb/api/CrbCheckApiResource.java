@@ -72,15 +72,15 @@ public class CrbCheckApiResource {
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Retrieve Kyc Checks", description = "Retrieves the saved CRB kyc checks for a client, including their statuses and provider results.")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.GetCrbChecksResponse.class)))})
-    public String retrieveKycChecks(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId, @Context final UriInfo uriInfo) {
+    public String retrieveKycChecks(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId, @QueryParam("type") @Parameter(description = "Validation Type", required = true) final Integer type, @Context final UriInfo uriInfo) {
 
         context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_KYC_RESOURCE_NAME);
 
-        if (clientId == null) {
+        if (clientId == null || type == null) {
             throw new IllegalArgumentException("clientId is required");
         }
 
-        final List<CrbCheckData> checks = crbCheckReadService.retrieveKycChecks(clientId);
+        final List<CrbCheckData> checks = crbCheckReadService.retrieveKycChecks(clientId, type);
 
         final ApiRequestJsonSerializationSettings settings = apiRequestParameterHelper.process(uriInfo.getQueryParameters());
 

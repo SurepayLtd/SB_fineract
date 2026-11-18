@@ -75,7 +75,7 @@ public final class CreditReportUrlBuilder {
             throw new GeneralPlatformDomainRuleException("error.msg.crb.credit.report.timestamp.missing", "Credit report timestamp is required.");
         }
 
-        return TIMESTAMP_FORMAT.format(Instant.ofEpochSecond(timestamp));
+        return String.valueOf(timestamp);
     }
 
     private static String stripTrailingSlash(final String url) {

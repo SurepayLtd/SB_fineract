@@ -9,6 +9,6 @@ public interface CrbCheckReadServicePlatform {
     List<CrbCheckData> retrieveClientChecks(Long clientId);
     List<CrbCheckData> retrieveCreditChecks(Long loanId, Integer type);
     CrbCheckData retrieveTypes();
-    List<CrbCheckData> retrieveKycChecks(Long clientId);
+    List<CrbCheckData> retrieveKycChecks(Long clientId, Integer type);
 
 }

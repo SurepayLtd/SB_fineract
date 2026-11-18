@@ -39,6 +39,11 @@ public class CrbApiConstants {
     public static final String crbCreditFormatParamName= "crbCreditValidationType";
     public static final String crbReportActionFormatParamName= "crbReportAction";
     public static final String crbCreditScoreTypeActionFormatParamName= "crbCreditScoreType";
+    public static final String crbCreditBureauParamName= "creditBureauID";
+    public static final String crbCreditBureauLoanIdParamName= "loanId";
+    public static final String crbCreditBureauClientIdParamName= "clientId";
+
+
 
 
 
@@ -64,7 +69,7 @@ public class CrbApiConstants {
 
     public static final Set<String> CRB_CREATE_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbValidationTypeParamName, crbRequestTypeParamName));
 
-    public static final Set<String> CRB_CREDIT_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbCreditFormatParamName, crbReportTypeParamName, crbCreditScoreTypeActionFormatParamName, entityCategoryIdParamName, crbReportFormatParamName, enquiryReasonIdParamName));
+    public static final Set<String> CRB_CREDIT_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbCreditFormatParamName, crbReportTypeParamName, crbCreditScoreTypeActionFormatParamName, entityCategoryIdParamName, crbReportFormatParamName, enquiryReasonIdParamName, crbReportActionFormatParamName, crbCreditBureauParamName, crbCreditBureauLoanIdParamName, crbCreditBureauClientIdParamName));
 
 
     public static final Set<String> VALIDATE_OTP_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, otpCodeParamName));

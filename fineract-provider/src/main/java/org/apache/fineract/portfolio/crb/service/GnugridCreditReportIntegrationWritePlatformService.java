@@ -8,6 +8,8 @@ import org.apache.fineract.infrastructure.creditbureau.service.CreditBureauInteg
 public interface GnugridCreditReportIntegrationWritePlatformService extends CreditBureauIntegrationWritePlatformService {
 
     CommandProcessingResult creditReports(Long loanId, JsonCommand command);
+    CommandProcessingResult kycReports(Long clientId, JsonCommand command);
     String getCreditReportPayload(Long loanId);
+    String getKycReportPayload(Long clientId);
 
 }

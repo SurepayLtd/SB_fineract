@@ -21,11 +21,9 @@ package org.apache.fineract.infrastructure.creditbureau.service;
 import jakarta.persistence.PersistenceException;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
@@ -34,7 +32,6 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuild
 import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
-import org.apache.fineract.infrastructure.creditbureau.data.CreditBureauConfigurations;
 import org.apache.fineract.infrastructure.creditbureau.data.CreditBureauReportData;
 import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureau;
 import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauRepository;
@@ -42,7 +39,6 @@ import org.apache.fineract.infrastructure.creditbureau.domain.CreditReport;
 import org.apache.fineract.infrastructure.creditbureau.domain.CreditReportRepository;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.crb.service.GnugridCreditReportIntegrationWritePlatformService;
-import org.apache.fineract.portfolio.crb.service.GnugridKycReportIntegrationWritePlatformService;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -51,6 +47,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 public class CreditReportWritePlatformServiceImpl implements CreditReportWritePlatformService {
 
     public static final String CREDIT_BUREAU_INTEGRATION = "creditBureauIntegration";
@@ -94,13 +91,13 @@ public class CreditReportWritePlatformServiceImpl implements CreditReportWritePl
             }else if (integration instanceof GnugridCreditReportIntegrationWritePlatformService gnugridIntegration) {
 
                 Long loanId = command.longValueOfParameterNamed("loanId");
-
-                return gnugridIntegration.creditReports(loanId, command);
-            }else if (integration instanceof GnugridKycReportIntegrationWritePlatformService gnugridKycReport) {
-
                 Long clientId = command.longValueOfParameterNamed("clientId");
 
-                return gnugridKycReport.kycReports(clientId, command);
+                if (loanId != null) {
+                    return gnugridIntegration.creditReports(loanId, command);
+                } else if (clientId != null) {
+                    return gnugridIntegration.kycReports(clientId, command);
+                }
             }
 
             baseDataValidator.reset().failWithCode(CREDIT_BUREAU_HAS_NOT_BEEN_INTEGRATED);
@@ -182,33 +179,36 @@ public class CreditReportWritePlatformServiceImpl implements CreditReportWritePl
             } else if (integration instanceof GnugridCreditReportIntegrationWritePlatformService gnugridIntegration) {
 
                 Long loanId = command.longValueOfParameterNamed("loanId");
-
-                String reportData = gnugridIntegration.getCreditReportPayload(loanId);
-
-                creditReport = creditReportRepository.getCreditReport(creditBureauId, nationalId);
-
-                if (creditReport != null) {
-                    creditReportRepository.delete(creditReport);
-                }
-
-                creditReport = CreditReport.instance(creditBureauId, nationalId, reportData.getBytes(StandardCharsets.UTF_8));
-
-                creditReportRepository.saveAndFlush(creditReport);
-            } else if (integration instanceof GnugridKycReportIntegrationWritePlatformService gnugridKycReport) {
-
                 Long clientId = command.longValueOfParameterNamed("clientId");
 
-                String reportData = gnugridKycReport.getKycReportPayload(clientId);
 
-                creditReport = creditReportRepository.getCreditReport(creditBureauId, nationalId);
+                if (loanId != null) {
+                    String reportData = gnugridIntegration.getCreditReportPayload(loanId);
 
-                if (creditReport != null) {
-                    creditReportRepository.delete(creditReport);
+                    creditReport = creditReportRepository.getCreditReport(creditBureauId, nationalId);
+
+                    if (creditReport != null) {
+                        creditReportRepository.delete(creditReport);
+                    }
+
+                    creditReport = CreditReport.instance(creditBureauId, nationalId, reportData.getBytes(StandardCharsets.UTF_8));
+
+                    creditReportRepository.saveAndFlush(creditReport);
+
+                } else if (clientId !=null) {
+
+                    String reportData = gnugridIntegration.getKycReportPayload(clientId);
+
+                    creditReport = creditReportRepository.getCreditReport(creditBureauId, nationalId);
+
+                    if (creditReport != null) {
+                        creditReportRepository.delete(creditReport);
+                    }
+
+                    creditReport = CreditReport.instance(creditBureauId, nationalId, reportData.getBytes(StandardCharsets.UTF_8));
+
+                    creditReportRepository.saveAndFlush(creditReport);
                 }
-
-                creditReport = CreditReport.instance(creditBureauId, nationalId, reportData.getBytes(StandardCharsets.UTF_8));
-
-                creditReportRepository.saveAndFlush(creditReport);
             }
 
             return new CommandProcessingResultBuilder().withEntityId(creditReport.getId()).build();

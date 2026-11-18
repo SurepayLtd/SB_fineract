@@ -3,6 +3,7 @@ package org.apache.fineract.portfolio.crb.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
@@ -14,14 +15,9 @@ import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauLoanPr
 import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauLoanProductMappingRepository;
 import org.apache.fineract.portfolio.client.domain.CRBStatus;
 import org.apache.fineract.portfolio.client.domain.Client;
+import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.client.domain.LegalForm;
-import org.apache.fineract.portfolio.crb.data.CrbApiConstants;
-import org.apache.fineract.portfolio.crb.data.CreditReportRequestData;
-import org.apache.fineract.portfolio.crb.data.CreditReportGenerationData;
-import org.apache.fineract.portfolio.crb.data.CreditReportJsonResponseData;
-import org.apache.fineract.portfolio.crb.data.CreditReportPdfResponseData;
-import org.apache.fineract.portfolio.crb.data.CrbProviderResult;
-import org.apache.fineract.portfolio.crb.data.CreditReportUrlBuilder;
+import org.apache.fineract.portfolio.crb.data.*;
 import org.apache.fineract.portfolio.crb.domain.CrbCheckRepository;
 import org.apache.fineract.portfolio.crb.domain.CreditReports;
 import org.apache.fineract.portfolio.crb.domain.CrbReportAction;
@@ -43,10 +39,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements GnugridCreditReportIntegrationWritePlatformService{
@@ -61,6 +59,7 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
     private final CrbConsentRepository crbConsentRepository;
     private final CreditBureauLoanProductMappingRepository creditBureauLoanProductMappingRepository;
     private final ConfigurationDomainService configurationDomainService;
+    private final ClientRepositoryWrapper clientRepositoryWrapper;
 
 
     @Transactional
@@ -106,7 +105,7 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
         // Reuse a previous successful credit check when still valid.
         if (validationType.equals(CreditReports.CREDIT_REPORT)) {
 
-            final CrbCheck reusableCheck = findReusableCheck(client.getId(), report, mapping.getStalePeriod());
+            final CrbCheck reusableCheck = findReusableCheck(client.getId(), report, reportFormat, mapping.getStalePeriod());
 
             if (reusableCheck != null) {
                 return new CommandProcessingResultBuilder()
@@ -162,6 +161,111 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
         }
     }
 
+    @Transactional
+    @Override
+    public CommandProcessingResult kycReports(Long clientId, JsonCommand command) {
+        Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
+
+        this.fromApiJsonDeserializer.validateCrbCredit(command);
+
+        Integer report = command.integerValueOfParameterNamed(CrbApiConstants.crbReportTypeParamName);
+        Integer reportFormat = command.integerValueOfParameterNamed(CrbApiConstants.crbReportFormatParamName);
+
+        if (!client.isActive() && !client.isPending()) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.client.inactive", "Kyc Report Check cannot be performed because the client is inactive.");
+        }
+
+        final CrbConsent crbConsent = this.crbConsentRepository.findVerifiedClient(client.getId(), ConsentStatus.VERIFIED.getValue());
+
+
+        final CrbCheck crbCheck = CrbCheck.create(client, null, crbConsent, report, CrbRequestType.INITIAL.getValue());
+
+        this.crbCheckRepository.saveAndFlush(crbCheck);
+
+        try{
+
+            var check = kycReport(client, reportFormat);
+
+            var reportToken = check != null ? check.getReportToken() : null;
+
+            var reportUrl = check != null ? check.getReportUrl() : null;
+
+            assert check != null;
+
+            int status = check.isVerified() ? CRBStatus.VERIFIED.getValue() : CRBStatus.FAILED.getValue();
+
+            LocalDateTime completedAt = DateUtils.getLocalDateTimeOfTenant();
+
+
+            crbCheck.creditCheck(status, null, null, null, check.getResponsePayload(), completedAt, null, null, reportToken, reportUrl);
+
+            this.crbCheckRepository.saveAndFlush(crbCheck);
+
+
+            return new CommandProcessingResultBuilder()
+                    .withEntityId(crbCheck.getId())
+                    .withClientId(client.getId())
+                    .build();
+
+        } catch (Exception e) {
+            crbCheck.setStatus(CRBStatus.ERROR.getValue());
+            crbCheck.setErrorMessage(e.getMessage());
+            crbCheck.setCompletedAt(DateUtils.getLocalDateTimeOfTenant());
+
+            this.crbCheckRepository.saveAndFlush(crbCheck);
+
+            throw e;
+        }
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getCreditReportPayload(Long loanId) {
+
+        final Loan loan = loanRepositoryWrapper.findOneWithNotFoundDetection(loanId);
+
+        final Client client = loan.getClient();
+
+        // Retrieve the latest successful credit report check for this client.
+        CrbCheck crbCheck = this.crbCheckRepository.findReportsHistory(client.getId(), CreditReports.CREDIT_REPORT.getValue(), CrbRequestType.INITIAL.getValue(), CRBStatus.VERIFIED.getValue(),PageRequest.of(0, 1))
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.crb.check.not.found",
+                        "Previous CRB details validation not found."));
+
+        // PDF reports have a generated URL; JSON reports use the response payload.
+        if (crbCheck.getReportUrl() != null && !crbCheck.getReportUrl().isBlank()) {
+            return crbCheck.getReportUrl();
+        }
+
+        return crbCheck.getResponsePayload();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getKycReportPayload(Long clientId) {
+        final Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
+
+        // Retrieve the latest successful credit report check for this client.
+        CrbCheck crbCheck = this.crbCheckRepository.findReportsHistory(client.getId(), CreditReports.KYC_REPORT.getValue(), CrbRequestType.INITIAL.getValue(), CRBStatus.VERIFIED.getValue(),PageRequest.of(0, 1))
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.crb.check.not.found",
+                        "Previous CRB details validation not found."));
+
+        // PDF reports have a generated URL; JSON reports use the response payload.
+        if (crbCheck.getReportUrl() != null && !crbCheck.getReportUrl().isBlank()) {
+            return crbCheck.getReportUrl();
+        }
+
+        return crbCheck.getResponsePayload();
+    }
+
+    @Override
+    public String getImplementationKey() {
+        return CRBProviders.GNUGRID.getDescription();
+    }
 
     private CrbProviderResult creditReport(Client client, Integer reportFormat, Integer reportAction) {
 
@@ -188,7 +292,6 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
 
             final CreditReportJsonResponseData jsonResponseData = gnugridService.creditReport(request);
 
-            //Todo: What Makes the Report verified really???
             //Todo: I assume that if the first enquiry was successful then we don't need a verification here
             final boolean verified = true;
 
@@ -208,26 +311,24 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
 
         final String baseUrl = getProperty("crb.ui.url");
 
-        final long timestamp = crbCheck.getCreatedAt()
-                .atZone(TIME_ZONE)
-                .toEpochSecond();
+        final Long timestamp = crbCheck.getValidationTimestamp();
 
         final CreditReportGenerationData genData;
 
         if (legalForm.isEntity()) {
 
-            genData = new CreditReportGenerationData(request.getEnquiryId(), null, request.getNon_individual_id(),
+            genData = new CreditReportGenerationData(request.getEnquiry_id(), null, request.getNon_individual_id(),
                     pdfResponseData.getAccount_id(), crbCheck.getProviderReference(), timestamp, pdfResponseData.getToken(), crbReportAction.getDescription());
 
         } else {
 
-            genData = new CreditReportGenerationData(request.getEnquiryId(), request.getIndividual_id(), null,
+            genData = new CreditReportGenerationData(request.getEnquiry_id(), request.getIndividual_id(), null,
                     pdfResponseData.getAccount_id(), crbCheck.getProviderReference(), timestamp, pdfResponseData.getToken(), crbReportAction.getDescription());
         }
 
         final String reportUrl = CreditReportUrlBuilder.buildReportUrl(baseUrl, genData);
 
-        //Todo: What Makes the Report verified really???
+        //Todo: I assume that if the first enquiry was successful then we don't need a verification here
         final boolean verified = true;
 
         return CrbProviderResult.builder()
@@ -239,32 +340,61 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
                 .build();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public String getCreditReportPayload(Long loanId) {
+    private CrbProviderResult kycReport(Client client, Integer reportFormat){
 
-        final Loan loan = loanRepositoryWrapper.findOneWithNotFoundDetection(loanId);
+        CrbReportFormat crbReportFormat = CrbReportFormat.fromInt(reportFormat);
 
-        final Client client = loan.getClient();
+        var request = kycClientTypeReport(client, crbReportFormat);
 
-        // Retrieve the latest successful credit report check for this client.
-        CrbCheck crbCheck = this.crbCheckRepository.findHistoryWithProviderId(client.getId(), CreditReports.CREDIT_REPORT.getValue(), CrbRequestType.INITIAL.getValue())
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.crb.check.not.found",
-                        "Previous CRB details validation not found."));
+        var response = gnugridService.kycReport(request);
 
-        // PDF reports have a generated URL; JSON reports use the response payload.
-        if (crbCheck.getReportUrl() != null && !crbCheck.getReportUrl().isBlank()) {
-            return crbCheck.getReportUrl();
-        }
+        //Todo: I assume that if the first enquiry was successful then we don't need a verification here
+        final boolean verified = true;
 
-        return crbCheck.getResponsePayload();
+        return CrbProviderResult.builder()
+                .verified(verified)
+                .responsePayload(serializeResponse(response))
+                .build();
     }
 
-    @Override
-    public String getImplementationKey() {
-        return CRBProviders.GNUGRID.getDescription();
+    private KycReportRequestData kycClientTypeReport(Client client, CrbReportFormat crbReportFormat){
+        final LegalForm legalForm = LegalForm.fromInt(client.getLegalForm());
+
+        if (legalForm == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.client.legal.form.invalid", "Invalid client legal form.");
+        }
+
+        CrbCheck crbCheck = findCreditEnquiryCheck(client, CreditValidationType.KYC_ENQUIRY.getValue());
+
+        if (!CRBStatus.VERIFIED.getValue().equals(crbCheck.getStatus())) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.not.verified",
+                    "KYC report cannot be generated because the client's Kyc validation has not been verified."
+            );
+        }
+
+        var providerValidationId = crbCheck.getProviderValidationId();
+
+
+        if (providerValidationId == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.id.not.found", "CRB provider validation ID not found.");
+        }
+
+        if (legalForm.isEntity()){
+            Integer nonIndividualId = crbCheck.getNonIndividualId();
+
+            if (nonIndividualId == null) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.non.individual.id.not.found", "CRB non-individual ID not found.");
+            }
+            return new KycReportRequestData(providerValidationId, crbReportFormat.getDescription(), null, nonIndividualId);
+        }
+
+        final Integer individualId = crbCheck.getIndividualId();
+
+        if (individualId == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.individual.id.not.found", "CRB individual ID not found.");
+        }
+
+        return new KycReportRequestData(providerValidationId, crbReportFormat.getDescription(),individualId, null);
     }
 
     private String serializeResponse(final Object response) {
@@ -323,15 +453,23 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
         return environment.getProperty(property);
     }
 
-    private CrbCheck findReusableCheck(final Long clientId, final Integer validationType, final int stalePeriod) {
+    private CrbCheck findReusableCheck(final Long clientId, final Integer validationType, final Integer reportFormat, final int stalePeriod) {
 
         if (stalePeriod <= 0) {
             return null;
         }
 
-        final List<CrbCheck> checks = this.crbCheckRepository.findLatestVerifiedCheck(clientId, validationType,
+        final CrbReportFormat format = CrbReportFormat.fromInt(reportFormat);
+
+        final boolean hasReportUrl = format.equals(CrbReportFormat.PDF);
+
+        final List<CrbCheck> checks = this.crbCheckRepository.findLatestVerifiedReportCheck(
+                clientId,
+                validationType,
                 CRBStatus.VERIFIED.getValue(),
-                PageRequest.of(0, 1));
+                hasReportUrl,
+                PageRequest.of(0, 1)
+        );
 
         if (checks.isEmpty()) {
             return null;

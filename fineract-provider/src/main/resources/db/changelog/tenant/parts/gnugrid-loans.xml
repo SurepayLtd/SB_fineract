@@ -229,5 +229,11 @@
                                  referencedColumnNames="id"/>
     </changeSet>
 
+    <changeSet id="add-validation-timestamp-to-crb-check" author="victor">
+        <addColumn tableName="m_crb_check">
+            <column name="validation_timestamp" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+
 
 </databaseChangeLog>

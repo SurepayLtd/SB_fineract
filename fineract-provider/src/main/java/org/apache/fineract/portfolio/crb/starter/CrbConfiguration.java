@@ -66,17 +66,11 @@ public class CrbConfiguration {
         return new CrbCreditCheckWriteServiceImpl(clientRepositoryWrapper, clientNonPersonRepositoryWrapper, gnugridNotificationWritePlatformService, crbCheckRepository, objectMapper, crbConsentRepository, fromApiJsonDeserializer, codeValueRepository, loanRepositoryWrapper, creditBureauLoanProductMappingRepository, configurationDomainService);
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public GnugridKycReportIntegrationWritePlatformService gnugridKycReportIntegrationWritePlatformService(ClientRepositoryWrapper clientRepositoryWrapper, CrbDataValidator fromApiJsonDeserializer, CrbConsentRepository crbConsentRepository,
-                                                                 CrbCheckRepository crbCheckRepository, ObjectMapper objectMapper, GnugridNotificationWritePlatformService gnugridNotificationWritePlatformService){
-        return new GnugridKycReportIntegrationWritePlatformServiceImpl(clientRepositoryWrapper, fromApiJsonDeserializer, crbConsentRepository, crbCheckRepository, objectMapper, gnugridNotificationWritePlatformService);
-    }
 
     @Bean
     @ConditionalOnMissingBean
     public GnugridCreditReportIntegrationWritePlatformService gnugridCreditReportIntegrationWritePlatformService(GnugridNotificationWritePlatformService gnugridService, CrbCheckRepository crbCheckRepository, ObjectMapper objectMapper, Environment environment, CrbDataValidator fromApiJsonDeserializer,
-                                                                                                                 LoanRepositoryWrapper loanRepositoryWrapper, CrbConsentRepository crbConsentRepository, CreditBureauLoanProductMappingRepository creditBureauLoanProductMappingRepository, ConfigurationDomainService configurationDomainService){
-        return new GnugridCreditReportIntegrationWritePlatformServiceImpl(gnugridService, crbCheckRepository, objectMapper, environment, fromApiJsonDeserializer, loanRepositoryWrapper, crbConsentRepository, creditBureauLoanProductMappingRepository, configurationDomainService);
+                                                                                                                 LoanRepositoryWrapper loanRepositoryWrapper, CrbConsentRepository crbConsentRepository, CreditBureauLoanProductMappingRepository creditBureauLoanProductMappingRepository, ConfigurationDomainService configurationDomainService,  ClientRepositoryWrapper clientRepositoryWrapper){
+        return new GnugridCreditReportIntegrationWritePlatformServiceImpl(gnugridService, crbCheckRepository, objectMapper, environment, fromApiJsonDeserializer, loanRepositoryWrapper, crbConsentRepository, creditBureauLoanProductMappingRepository, configurationDomainService, clientRepositoryWrapper);
     }
 }

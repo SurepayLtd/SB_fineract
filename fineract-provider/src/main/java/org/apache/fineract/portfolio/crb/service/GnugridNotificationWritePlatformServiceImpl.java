@@ -37,10 +37,6 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
 
 
-    @Override
-    public String getImplementationKey() {
-        return CRBProviders.GNUGRID.getDescription();
-    }
 
     @Override
     public CreditScoreResponseData creditScore(CreditScoreRequestData creditScoreRequestData) {
@@ -66,7 +62,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 "error.msg.crb.credit.enquiry.connection.failed"
         );
 
-        log.info("Credit Score: {}", responseData);
+//        log.info("Credit Score: {}", responseData);
 
         return responseData;
     }
@@ -99,12 +95,12 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 CreditReportJsonResponseData.class,
                 "error.msg.crb.credit.report.invalid.response",
                 "Credit Report returned an invalid personal information validation response..",
-                response -> response.getCredit_information() != null,
+                response -> response.getCreditInformation() != null,
                 "error.msg.crb.report.enquiry.request.failed",
                 "error.msg.crb.report.enquiry.connection.failed"
         );
 
-        log.info("Credit Report: {}", responseData);
+//        log.info("Credit Report: {}", responseData);
 
         return responseData;
     }
@@ -142,7 +138,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 "error.msg.crb.report.enquiry.connection.failed"
         );
 
-        log.info("Credit Report: {}", responseData);
+//        log.info("Credit Report: {}", responseData);
 
         return responseData;
     }
@@ -170,7 +166,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 "error.msg.crb.credit.enquiry.connection.failed"
         );
 
-        log.info("Credit Enquiry: {}", responseData);
+//        log.info("Credit Enquiry: {}", responseData);
 
         return responseData;
     }
@@ -204,7 +200,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 KycReportResponseJsonData.class,
                 "error.msg.crb.kyc.report.invalid.response",
                 "KYC Report returned an invalid personal information validation response.",
-                response -> response.getKyc_information() != null,
+                response -> response.getKycInformation() != null,
                 "error.msg.crb..kyc.report.request.failed",
                 "error.msg.crb..kyc.report.connection.failed"
         );
@@ -241,7 +237,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 "error.msg.crb.kyc.enquiry.connection.failed"
         );
 
-        log.info("KYC Enquiry: {}", responseData);
+//        log.info("KYC Enquiry: {}", responseData);
 
         return responseData;
     }
@@ -272,7 +268,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 "error.msg.crb.validation.connection.failed"
         );
 
-        log.info("Personal Details: {}", responseData);
+        //log.info("Personal Details: {}", responseData);
 
         return responseData;
 
@@ -304,7 +300,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 "error.msg.crb.validation.connection.failed"
         );
 
-        log.info("Personal Details: {}", responseData);
+        //log.info("Personal Details: {}", responseData);
 
         return responseData;
     }
@@ -338,7 +334,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 "error.msg.crb.nin.validation.connection.failed"
         );
 
-        log.info("NinData: {}", responseData);
+        //log.info("NinData: {}", responseData);
 
         return responseData;
     }
@@ -369,7 +365,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 "error.msg.crb.nin.validation.connection.failed"
         );
 
-        log.info("NinData: {}", responseData);
+        //log.info("NinData: {}", responseData);
 
         return responseData;
     }
@@ -403,7 +399,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 "error.msg.crb.phone.validation.connection.failed"
         );
 
-        log.info("Phone Data: {}", responseData);
+        //log.info("Phone Data: {}", responseData);
 
         return responseData;
     }
@@ -434,7 +430,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 "error.msg.crb.phone.validation.connection.failed"
         );
 
-        log.info("Phone Data: {}", responseData);
+        //log.info("Phone Data: {}", responseData);
 
         return responseData;
 
@@ -484,7 +480,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                     );
 
                 }
-                log.info("AccessToken: {}", tokenResponse.getAccess_token());
+                //log.info("AccessToken: {}", tokenResponse.getAccess_token());
                 return tokenResponse.getAccess_token();
 
 

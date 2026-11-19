@@ -170,4 +170,6 @@ public interface ConfigurationDomainService {
 
     boolean isCrbCreditScoreEnabled();
 
+    Integer retrieveCrbLoanApplicationRequirement();
+
 }

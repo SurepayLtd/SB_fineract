@@ -14,6 +14,12 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuild
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
+import org.apache.fineract.infrastructure.documentmanagement.command.DocumentCommand;
+import org.apache.fineract.infrastructure.documentmanagement.contentrepository.ContentRepository;
+import org.apache.fineract.infrastructure.documentmanagement.contentrepository.ContentRepositoryFactory;
+import org.apache.fineract.infrastructure.documentmanagement.domain.StorageType;
+import org.apache.fineract.infrastructure.documentmanagement.service.DocumentWritePlatformService;
+import org.apache.fineract.infrastructure.documentmanagement.service.DocumentWritePlatformServiceJpaRepositoryImpl;
 import org.apache.fineract.infrastructure.security.service.HashingPasswordEncoder;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.notification.data.SmsTypeEnum;
@@ -33,7 +39,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -51,10 +61,12 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
     private final CrbDataValidator fromApiJsonDeserializer;
     private final SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService;
     private final CodeValueRepositoryWrapper codeValueRepository;
+    private final DocumentWritePlatformService documentWritePlatformService;
 
     @Transactional
     @Override
-    public CommandProcessingResult createConsent(Long clientId, JsonCommand command) {
+    public CommandProcessingResult createConsent(Long clientId, JsonCommand command, InputStream file,
+                                                 String fileName, Long fileSize, String contentType) throws IOException {
 
         try{
 
@@ -74,6 +86,13 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
             }
 
             final Integer consentChannel = command.integerValueOfParameterNamed("consentChannel");
+
+            if (ConsentChannel.PAPER.getValue().equals(consentChannel) && (file == null || fileSize == null || fileSize <= 0)) {
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.consent.paper.document.required",
+                        "A consent document is required for PAPER consent."
+                );
+            }
+
             final Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
 
             final String phone = client.mobileNo();
@@ -83,6 +102,7 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
             LocalDateTime expiryTime = null;
             Integer consentStatus = null;
             LocalDateTime consentedAt = null;
+            DocumentCommand documentCommand = null;
 
             if (consentChannel.equals(ConsentChannel.OTP.getValue())){
                  otp = String.valueOf(secureRandom.nextInt( 90000) + 10000);
@@ -92,17 +112,28 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
                 consentStatus = ConsentStatus.PENDING.getValue();
                 expiryTime = LocalDateTime.now().plusMinutes(otpExpiryMinutes);
             } else if (consentChannel.equals(ConsentChannel.PAPER.getValue())) {
-                consentStatus = ConsentStatus.VERIFIED.getValue();
+                consentStatus = ConsentStatus.PENDING.getValue();
                 consentedAt = LocalDateTime.now();
-                client.markCrbVerificationPending();
             }
 
             CrbConsent crbConsent = CrbConsent.fromJson(command, client, user, consentStatus, hashedOtp, expiryTime,consentedAt);
             crbConsent.setOtpUsed(false);
-            this.crbConsentRepository.save(crbConsent);
+            this.crbConsentRepository.saveAndFlush(crbConsent);
+
+            if (file != null && fileSize != null && fileSize > 0) {
+
+                documentCommand = new DocumentCommand(null, null, DocumentWritePlatformServiceJpaRepositoryImpl.DocumentManagementEntity.CRB_CONSENT.toString(), crbConsent.getId(),
+                        fileName, fileName, fileSize, contentType, "Consent Paper", null);
+
+                Long docId = this.documentWritePlatformService.createDocument(documentCommand, file);
+                crbConsent.setDocumentId(docId);
+                crbConsent.setConsentStatus(ConsentStatus.VERIFIED.getValue());
+                client.markCrbVerificationPending();
+                this.crbConsentRepository.saveAndFlush(crbConsent);
+
+            }
 
             if (otp !=null) {
-//                log.info("Create Consent OTP: {}", otp);
                 this.smsNotificationWritePlatformService.processClientSmsNotification(client, SmsTypeEnum.OTP_CRB_CONSENT, Integer.valueOf(otp), null);
             }
 

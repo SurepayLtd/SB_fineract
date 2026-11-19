@@ -623,4 +623,19 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
     public boolean isCrbCreditReportEnabled() {
         return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_CREDIT_REPORT).isEnabled();
     }
+
+    @Override
+    public Integer retrieveCrbLoanApplicationRequirement() {
+        String name = "crb-loan-approval-requirement";
+        GlobalConfigurationPropertyData property = getGlobalConfigurationPropertyData(name);
+        int defaultValue = 3;
+        if (property.isEnabled()){
+            int value = property.getValue().intValue();
+            if (value <1){
+                return defaultValue;
+            }
+            return value;
+        }
+        return defaultValue;
+    }
 }

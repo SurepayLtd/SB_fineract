@@ -1,6 +1,7 @@
 package org.apache.fineract.portfolio.crb.service;
 
 import org.apache.fineract.portfolio.crb.data.CrbCheckData;
+import org.apache.fineract.portfolio.crb.data.CrbReportFetchResult;
 
 import java.util.List;
 
@@ -10,5 +11,6 @@ public interface CrbCheckReadServicePlatform {
     List<CrbCheckData> retrieveCreditChecks(Long loanId, Integer type);
     CrbCheckData retrieveTypes();
     List<CrbCheckData> retrieveKycChecks(Long clientId, Integer type);
+    CrbReportFetchResult fetchPdf(final Long checkId);
 
 }

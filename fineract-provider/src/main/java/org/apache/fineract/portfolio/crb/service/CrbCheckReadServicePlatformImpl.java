@@ -4,14 +4,22 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.crb.data.CrbCheckData;
+import org.apache.fineract.portfolio.crb.data.CrbReportFetchResult;
 import org.apache.fineract.portfolio.crb.domain.*;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,11 +28,14 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatform{
 
     private final JdbcTemplate jdbcTemplate;
     private final PlatformSecurityContext context;
     private final ObjectMapper objectMapper;
+    private final CrbCheckRepository crbCheckRepository;
+    private final CloseableHttpClient httpClient;
 
 
     @Override
@@ -67,6 +78,46 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
     @Override
     public CrbCheckData retrieveTypes() {
         return CrbCheckData.dropdown(getRequestTypes(), getValidationTypes(), getCreditReportActionTypes(), getCreditReportFormatTypes(), getCreditReportTypes(), getCreditValidationTypes(), getCreditScoreTypes());
+    }
+
+    @Override
+    public CrbReportFetchResult fetchPdf(Long checkId) {
+
+        CrbCheck crbCheck = this.crbCheckRepository.findById(checkId)
+                .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.crb.check.not.found", "CRB check record not found."));
+
+        String reportUrl = crbCheck.getReportUrl();
+
+        if (reportUrl == null || reportUrl.isBlank()) {
+            return CrbReportFetchResult.upstreamError(404);
+        }
+
+        final HttpGet get = new HttpGet(reportUrl);
+
+        try {
+            final CloseableHttpResponse upstream = httpClient.execute(get);
+            final int status = upstream.getStatusLine().getStatusCode();
+
+            if (status != 200) {
+                upstream.close();
+                log.warn("CRB report fetch returned {} for {}", status, reportUrl);
+                return CrbReportFetchResult.upstreamError(status);
+            }
+
+            final HttpEntity entity = upstream.getEntity();
+            if (entity == null) {
+                upstream.close();
+                return CrbReportFetchResult.ioError("CRB returned an empty response body");
+            }
+
+            // The stream is tied to the response — the caller must close both.
+            // Wrap it so closing the input stream also closes the response.
+            return CrbReportFetchResult.success(entity.getContent(), entity.getContentLength());
+
+        } catch (IOException e) {
+            log.error("Failed to fetch CRB report from {}", reportUrl, e);
+            return CrbReportFetchResult.ioError(e.getMessage());
+        }
     }
 
     protected static class CheckMapper implements RowMapper<CrbCheckData>{

@@ -156,7 +156,7 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
         // Reuse a previous successful credit check when still valid.
         if (validationType.equals(CreditValidationType.CREDIT_ENQUIRY) || validationType.equals(CreditValidationType.CREDIT_SCORE)) {
 
-            final CrbCheck reusableCheck = findReusableCheck(client.getId(), type, mapping.getStalePeriod());
+            final CrbCheck reusableCheck = findReusableCheck(client.getId(), loan.getId(), type, mapping.getStalePeriod());
 
             if (reusableCheck != null) {
                 return new CommandProcessingResultBuilder()
@@ -450,14 +450,14 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
         }
     }
 
-    private CrbCheck findReusableCheck(final Long clientId, final Integer validationType, final int stalePeriod) {
+    private CrbCheck findReusableCheck(final Long clientId, final Long loanId, final Integer validationType, final int stalePeriod) {
 
         if (stalePeriod <= 0) {
             return null;
         }
 
         final List<CrbCheck> checks = this.crbCheckRepository.findLatestVerifiedCheck(
-                        clientId,
+                        clientId, loanId,
                         validationType,
                         CRBStatus.VERIFIED.getValue(),
                         PageRequest.of(0, 1));

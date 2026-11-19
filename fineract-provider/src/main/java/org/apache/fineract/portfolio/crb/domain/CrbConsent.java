@@ -9,6 +9,7 @@ import lombok.Setter;
 import org.apache.fineract.infrastructure.codes.domain.CodeValue;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
+import org.apache.fineract.infrastructure.documentmanagement.domain.Document;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.useradministration.domain.AppUser;
 
@@ -79,10 +80,13 @@ public class CrbConsent extends AbstractPersistableCustom<Long> {
     @Column(name = "otp_used", nullable = false)
     private boolean otpUsed;
 
+    @Column(name = "document_id")
+    private Long documentId;
+
 
     protected CrbConsent() {}
 
-    public CrbConsent(Client client, AppUser consentedBy, String consentVersion, String consentText, Integer consentChannel, Integer consentStatus, String otpHash, LocalDateTime otpExpiresAt, LocalDateTime consentedAt) {
+    private CrbConsent(Client client, AppUser consentedBy, String consentVersion, String consentText, Integer consentChannel, Integer consentStatus, String otpHash, LocalDateTime otpExpiresAt, LocalDateTime consentedAt) {
         this.client = client;
         this.consentedBy = consentedBy;
         this.consentVersion = consentVersion;

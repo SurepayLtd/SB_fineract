@@ -84,7 +84,8 @@ public class CrbConsentReadServiceImpl implements CrbConsentReadService{
                     revokedBy,
                     rs.getString("revokedByName"),
                     reactivatedBy,
-                    rs.getString("reactivatedByName")
+                    rs.getString("reactivatedByName"),
+                    rs.getLong("document_id")
 
                     );
         }
@@ -94,6 +95,7 @@ public class CrbConsentReadServiceImpl implements CrbConsentReadService{
 
             builder.append("cc.id AS id, ");
             builder.append("cc.client_id AS client_id, ");
+            builder.append("cc.document_id AS document_id, ");
             builder.append("c.display_name AS client_name, ");
             builder.append("cc.consent_channel AS consent_channel, ");
             builder.append("cc.consent_status AS consent_status, ");

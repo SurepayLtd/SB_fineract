@@ -235,5 +235,17 @@
         </addColumn>
     </changeSet>
 
+    <changeSet id="add-loan-crb-approval-config" author="victor">
+        <insert tableName="c_configuration">
+            <column name="name" value="crb-loan-approval-requirement"/>
+            <column name="value" valueNumeric="0"/>
+            <column name="date_value"/>
+            <column name="string_value"/>
+            <column name="enabled" valueBoolean="false"/>
+            <column name="is_trap_door" valueBoolean="false"/>
+            <column name="description" value="Defines the CRB checks required before a loan application can proceed: 1=Credit Enquiry and Report, 2=Credit Score, 3=Both."/>
+        </insert>
+    </changeSet>
+
 
 </databaseChangeLog>

@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.commands.domain.CommandWrapper;
@@ -27,9 +28,11 @@ import org.apache.fineract.infrastructure.security.service.PlatformSecurityConte
 import org.apache.fineract.portfolio.crb.data.CrbApiConstants;
 import org.apache.fineract.portfolio.crb.data.CrbCheckData;
 import org.apache.fineract.portfolio.crb.data.CrbConsentData;
+import org.apache.fineract.portfolio.crb.data.CrbReportFetchResult;
 import org.apache.fineract.portfolio.crb.service.CrbCheckReadServicePlatform;
 import org.springframework.stereotype.Component;
 
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
@@ -64,6 +67,41 @@ public class CrbCheckApiResource {
         final ApiRequestJsonSerializationSettings settings = apiRequestParameterHelper.process(uriInfo.getQueryParameters());
 
         return toApiJsonSerializer.serialize(settings, checks);
+    }
+
+    @GET
+    @Path("{checkId}/report-pdf")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces("application/pdf")
+    @Operation(summary = "Retrieve CRB Credit Reports", description = "Retrieves the saved CRB Credit Report Url")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "OK")})
+    public Response proxyCreditReportPdf(@PathParam("checkId") @Parameter(description = "Report Check ID", required = true) final Long checkId, @Context final UriInfo uriInfo) {
+
+        context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_CHECK_RESOURCE_NAME);
+
+        if (checkId == null) {
+            throw new IllegalArgumentException("checkId is required");
+        }
+
+        final CrbReportFetchResult result = crbCheckReadService.fetchPdf(checkId);
+
+        if (result.isSuccess()) {
+            final InputStream stream = result.getStream();
+            return Response.ok(stream)
+                    .header("Content-Type", "application/pdf")
+                    .header("Content-Length", result.getLength())
+                    .header("Content-Disposition",
+                            "inline; filename=\"CRB_Report_" + checkId + ".pdf\"")
+                    .build();
+        }
+        if (result.isUpstreamError()) {
+            // Forward whatever the CRB said (404, 500, 401…) so the
+            // frontend can show an accurate message.
+            return Response.status(result.getStatusCode()).build();
+        }
+        return Response.serverError()
+                .entity("Failed to fetch CRB report: " + result.getError())
+                .build();
     }
 
     @GET

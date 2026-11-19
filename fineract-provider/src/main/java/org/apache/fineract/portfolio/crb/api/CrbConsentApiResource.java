@@ -1,6 +1,6 @@
 package org.apache.fineract.portfolio.crb.api;
 
-
+import com.google.gson.JsonElement;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -18,18 +18,29 @@ import org.apache.fineract.commands.domain.CommandWrapper;
 import org.apache.fineract.commands.service.CommandWrapperBuilder;
 import org.apache.fineract.commands.service.PortfolioCommandSourceWritePlatformService;
 import org.apache.fineract.infrastructure.core.api.ApiRequestParameterHelper;
+import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.exception.UnrecognizedQueryParamException;
 import org.apache.fineract.infrastructure.core.serialization.ApiRequestJsonSerializationSettings;
+import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.apache.fineract.infrastructure.core.serialization.ToApiJsonSerializer;
 
 import org.apache.fineract.infrastructure.core.service.CommandParameterUtil;
+import org.apache.fineract.infrastructure.documentmanagement.api.FileUploadValidator;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
-import org.apache.fineract.portfolio.client.api.ClientApiConstants;
 import org.apache.fineract.portfolio.crb.data.CrbApiConstants;
 import org.apache.fineract.portfolio.crb.data.CrbConsentData;
+import org.apache.fineract.portfolio.crb.domain.ConsentChannel;
 import org.apache.fineract.portfolio.crb.service.CrbConsentReadService;
+import org.apache.fineract.portfolio.crb.service.CrbConsentWriteService;
+import org.glassfish.jersey.media.multipart.FormDataBodyPart;
+import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
+import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.springframework.stereotype.Component;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 @Path("/v1/crbconsents")
 @Component
@@ -42,6 +53,10 @@ public class CrbConsentApiResource {
     private final ToApiJsonSerializer<CrbConsentData> toApiJsonSerializer;
     private final ApiRequestParameterHelper apiRequestParameterHelper;
     private final PortfolioCommandSourceWritePlatformService commandsSourceWritePlatformService;
+    private final CrbConsentWriteService crbConsentWriteService;
+    private final FileUploadValidator fileUploadValidator;
+    private final FromJsonHelper fromJsonHelper;
+
 
     @GET
     @Path("template")
@@ -87,20 +102,48 @@ public class CrbConsentApiResource {
 
     @POST
     @Path("{clientId}")
-    @Consumes({ MediaType.APPLICATION_JSON })
+    @Consumes({ MediaType.MULTIPART_FORM_DATA })
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Create CRB Consent", description = "Creates a consent record for a client. OTP consent sends an OTP to the client's registered phone number. PAPER consent is recorded as verified.")
-    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = CrbConsentApiResourceSwagger.PostCrbConsentRequest.class)))
+    @RequestBody(required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA, schema = @Schema(implementation = CrbConsentApiResourceSwagger.PostCrbConsentRequest.class)))
     @ApiResponses({@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = CrbConsentApiResourceSwagger.PostCrbConsentResponse.class)))
     })
-    public String create(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId, @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+    public String create(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId,
+                         @FormDataParam("command") final String apiRequestBodyAsJson,
+                         @FormDataParam("file") final InputStream file,
+                         @FormDataParam("file") final FormDataBodyPart filePart,
+                         @FormDataParam("file") final FormDataContentDisposition fileDetails,
+                         @HeaderParam("Content-Length") @Parameter(description = "Content-Length") final Long contentLength
+    ) throws IOException {
+        this.context.authenticatedUser().validateHasCreatePermission(CrbApiConstants.CRB_RESOURCE_NAME);
 
-        final CommandWrapper commandRequest = new CommandWrapperBuilder()
-                .createClientCRBConsent(clientId)
-                .withJson(apiRequestBodyAsJson)
-                .build();
+        JsonElement parsedCommand = this.fromJsonHelper.parse(apiRequestBodyAsJson);
 
-        final CommandProcessingResult result = commandsSourceWritePlatformService.logCommandSource(commandRequest);
+
+        JsonCommand command = JsonCommand.from(apiRequestBodyAsJson, parsedCommand, fromJsonHelper,
+                null, null, null, null, clientId,
+                null, null, null, null, null,
+                null, null, null, null);
+
+        Integer consentChannel = command.integerValueOfParameterNamed("consentChannel");
+
+        if (ConsentChannel.PAPER.getValue().equals(consentChannel)) {
+            this.fileUploadValidator.validate(contentLength, file, fileDetails, filePart);
+        }
+
+        byte[] fileBytes = file != null ? file.readAllBytes() : null;
+
+        Long fileSize = fileBytes != null ? (long) fileBytes.length : null;
+
+        InputStream fileInputStream = fileBytes != null ? new ByteArrayInputStream(fileBytes) : null;
+
+        String fileName = fileDetails != null ? fileDetails.getFileName() : null;
+
+        String contentType = filePart != null && filePart.getMediaType() != null ? filePart.getMediaType().toString() : null;
+
+        CommandProcessingResult result = this.crbConsentWriteService.createConsent(
+                clientId, command, fileInputStream, fileName, fileSize, contentType
+        );
 
         return toApiJsonSerializer.serialize(result);
     }

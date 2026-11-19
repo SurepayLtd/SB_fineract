@@ -76,6 +76,7 @@ import org.apache.fineract.portfolio.calendar.domain.CalendarType;
 import org.apache.fineract.portfolio.calendar.exception.CalendarNotFoundException;
 import org.apache.fineract.portfolio.calendar.exception.MeetingFrequencyMismatchException;
 import org.apache.fineract.portfolio.calendar.service.CalendarUtils;
+import org.apache.fineract.portfolio.client.domain.CRBStatus;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.common.domain.DayOfWeekType;
@@ -83,10 +84,7 @@ import org.apache.fineract.portfolio.common.domain.DaysInMonthType;
 import org.apache.fineract.portfolio.common.domain.DaysInYearType;
 import org.apache.fineract.portfolio.common.domain.NthDayType;
 import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
-import org.apache.fineract.portfolio.crb.domain.CrbCheck;
-import org.apache.fineract.portfolio.crb.domain.CrbCheckRepository;
-import org.apache.fineract.portfolio.crb.domain.CrbRequestType;
-import org.apache.fineract.portfolio.crb.domain.CreditValidationType;
+import org.apache.fineract.portfolio.crb.domain.*;
 import org.apache.fineract.portfolio.floatingrates.data.FloatingRateDTO;
 import org.apache.fineract.portfolio.floatingrates.data.FloatingRatePeriodData;
 import org.apache.fineract.portfolio.floatingrates.exception.FloatingRateNotFoundException;
@@ -1496,12 +1494,36 @@ public class LoanScheduleAssembler {
                 final Long clientId = loan.getClient().getId();
 
                 final List<CrbCheck> initialCreditChecks = this.crbCheckRepository.findInitialCreditEnquiryOrScore(
-                        clientId, List.of(CreditValidationType.CREDIT_ENQUIRY.getValue(), CreditValidationType.CREDIT_SCORE.getValue()),
+                        clientId, loan.getId(), List.of(CreditValidationType.CREDIT_ENQUIRY.getValue(), CreditReports.CREDIT_REPORT.getValue(), CreditValidationType.CREDIT_SCORE.getValue()),
                         CrbRequestType.INITIAL.getValue());
 
                 if (initialCreditChecks.isEmpty()) {
                     throw new GeneralPlatformDomainRuleException("error.msg.loan.approval.crb.check.required",
                             "A Credit Bureau Enquiry or Credit Score check is required before approving this loan.", "loanId", loanId);
+                }
+
+                final Integer requirement = this.configurationDomainService.retrieveCrbLoanApplicationRequirement();
+
+                final boolean creditEnquiryVerified = initialCreditChecks.stream()
+                        .anyMatch(check -> CreditValidationType.CREDIT_ENQUIRY.getValue().equals(check.getValidationType())
+                                        && CRBStatus.VERIFIED.getValue().equals(check.getStatus()));
+
+                final boolean creditReportVerified = initialCreditChecks.stream()
+                        .anyMatch(check -> CreditReports.CREDIT_REPORT.getValue().equals(check.getValidationType())
+                                        && CRBStatus.VERIFIED.getValue().equals(check.getStatus()));
+
+                final boolean creditScoreVerified = initialCreditChecks.stream()
+                        .anyMatch(check -> CreditValidationType.CREDIT_SCORE.getValue().equals(check.getValidationType())
+                                        && CRBStatus.VERIFIED.getValue().equals(check.getStatus()));
+
+                final boolean crbChecksSatisfied = switch (CrbLoanApplicationRequirement.fromInt(requirement)) {
+                    case CREDIT_ENQUIRY_AND_REPORT -> creditEnquiryVerified && creditReportVerified;
+                    case CREDIT_SCORE -> creditScoreVerified;
+                    case BOTH -> creditEnquiryVerified && creditReportVerified && creditScoreVerified;
+                };
+
+                if (!crbChecksSatisfied) {
+                    throw new GeneralPlatformDomainRuleException("error.msg.loan.crb.checks.not.completed", "Required credit bureau checks have not been successfully completed.");
                 }
             }
         }

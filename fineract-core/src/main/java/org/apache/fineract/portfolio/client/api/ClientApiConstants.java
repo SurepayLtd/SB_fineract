@@ -205,7 +205,7 @@ public class ClientApiConstants {
             Arrays.asList("loanAccounts", "savingsAccounts", "shareAccounts"));
 
     public static final Set<String> SMS_TRIGGER_FIELDS = new HashSet<>(Arrays.asList(
-            firstnameParamName, lastnameParamName, emailAddressParamName,
+            firstnameParamName, lastnameParamName, emailAddressParamName,cardNoParamName, ninNoParamName,
             mobileNoParamName, externalIdParamName, address, familyMembers)
     );
 

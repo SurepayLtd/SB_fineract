@@ -5,6 +5,7 @@ import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrappe
 import org.apache.fineract.infrastructure.codes.service.CodeValueReadPlatformService;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.creditbureau.domain.CreditBureauLoanProductMappingRepository;
+import org.apache.fineract.infrastructure.documentmanagement.service.DocumentWritePlatformService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.notification.service.SMSNotificationWritePlatformServiceImpl;
 import org.apache.fineract.portfolio.client.domain.ClientNonPersonRepositoryWrapper;
@@ -14,6 +15,10 @@ import org.apache.fineract.portfolio.crb.domain.CrbConsentRepository;
 import org.apache.fineract.portfolio.crb.serializer.CrbDataValidator;
 import org.apache.fineract.portfolio.crb.service.*;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
+import org.apache.http.impl.client.HttpClients;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,10 +31,27 @@ import java.security.SecureRandom;
 @Configuration
 public class CrbConfiguration {
 
+
+    @Bean(destroyMethod = "close")
+    public CloseableHttpClient closeableHttpClient() {
+        return HttpClients.custom()
+                .setDefaultRequestConfig(
+                        RequestConfig.custom()
+                                .setConnectTimeout(50_000)
+                                .setConnectionRequestTimeout(20_000)
+                                .setSocketTimeout(50_000)
+                                .build()
+                )
+                .setMaxConnTotal(50)
+                .setMaxConnPerRoute(20)
+                .setRetryHandler(new DefaultHttpRequestRetryHandler(3, true))
+                .build();
+    }
+
     @Bean
     @ConditionalOnMissingBean
-    public CrbCheckReadServicePlatform crbCheckReadServicePlatform(JdbcTemplate jdbcTemplate, PlatformSecurityContext context, ObjectMapper objectMapper) {
-        return new CrbCheckReadServicePlatformImpl(jdbcTemplate, context, objectMapper);
+    public CrbCheckReadServicePlatform crbCheckReadServicePlatform(JdbcTemplate jdbcTemplate, PlatformSecurityContext context, ObjectMapper objectMapper, CrbCheckRepository crbCheckRepository, CloseableHttpClient httpClient) {
+        return new CrbCheckReadServicePlatformImpl(jdbcTemplate, context, objectMapper, crbCheckRepository, httpClient);
     }
 
     @Bean
@@ -54,8 +76,8 @@ public class CrbConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public CrbConsentWriteService crbConsentWriteService(CrbConsentRepository crbConsentRepository, ConfigurationDomainService configurationDomainService, ClientRepositoryWrapper clientRepositoryWrapper, PlatformSecurityContext platformSecurityContext,
-                                                         SecureRandom secureRandom, CrbDataValidator fromApiJsonDeserializer, SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService, CodeValueRepositoryWrapper codeValueRepository){
-        return new CrbConsentWriteServiceImpl(crbConsentRepository, configurationDomainService, clientRepositoryWrapper, platformSecurityContext, secureRandom, fromApiJsonDeserializer, smsNotificationWritePlatformService, codeValueRepository);
+                                                         SecureRandom secureRandom, CrbDataValidator fromApiJsonDeserializer, SMSNotificationWritePlatformServiceImpl smsNotificationWritePlatformService, CodeValueRepositoryWrapper codeValueRepository, DocumentWritePlatformService documentWritePlatformService){
+        return new CrbConsentWriteServiceImpl(crbConsentRepository, configurationDomainService, clientRepositoryWrapper, platformSecurityContext, secureRandom, fromApiJsonDeserializer, smsNotificationWritePlatformService, codeValueRepository, documentWritePlatformService);
     }
 
     @Bean

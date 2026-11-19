@@ -27,26 +27,29 @@ public interface CrbCheckRepository extends JpaRepository<CrbCheck, Long>, JpaSp
     SELECT cc
     FROM CrbCheck cc
     WHERE cc.client.id = :clientId
+      AND cc.loan.id = :loanId
       AND cc.validationType IN :validationTypes
       AND cc.requestType = :requestType
     """)
-    List<CrbCheck> findInitialCreditEnquiryOrScore(@Param("clientId") Long clientId, @Param("validationTypes") List<Integer> validationTypes, @Param("requestType") Integer requestType);
+    List<CrbCheck> findInitialCreditEnquiryOrScore(@Param("clientId") Long clientId, @Param("loanId") Long loanId, @Param("validationTypes") List<Integer> validationTypes, @Param("requestType") Integer requestType);
 
     @Query("""
     SELECT cc
     FROM CrbCheck cc
     WHERE cc.client.id = :clientId
+      AND cc.loan.id = :loanId
       AND cc.validationType = :validationType
       AND cc.status = :status
     ORDER BY cc.createdAt DESC
     """)
-    List<CrbCheck> findLatestVerifiedCheck(@Param("clientId") Long clientId, @Param("validationType") Integer validationType, @Param("status") Integer status,
+    List<CrbCheck> findLatestVerifiedCheck(@Param("clientId") Long clientId, @Param("loanId") Long loanId, @Param("validationType") Integer validationType, @Param("status") Integer status,
             Pageable pageable);
 
     @Query("""
         SELECT c
         FROM CrbCheck c
         WHERE c.client.id = :clientId
+          AND c.loan.id = :loanId
           AND c.validationType = :validationType
           AND c.status = :status
           AND (
@@ -56,7 +59,7 @@ public interface CrbCheckRepository extends JpaRepository<CrbCheck, Long>, JpaSp
           )
         ORDER BY c.createdAt DESC
         """)
-    List<CrbCheck> findLatestVerifiedReportCheck(@Param("clientId") Long clientId, @Param("validationType") Integer validationType,
+    List<CrbCheck> findLatestVerifiedReportCheck(@Param("clientId") Long clientId, @Param("loanId") Long loanId, @Param("validationType") Integer validationType,
             @Param("status") Integer status, @Param("hasReportUrl") boolean hasReportUrl, Pageable pageable
     );
 

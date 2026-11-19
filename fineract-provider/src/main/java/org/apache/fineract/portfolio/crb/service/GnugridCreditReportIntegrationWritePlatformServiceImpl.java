@@ -105,7 +105,7 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
         // Reuse a previous successful credit check when still valid.
         if (validationType.equals(CreditReports.CREDIT_REPORT)) {
 
-            final CrbCheck reusableCheck = findReusableCheck(client.getId(), report, reportFormat, mapping.getStalePeriod());
+            final CrbCheck reusableCheck = findReusableCheck(client.getId(), loan.getId(), report, reportFormat, mapping.getStalePeriod());
 
             if (reusableCheck != null) {
                 return new CommandProcessingResultBuilder()
@@ -453,7 +453,7 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
         return environment.getProperty(property);
     }
 
-    private CrbCheck findReusableCheck(final Long clientId, final Integer validationType, final Integer reportFormat, final int stalePeriod) {
+    private CrbCheck findReusableCheck(final Long clientId, final Long loanId, final Integer validationType, final Integer reportFormat, final int stalePeriod) {
 
         if (stalePeriod <= 0) {
             return null;
@@ -464,7 +464,7 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
         final boolean hasReportUrl = format.equals(CrbReportFormat.PDF);
 
         final List<CrbCheck> checks = this.crbCheckRepository.findLatestVerifiedReportCheck(
-                clientId,
+                clientId, loanId,
                 validationType,
                 CRBStatus.VERIFIED.getValue(),
                 hasReportUrl,

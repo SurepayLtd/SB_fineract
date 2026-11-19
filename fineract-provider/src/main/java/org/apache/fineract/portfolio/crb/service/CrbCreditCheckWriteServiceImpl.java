@@ -342,9 +342,9 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
 
         if (formal != null) {
             if (formal.getIndividuals() != null && !formal.getIndividuals().isEmpty()) {
-                builder.individualId(formal.getIndividuals().getFirst().getIndividual_id());
+                builder.individualId(formal.getIndividuals().get(0).getIndividual_id());
             } else if (formal.getNonindividuals() != null && !formal.getNonindividuals().isEmpty()) {
-                builder.nonIndividualId(formal.getNonindividuals().getFirst().getNon_individual_id());
+                builder.nonIndividualId(formal.getNonindividuals().get(0).getNon_individual_id());
             }
         }
         return builder.build();
@@ -389,9 +389,9 @@ public class CrbCreditCheckWriteServiceImpl implements CrbCreditCheckWriteServic
                 .responsePayload(serializeResponse(response));
         if (formal != null) {
             if (formal.getIndividuals() != null && !formal.getIndividuals().isEmpty()) {
-                builder.individualId(formal.getIndividuals().getFirst().getIndividual_id());
+                builder.individualId(formal.getIndividuals().get(0).getIndividual_id());
             } else if (formal.getNonindividuals() != null && !formal.getNonindividuals().isEmpty()) {
-                builder.nonIndividualId(formal.getNonindividuals().getFirst().getNon_individual_id());
+                builder.nonIndividualId(formal.getNonindividuals().get(0).getNon_individual_id());
             }
         }
 

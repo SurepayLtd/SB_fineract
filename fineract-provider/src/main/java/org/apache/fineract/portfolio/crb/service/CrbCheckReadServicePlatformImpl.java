@@ -10,7 +10,15 @@ import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRu
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.crb.data.CrbCheckData;
 import org.apache.fineract.portfolio.crb.data.CrbReportFetchResult;
-import org.apache.fineract.portfolio.crb.domain.*;
+import org.apache.fineract.portfolio.crb.domain.CrbCheckRepository;
+import org.apache.fineract.portfolio.crb.domain.CrbValidationType;
+import org.apache.fineract.portfolio.crb.domain.CrbRequestType;
+import org.apache.fineract.portfolio.crb.domain.CreditReports;
+import org.apache.fineract.portfolio.crb.domain.CreditScore;
+import org.apache.fineract.portfolio.crb.domain.CreditValidationType;
+import org.apache.fineract.portfolio.crb.domain.CrbReportAction;
+import org.apache.fineract.portfolio.crb.domain.CrbReportFormat;
+import org.apache.fineract.portfolio.crb.domain.CrbCheck;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -24,7 +32,15 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Collection;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
+
+
+
+
 
 @Service
 @RequiredArgsConstructor

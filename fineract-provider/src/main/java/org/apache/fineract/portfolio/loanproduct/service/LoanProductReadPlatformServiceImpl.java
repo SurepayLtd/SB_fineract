@@ -309,6 +309,10 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     + "lfr.min_differential_lending_rate as minDifferentialLendingRate, "
                     + "lfr.default_differential_lending_rate as defaultDifferentialLendingRate, "
                     + "lfr.max_differential_lending_rate as maxDifferentialLendingRate, "
+                    + "cblp.id as mappingId, cblp.organisation_creditbureau_id as orgcbId,"
+                    + "orgcb.alias as alias,concat( cb.product,' - ' ,cb.name,' - ',cb.country) as creditbureau,"
+                    + "cblp.loan_product_id as lpId,lp.name as loan_product_name, cblp.is_creditcheck_mandatory as crCheck,cblp.skip_creditcheck_in_failure as skipcheck,"
+                    + "cblp.stale_period as staleperiod, cblp.is_active as isActive, "
                     + "lfr.is_floating_interest_rate_calculation_allowed as isFloatingInterestRateCalculationAllowed, "
                     + "lp.allow_variabe_installments as isVariableIntallmentsAllowed, " + "lvi.minimum_gap as minimumGap, "
                     + "lvi.maximum_gap as maximumGap, dbuc.id as delinquencyBucketId, dbuc.name as delinquencyBucketName, "
@@ -322,6 +326,9 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     + " left join m_floating_rates as fr on lfr.floating_rates_id = fr.id "
                     + " left join m_product_loan_variable_installment_config as lvi on lvi.loan_product_id = lp.id "
                     + " left join m_delinquency_bucket as dbuc on dbuc.id = lp.delinquency_bucket_id "
+                    + " left join m_creditbureau_loanproduct_mapping as cblp on cblp.loan_product_id = lp.id "
+                    + " left join m_organisation_creditbureau orgcb on cblp.organisation_creditbureau_id = orgcb.id "
+                    + " left join m_creditbureau cb on orgcb.creditbureau_id=cb.id "
                     + " join m_currency curr on curr.code = lp.currency_code";
 
         }
@@ -535,6 +542,23 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
             allowAttributeOverrides = new LoanProductConfigurableAttributes(amortization, interestMethod, transactionProcessingStrategy,
                     interestCalcPeriod, arrearsTolerance, repaymentFrequency, graceOnPrincipalAndInterest, graceOnArrearsAging);
 
+            CreditBureauLoanProductMappingData creditBureauLoanProductMappingData = null;
+
+            final Long mapping_id = rs.getLong("mappingId");
+            final Long orgcbID = rs.getLong("orgcbId");
+            final String alias = rs.getString("alias");
+            final String credit_bureau_name = rs.getString("creditbureau");
+            final String loan_product_name = rs.getString("loan_product_name");
+            final Long lpId = rs.getLong("lpId");
+            final boolean is_creditcheck_mandatory = rs.getBoolean("crCheck");
+            final boolean skip_credit_check_in_failure = rs.getBoolean("skipcheck");
+            final int stale_period = rs.getInt("staleperiod");
+            final boolean isActive = rs.getBoolean("isActive");
+
+            creditBureauLoanProductMappingData = CreditBureauLoanProductMappingData.instance(mapping_id, orgcbID, alias, credit_bureau_name, loan_product_name, lpId,
+                    is_creditcheck_mandatory, skip_credit_check_in_failure, stale_period, isActive);
+
+
             final boolean holdGuaranteeFunds = rs.getBoolean("holdGuaranteeFunds");
             LoanProductGuaranteeData loanProductGuaranteeData = null;
             if (holdGuaranteeFunds) {
@@ -588,7 +612,7 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
                     numberOfRepaymentVariationsForBorrowerCycle, multiDisburseLoan, maxTrancheCount, outstandingLoanBalance,
                     disallowExpectedDisbursements, allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType, overAppliedNumber,
                     graceOnArrearsAgeing, overdueDaysForNPA, daysInMonthType, daysInYearType, isInterestRecalculationEnabled,
-                    interestRecalculationData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds, loanProductGuaranteeData,
+                    interestRecalculationData, creditBureauLoanProductMappingData, minimumDaysBetweenDisbursalAndFirstRepayment, holdGuaranteeFunds, loanProductGuaranteeData,
                     principalThresholdForLastInstallment, accountMovesOutOfNPAOnlyOnArrearsCompletion, canDefineInstallmentAmount,
                     installmentAmountInMultiplesOf, allowAttributeOverrides, isLinkedToFloatingInterestRates, floatingRateId,
                     floatingRateName, interestRateDifferential, minDifferentialLendingRate, defaultDifferentialLendingRate,

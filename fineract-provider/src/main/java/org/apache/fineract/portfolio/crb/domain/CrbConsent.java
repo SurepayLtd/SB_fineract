@@ -1,8 +1,15 @@
 package org.apache.fineract.portfolio.crb.domain;
 
-import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Column;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Table;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -79,10 +86,13 @@ public class CrbConsent extends AbstractPersistableCustom<Long> {
     @Column(name = "otp_used", nullable = false)
     private boolean otpUsed;
 
+    @Column(name = "document_id")
+    private Long documentId;
+
 
     protected CrbConsent() {}
 
-    public CrbConsent(Client client, AppUser consentedBy, String consentVersion, String consentText, Integer consentChannel, Integer consentStatus, String otpHash, LocalDateTime otpExpiresAt, LocalDateTime consentedAt) {
+    private CrbConsent(Client client, AppUser consentedBy, String consentVersion, String consentText, Integer consentChannel, Integer consentStatus, String otpHash, LocalDateTime otpExpiresAt, LocalDateTime consentedAt) {
         this.client = client;
         this.consentedBy = consentedBy;
         this.consentVersion = consentVersion;

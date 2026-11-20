@@ -97,6 +97,13 @@ public final class GlobalConfigurationConstants {
     public static final String ENABLE_SUREPAY_CRB_VALIDATE_CLIENT_DETAILS = "enable-surepay-crb-validate-client-details";
     public static final String ENABLE_SUREPAY_CRB_VALIDATE_NIN = "enable-surepay-crb-validate-nin";
     public static final String ENABLE_SUREPAY_CRB_VALIDATE_PHONE = "enable-surepay-crb-validate-phone";
+    public static final String ENABLE_SUREPAY_CRB_KYC_ENQUIRY = "enable-surepay-crb-kyc-enquiry";
+    public static final String ENABLE_SUREPAY_CRB_KYC_REPORT = "enable-surepay-crb-kyc-report";
+    public static final String ENABLE_SUREPAY_CRB_CREDIT_ENQUIRY = "enable-surepay-crb-credit-enquiry";
+    public static final String ENABLE_SUREPAY_CRB_CREDIT_REPORT = "enable-surepay-crb-credit-report";
+    public static final String ENABLE_SUREPAY_CRB_CREDIT_SCORE = "enable-surepay-crb-credit-score";
+
+
 
 
     private GlobalConfigurationConstants() {}

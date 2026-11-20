@@ -777,7 +777,7 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
                     + " cobu.username as chargedOffByUsername, cobu.firstname as chargedOffByFirstname, cobu.lastname as chargedOffByLastname, l.loan_schedule_type as loanScheduleType, l.loan_schedule_processing_type as loanScheduleProcessingType, "
                     + " l.charge_off_behaviour as chargeOffBehaviour, l.interest_recognition_on_disbursement_date as interestRecognitionOnDisbursementDate ,"
                     + " l.is_disbursed_via_momo_pay AS disbursedViaMomoPay,l.disbursement_payout_completed AS disbursementPayoutCompleted ,"
-                    + " l.disbursement_payout_completed_date AS disbursementPayoutCompletedDate,l.middleware_reference_no AS middlewareReferenceNo, l.loan_channel as channelType " //
+                    + " l.disbursement_payout_completed_date AS disbursementPayoutCompletedDate,l.middleware_reference_no AS middlewareReferenceNo, l.loan_channel as channelType, crb.is_active as isLoanProductCrbEnabled " //
                     + " from m_loan l" //
                     + " join m_product_loan lp on lp.id = l.product_id" //
                     + " left join m_loan_recalculation_details lir on lir.loan_id = l.id join m_currency rc on rc."
@@ -797,7 +797,8 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
                     + " left join m_code_value codec on codec.id = l.charge_off_reason_cv_id"
                     + " left join m_product_loan_variable_installment_config lpvi on lpvi.loan_product_id = l.product_id"
                     + " left join m_loan_topup as topup on l.id = topup.loan_id"
-                    + " left join m_loan as topuploan on topuploan.id = topup.closure_loan_id ";
+                    + " left join m_loan as topuploan on topuploan.id = topup.closure_loan_id "
+                    + " left join m_creditbureau_loanproduct_mapping crb on crb.loan_product_id = lp.id";
 
         }
 
@@ -1150,6 +1151,7 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
             final LocalDate dibursementPayoutCompletedDate = JdbcSupport.getLocalDate(rs, "disbursementPayoutCompletedDate");
             final String middlewareReferenceNo = rs.getString("middlewareReferenceNo");
             final Integer channelType = JdbcSupport.getInteger(rs, "channelType");
+            final boolean isLoanProductCrbEnabled = rs.getBoolean("isLoanProductCrbEnabled");
             final EnumOptionData channel  = getChannel(channelType);
 
             LoanAccountData loanAccountData = LoanAccountData.basicLoanDetails(id, accountNo, status, externalId, clientId, clientAccountNo,
@@ -1170,7 +1172,7 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
                     disallowExpectedDisbursements, isFraud, lastClosedBusinessDate, overpaidOnDate, isChargedOff, enableDownPayment,
                     disbursedAmountPercentageForDownPayment, enableAutoRepaymentForDownPayment, enableInstallmentLevelDelinquency,
                     loanScheduleType.asEnumOptionData(), loanScheduleProcessingType.asEnumOptionData(), fixedLength,
-                    chargeOffBehaviour.getValueAsStringEnumOptionData(), interestRecognitionOnDisbursementDate, channel);
+                    chargeOffBehaviour.getValueAsStringEnumOptionData(), interestRecognitionOnDisbursementDate, channel, isLoanProductCrbEnabled);
 
             loanAccountData.setDisbursedViaMomoPay(disbursedViaMomoPay);
             loanAccountData.setDisbursementPayoutCompleted(dibursementPayoutCompleted);

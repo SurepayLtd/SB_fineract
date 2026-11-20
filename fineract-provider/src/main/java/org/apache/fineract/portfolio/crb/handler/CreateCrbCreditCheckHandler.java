@@ -5,18 +5,18 @@ import org.apache.fineract.commands.annotation.CommandType;
 import org.apache.fineract.commands.handler.NewCommandSourceHandler;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
-import org.apache.fineract.portfolio.crb.service.CrbConsentWriteService;
+import org.apache.fineract.portfolio.crb.service.CrbCreditCheckWriteService;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-@CommandType(entity = "CRBCONSENT", action = "CREATE")
-public class CreateCrbConsentHandler implements NewCommandSourceHandler {
+@CommandType(entity = "CRBCREDIT", action = "CREATE")
+public class CreateCrbCreditCheckHandler implements NewCommandSourceHandler {
 
-    private final CrbConsentWriteService crbConsentWriteService;
+    private final CrbCreditCheckWriteService crbCreditCheckWriteService;
 
     @Override
     public CommandProcessingResult processCommand(JsonCommand command) {
-        return this.crbConsentWriteService.createConsent(command.getClientId(), command);
+        return crbCreditCheckWriteService.crbCredit(command.getLoanId(), command);
     }
 }

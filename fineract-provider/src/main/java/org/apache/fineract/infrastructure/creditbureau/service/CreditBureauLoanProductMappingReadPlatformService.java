@@ -23,7 +23,7 @@ import org.apache.fineract.infrastructure.creditbureau.data.CreditBureauLoanProd
 
 public interface CreditBureauLoanProductMappingReadPlatformService {
 
-    Collection<CreditBureauLoanProductMappingData> readCreditBureauLoanProductMapping();
+    Collection<CreditBureauLoanProductMappingData> readCreditBureauLoanProductMapping(Long orgId);
 
     Collection<CreditBureauLoanProductMappingData> fetchLoanProducts();
 

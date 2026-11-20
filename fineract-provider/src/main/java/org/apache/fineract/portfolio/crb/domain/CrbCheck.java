@@ -3,16 +3,21 @@ package org.apache.fineract.portfolio.crb.domain;
 
 
 
-import jakarta.persistence.*;
-
+import jakarta.persistence.Entity;
+import jakarta.persistence.Column;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 import org.apache.fineract.portfolio.client.domain.CRBStatus;
 import org.apache.fineract.portfolio.client.domain.Client;
+import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 
 @Entity
 @Table(name = "m_crb_check")
@@ -23,6 +28,10 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "loan_id")
+    private Loan loan;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "consent_id", nullable = false)
@@ -67,6 +76,21 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "individual_id")
+    private Integer individualId;
+
+    @Column(name = "non_individual_id")
+    private Integer nonIndividualId;
+
+    @Column(name = "report_token")
+    private String reportToken;
+
+    @Column(name = "report_url")
+    private String reportUrl;
+
+    @Column(name = "validation_timestamp")
+    private Long validationTimestamp;
+
 
     @PrePersist()
     public void onCreate(){
@@ -75,9 +99,10 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
 
     protected CrbCheck(){}
 
-    public CrbCheck(Client client, CrbConsent consent, Integer validationType, Integer requestType, String providerValidationId, String providerReference, BigDecimal cost, String currency, String requestPayload, String responsePayload, String errorMessage, String message,
-                    LocalDateTime completedAt) {
+    public CrbCheck(Client client, Loan loan, CrbConsent consent, Integer validationType, Integer requestType, String providerValidationId, String providerReference, BigDecimal cost, String currency, String requestPayload, String responsePayload, String errorMessage, String message,
+                    LocalDateTime completedAt, Integer individualId, Integer nonIndividualId) {
         this.client = client;
+        this.loan = loan;
         this.consent = consent;
         this.validationType = validationType;
         this.requestType = requestType;
@@ -91,10 +116,12 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
         this.errorMessage = errorMessage;
         this.message = message;
         this.completedAt = completedAt;
+        this.individualId = individualId;
+        this.nonIndividualId = nonIndividualId;
     }
 
-    public static CrbCheck create(final Client client, final CrbConsent consent, final Integer type, final Integer requestType) {
-        return new CrbCheck(client, consent, type, requestType, null, null, null, null, null, null, null, null, null);
+    public static CrbCheck create(final Client client, final Loan loan, final CrbConsent consent, final Integer type, final Integer requestType) {
+        return new CrbCheck(client, loan, consent, type, requestType, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public void complete(final Integer status, final String validationId, final String reference,
@@ -109,5 +136,21 @@ public class CrbCheck extends AbstractPersistableCustom<Long> {
         this.message = message;
         this.errorMessage = errorMessage;
         this.completedAt = completedAt;
+    }
+
+    public void creditCheck(final Integer status, final String validationId, final String reference,
+                         final BigDecimal cost, final String responsePayload, final LocalDateTime completedAt,
+                            final Integer individualId, final Integer nonIndividualId, final String reportToken,
+                            final String reportUrl) {
+        this.status = status;
+        this.providerValidationId = validationId;
+        this.providerReference = reference;
+        this.cost = cost;
+        this.responsePayload = responsePayload;
+        this.completedAt = completedAt;
+        this.individualId = individualId;
+        this.nonIndividualId = nonIndividualId;
+        this.reportToken = reportToken;
+        this.reportUrl = reportUrl;
     }
 }

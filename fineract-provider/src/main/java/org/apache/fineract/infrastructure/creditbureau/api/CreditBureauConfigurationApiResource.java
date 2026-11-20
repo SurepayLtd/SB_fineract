@@ -88,14 +88,14 @@ public class CreditBureauConfigurationApiResource {
     }
 
     @GET
-    @Path("/mappings")
+    @Path("/mappings/{orgId}")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
-    public String getCreditBureauLoanProductMapping(@Context final UriInfo uriInfo) {
+    public String getCreditBureauLoanProductMapping(@Context final UriInfo uriInfo, @PathParam("orgId") final Long orgId) {
         this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSIONS);
 
         final Collection<CreditBureauLoanProductMappingData> creditBureauLoanProductMapping = this.readPlatformServiceCreditBureauLoanProduct
-                .readCreditBureauLoanProductMapping();
+                .readCreditBureauLoanProductMapping(orgId);
 
         final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
         return this.toApiJsonSerializerCreditBureauLoanProduct.serialize(settings, creditBureauLoanProductMapping,
@@ -104,14 +104,14 @@ public class CreditBureauConfigurationApiResource {
     }
 
     @GET
-    @Path("/organisationCreditBureau")
+    @Path("/organisationCreditBureau/{bureauId}")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
-    public String getOrganisationCreditBureau(@Context final UriInfo uriInfo) {
+    public String getOrganisationCreditBureau(@Context final UriInfo uriInfo, @PathParam("bureauId") final Long bureauId) {
         this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSIONS);
 
         final Collection<OrganisationCreditBureauData> organisationCreditBureau = this.readPlatformServiceOrganisationCreditBureau
-                .retrieveOrgCreditBureau();
+                .retrieveOrgCreditBureau(bureauId);
 
         final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
         return this.toApiJsonSerializerOrganisationCreditBureau.serialize(settings, organisationCreditBureau, RESPONSE_DATA_PARAMETERS);

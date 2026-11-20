@@ -160,4 +160,16 @@ public interface ConfigurationDomainService {
 
     boolean isCRBValidatePhoneEnabled();
 
+    boolean isCrbKycEnquiryEnabled();
+
+    boolean isCrbCreditEnquiryEnabled();
+
+    boolean isCrbKycReportEnabled();
+
+    boolean isCrbCreditReportEnabled();
+
+    boolean isCrbCreditScoreEnabled();
+
+    Integer retrieveCrbLoanApplicationRequirement();
+
 }

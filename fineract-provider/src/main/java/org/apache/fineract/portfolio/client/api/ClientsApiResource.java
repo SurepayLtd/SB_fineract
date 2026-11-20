@@ -121,6 +121,8 @@ public class ClientsApiResource {
             clientData = clientReadPlatformService.retrieveAllNarrations(ClientApiConstants.CLIENT_REJECT_REASON);
         } else if (CommandParameterUtil.is(commandParam, "withdraw")) {
             clientData = clientReadPlatformService.retrieveAllNarrations(ClientApiConstants.CLIENT_WITHDRAW_REASON);
+        }else if (CommandParameterUtil.is(commandParam, "kyc")) {
+            clientData = clientReadPlatformService.retrieveAllNarrations(ClientApiConstants.CLIENT_KYC_REASON);
         } else {
             clientData = clientReadPlatformService.retrieveTemplate(officeId, staffInSelectedOfficeOnly);
         }

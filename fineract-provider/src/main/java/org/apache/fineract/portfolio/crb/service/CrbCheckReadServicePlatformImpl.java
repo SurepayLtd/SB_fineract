@@ -4,46 +4,136 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
+import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.crb.data.CrbCheckData;
-import org.apache.fineract.portfolio.crb.domain.CrbRequestType;
+import org.apache.fineract.portfolio.crb.data.CrbReportFetchResult;
+import org.apache.fineract.portfolio.crb.domain.CrbCheckRepository;
 import org.apache.fineract.portfolio.crb.domain.CrbValidationType;
+import org.apache.fineract.portfolio.crb.domain.CrbRequestType;
+import org.apache.fineract.portfolio.crb.domain.CreditReports;
+import org.apache.fineract.portfolio.crb.domain.CreditScore;
+import org.apache.fineract.portfolio.crb.domain.CreditValidationType;
+import org.apache.fineract.portfolio.crb.domain.CrbReportAction;
+import org.apache.fineract.portfolio.crb.domain.CrbReportFormat;
+import org.apache.fineract.portfolio.crb.domain.CrbCheck;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Collection;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
+
+
+
+
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatform{
 
     private final JdbcTemplate jdbcTemplate;
     private final PlatformSecurityContext context;
     private final ObjectMapper objectMapper;
-
+    private final CrbCheckRepository crbCheckRepository;
+    private final CloseableHttpClient httpClient;
 
 
     @Override
-    public List<CrbCheckData> retrieveChecks(Long clientId) {
+    public List<CrbCheckData> retrieveCreditChecks(Long loanId, Integer type) {
         this.context.authenticatedUser();
         CheckMapper mp = new CheckMapper(objectMapper);
         StringBuilder sb = new StringBuilder();
         sb.append(" Select ");
         sb.append(mp.schema());
-        sb.append(" WHERE cc.client_id = ? ");
+        sb.append(" WHERE cc.loan_id = ? ");
+        sb.append(" AND cc.validation_type = ? ");
+        sb.append(" ORDER BY cc.created_at DESC, cc.id DESC ");
+        return this.jdbcTemplate.query(sb.toString(), mp, loanId, type);
+    }
+
+    @Override
+    public List<CrbCheckData> retrieveClientChecks(Long clientId) {
+        this.context.authenticatedUser();
+        CheckMapper mp = new CheckMapper(objectMapper);
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select ");
+        sb.append(mp.schema());
+        sb.append(" WHERE cc.client_id = ? AND cc.validation_type IN (1,2,3)");
         sb.append(" ORDER BY cc.created_at DESC, cc.id DESC ");
         return this.jdbcTemplate.query(sb.toString(), mp, clientId);
     }
 
     @Override
+    public List<CrbCheckData> retrieveKycChecks(Long clientId, Integer type) {
+        this.context.authenticatedUser();
+        CheckMapper mp = new CheckMapper(objectMapper);
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Select ");
+        sb.append(mp.schema());
+        sb.append(" WHERE cc.client_id = ? AND cc.validation_type = ?");
+        sb.append(" ORDER BY cc.created_at DESC, cc.id DESC ");
+        return this.jdbcTemplate.query(sb.toString(), mp, clientId, type);
+    }
+
+    @Override
     public CrbCheckData retrieveTypes() {
-        return CrbCheckData.dropdown(getRequestTypes(), getValidationTypes());
+        return CrbCheckData.dropdown(getRequestTypes(), getValidationTypes(), getCreditReportActionTypes(), getCreditReportFormatTypes(), getCreditReportTypes(), getCreditValidationTypes(), getCreditScoreTypes());
+    }
+
+    @Override
+    public CrbReportFetchResult fetchPdf(Long checkId) {
+
+        CrbCheck crbCheck = this.crbCheckRepository.findById(checkId)
+                .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.crb.check.not.found", "CRB check record not found."));
+
+        String reportUrl = crbCheck.getReportUrl();
+
+        if (reportUrl == null || reportUrl.isBlank()) {
+            return CrbReportFetchResult.upstreamError(404);
+        }
+
+        final HttpGet get = new HttpGet(reportUrl);
+
+        try {
+            final CloseableHttpResponse upstream = httpClient.execute(get);
+            final int status = upstream.getStatusLine().getStatusCode();
+
+            if (status != 200) {
+                upstream.close();
+                log.warn("CRB report fetch returned {} for {}", status, reportUrl);
+                return CrbReportFetchResult.upstreamError(status);
+            }
+
+            final HttpEntity entity = upstream.getEntity();
+            if (entity == null) {
+                upstream.close();
+                return CrbReportFetchResult.ioError("CRB returned an empty response body");
+            }
+
+            // The stream is tied to the response — the caller must close both.
+            // Wrap it so closing the input stream also closes the response.
+            return CrbReportFetchResult.success(entity.getContent(), entity.getContentLength());
+
+        } catch (IOException e) {
+            log.error("Failed to fetch CRB report from {}", reportUrl, e);
+            return CrbReportFetchResult.ioError(e.getMessage());
+        }
     }
 
     protected static class CheckMapper implements RowMapper<CrbCheckData>{
@@ -60,6 +150,11 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
             final Long id = rs.getLong("id");
             final Long clientId = rs.getLong("clientId");
             final String clientName = rs.getString("clientName");
+            final String clientAccount = rs.getString("clientAccount");
+            final Long loanId = rs.getLong("loanId");
+            final String loanProductName = rs.getString("loanProductName");
+            final String loanAccount = rs.getString("loanAccount");
+            final BigDecimal proposedPrincipal = rs.getBigDecimal("proposedPrincipal");
             final Integer validationType = rs.getInt("validationType");
             final Integer requestType = rs.getInt("requestType");
             final Integer status = rs.getInt("status");
@@ -77,10 +172,11 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
             final LocalDateTime completedAt = rs.getTimestamp("completedAt") != null
                             ? rs.getTimestamp("completedAt").toLocalDateTime()
                             : null;
+            final String reportUrl = rs.getString("reportUrl");
             final Map<String, Object> responseDetails = extractResponseDetails(validationType, responsePayload);
-            return CrbCheckData.display(id, clientId, clientName, validationType, requestType, status, consentStatus,
+            return CrbCheckData.display(id, clientId, clientName, clientAccount, loanId, loanProductName, loanAccount, proposedPrincipal, validationType, requestType, status, consentStatus,
                     providerValidationId, providerReference, cost, currency,
-                    message, errorMessage, responsePayload, responseDetails, createdAt, completedAt);
+                    message, errorMessage, responsePayload, responseDetails, createdAt, completedAt, reportUrl);
         }
 
         public String schema(){
@@ -90,6 +186,11 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
             builder.append("cc.id AS id, ");
             builder.append("cc.client_id AS clientId, ");
             builder.append("c.display_name AS clientName, ");
+            builder.append("c.account_no AS clientAccount, ");
+            builder.append("l.account_no AS loanAccount, ");
+            builder.append("l.id AS loanId, ");
+            builder.append("lp.name AS loanProductName, ");
+            builder.append("l.principal_amount_proposed AS proposedPrincipal, ");
             builder.append("cc.validation_type AS validationType, ");
             builder.append("cc.request_type AS requestType, ");
             builder.append("cc.check_status AS status, ");
@@ -102,24 +203,42 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
             builder.append("cc.error_message AS errorMessage, ");
             builder.append("cc.response_payload AS responsePayload, ");
             builder.append("cc.created_at AS createdAt, ");
+            builder.append("cc.report_url AS reportUrl, ");
             builder.append("cc.completed_at AS completedAt");
             builder.append(" FROM m_crb_check cc ");
-            builder.append(" JOIN m_client c ON c.id = cc.client_id ");
-            builder.append(" JOIN m_crb_consent cr ON cr.id = cc.consent_id ");
+            builder.append(" LEFT JOIN m_client c ON c.id = cc.client_id ");
+            builder.append(" LEFT JOIN m_crb_consent cr ON cr.id = cc.consent_id ");
+            builder.append(" LEFT JOIN m_loan l ON l.id = cc.loan_id ");
+            builder.append(" LEFT JOIN m_product_loan lp ON lp.id = l.product_id ");
 
             return builder.toString();
         }
 
-        private Map<String, Object> extractResponseDetails(Integer validationType, String responsePayload) {
+        private Map<String, Object> extractResponseDetails(final Integer validationType, final String responsePayload) {
 
             if (responsePayload == null || responsePayload.isBlank()) {
+                return Map.of();
+            }
+
+            if (validationType == null) {
                 return Map.of();
             }
 
             try {
                 JsonNode root = objectMapper.readTree(responsePayload);
 
-                CrbValidationType type = CrbValidationType.fromInt(validationType);
+                CrbValidationType type = null;
+
+                for (CrbValidationType validation : CrbValidationType.values()) {
+                    if (validation.getValue().equals(validationType)) {
+                        type = validation;
+                        break;
+                    }
+                }
+
+                if (type == null) {
+                    return Map.of();
+                }
 
                 return switch (type) {
                     case DETAILS -> extractClientDetails(root);
@@ -186,6 +305,63 @@ public class CrbCheckReadServicePlatformImpl implements CrbCheckReadServicePlatf
         }
         return data;
     }
+
+    private Collection<EnumOptionData> getCreditReportActionTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CrbReportAction action : CrbReportAction.values()){
+            data.add(new EnumOptionData(
+                    action.getValue().longValue(), action.getCode(), action.getDescription()
+            ));
+        }
+        return data;
+    }
+
+    private Collection<EnumOptionData> getCreditReportFormatTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CrbReportFormat type : CrbReportFormat.values()){
+            data.add(new EnumOptionData(
+                    type.getValue().longValue(), type.getCode(), type.getDescription()
+            ));
+        }
+        return data;
+    }
+
+    private Collection<EnumOptionData> getCreditReportTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CreditReports type : CreditReports.values()){
+            data.add(new EnumOptionData(
+                    type.getValue().longValue(), type.getCode(), type.getDescription()
+            ));
+        }
+        return data;
+    }
+
+    private Collection<EnumOptionData> getCreditValidationTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CreditValidationType type : CreditValidationType.values()){
+            data.add(new EnumOptionData(
+                    type.getValue().longValue(), type.getCode(), type.getDescription()
+            ));
+        }
+        return data;
+    }
+
+    private Collection<EnumOptionData> getCreditScoreTypes(){
+
+        Collection<EnumOptionData> data = new ArrayList<>();
+        for (CreditScore type : CreditScore.values()){
+            data.add(new EnumOptionData(
+                    type.getValue().longValue(), type.getCode(), type.getDescription()
+            ));
+        }
+        return data;
+    }
+
+
 
 
 }

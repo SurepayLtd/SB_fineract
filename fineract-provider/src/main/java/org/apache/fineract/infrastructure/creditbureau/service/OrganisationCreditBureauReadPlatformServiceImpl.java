@@ -46,7 +46,8 @@ public class OrganisationCreditBureauReadPlatformServiceImpl implements Organisa
             return "ocb.id as orgCbId,ocb.alias as orgCbAlias,cb.name as creditbureauName,cb.product as creditbureauProduct,cb.country as creditbureauCountry,"
                     + "concat(cb.product,' - ',cb.name,' - ',cb.country) as CreditBureauSummary,"
                     + "ocb.creditbureau_id as cbid,ocb.is_active  as isActive"
-                    + " from m_organisation_creditbureau ocb,m_creditbureau cb where ocb.creditbureau_id=cb.id";
+                    + " from m_organisation_creditbureau ocb "
+                    + " left join m_creditbureau cb on ocb.creditbureau_id=cb.id ";
 
         }
 
@@ -68,13 +69,13 @@ public class OrganisationCreditBureauReadPlatformServiceImpl implements Organisa
     }
 
     @Override
-    public Collection<OrganisationCreditBureauData> retrieveOrgCreditBureau() {
+    public Collection<OrganisationCreditBureauData> retrieveOrgCreditBureau(Long bureauId) {
         this.context.authenticatedUser();
 
         final OrganisationCreditBureauMapper rm = new OrganisationCreditBureauMapper();
-        final String sql = "select " + rm.schema() + " order by ocb.id";
+        final String sql = "select " + rm.schema()+ " where cb.id = ?" + " order by ocb.id";
 
-        return this.jdbcTemplate.query(sql, rm); // NOSONAR
+        return this.jdbcTemplate.query(sql, rm, bureauId); // NOSONAR
     }
 
     @Override

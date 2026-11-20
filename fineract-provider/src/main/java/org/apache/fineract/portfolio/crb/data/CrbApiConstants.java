@@ -10,6 +10,12 @@ public class CrbApiConstants {
 
     public static final String CRB_CHECK_RESOURCE_NAME = "CRBCHECK";
 
+    public static final String CRB_CREDIT_RESOURCE_NAME = "CRBCREDIT";
+
+    public static final String CRB_KYC_RESOURCE_NAME = "CRBKYC";
+
+
+
     public static final String localeParamName = "locale";
     public static final String dateFormatParamName = "dateFormat";
     public static final String consentTextParamName = "consentText";
@@ -28,11 +34,33 @@ public class CrbApiConstants {
     public static final String otpCodeParamName = "otpCode";
     public static final String crbValidationTypeParamName= "crbValidationType";
     public static final String crbRequestTypeParamName= "crbRequestType";
+    public static final String crbReportTypeParamName= "crbReportType";
+    public static final String crbReportFormatParamName= "crbReportFormat";
+    public static final String crbCreditFormatParamName= "crbCreditValidationType";
+    public static final String crbReportActionFormatParamName= "crbReportAction";
+    public static final String crbCreditScoreTypeActionFormatParamName= "crbCreditScoreType";
+    public static final String crbCreditBureauParamName= "creditBureauID";
+    public static final String crbCreditBureauLoanIdParamName= "loanId";
+    public static final String crbCreditBureauClientIdParamName= "clientId";
+
+
+
+
+
+
+
+
 
 
 
     public static final String CRB_REVOKE_REASON = "CrbRevokeReason";
     public static final String revokeReasonIdParamName = "revokeReasonId";
+
+    public static final String CRB_ENQUIRY_REASON = "CrbEnquiryReason";
+    public static final String enquiryReasonIdParamName = "enquiryReasonId";
+    public static final String entityCategoryIdParamName = "entityCategoryId";
+    public static final String CRB_SCORE_CATEGORY = "Main Business Line";
+
 
 
 
@@ -40,6 +68,9 @@ public class CrbApiConstants {
     public static final Set<String> CRB_CREATE_CONSENT_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, consentTextParamName, consentChannelParamName));
 
     public static final Set<String> CRB_CREATE_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbValidationTypeParamName, crbRequestTypeParamName));
+
+    public static final Set<String> CRB_CREDIT_CHECK_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, crbCreditFormatParamName, crbReportTypeParamName, crbCreditScoreTypeActionFormatParamName, entityCategoryIdParamName, crbReportFormatParamName, enquiryReasonIdParamName, crbReportActionFormatParamName, crbCreditBureauParamName, crbCreditBureauLoanIdParamName, crbCreditBureauClientIdParamName));
+
 
     public static final Set<String> VALIDATE_OTP_REQUEST_DATA_PARAMETERS = new HashSet<>(Arrays.asList(localeParamName, dateFormatParamName, otpCodeParamName));
 

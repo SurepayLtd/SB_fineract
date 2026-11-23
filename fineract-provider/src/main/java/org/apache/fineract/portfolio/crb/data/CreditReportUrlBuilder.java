@@ -1,8 +1,8 @@
 package org.apache.fineract.portfolio.crb.data;
 
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
+import org.apache.fineract.portfolio.crb.domain.CrbReportType;
 
-import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -18,7 +18,7 @@ public final class CreditReportUrlBuilder {
 
     private CreditReportUrlBuilder() {}
 
-    public static String buildReportUrl(final String baseUrl, final CreditReportGenerationData data) {
+    public static String buildReportUrl(final String baseUrl, final CreditReportGenerationData data, final CrbReportType reportType) {
 
         if (baseUrl == null || baseUrl.isBlank()) {
             throw new GeneralPlatformDomainRuleException("error.msg.crb.credit.report.base.url.missing", "CRB credit report base URL is not configured.");
@@ -57,7 +57,7 @@ public final class CreditReportUrlBuilder {
         }
 
         return stripTrailingSlash(baseUrl)
-                + "/credit-report/"
+                + "/" + reportType.getPath() + "/"
                 + profileType + "/"
                 + data.getEnquiry_id() + "/"
                 + profileId + "/"

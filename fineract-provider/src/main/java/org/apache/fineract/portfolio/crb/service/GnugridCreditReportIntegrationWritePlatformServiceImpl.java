@@ -25,16 +25,18 @@ import org.apache.fineract.portfolio.crb.data.CreditReportJsonResponseData;
 import org.apache.fineract.portfolio.crb.data.CreditReportGenerationData;
 import org.apache.fineract.portfolio.crb.data.CreditReportUrlBuilder;
 import org.apache.fineract.portfolio.crb.data.CrbApiConstants;
+
 import org.apache.fineract.portfolio.crb.domain.CrbCheckRepository;
-import org.apache.fineract.portfolio.crb.domain.CreditReports;
+import org.apache.fineract.portfolio.crb.domain.CrbConsentRepository;
 import org.apache.fineract.portfolio.crb.domain.CrbReportAction;
-import org.apache.fineract.portfolio.crb.domain.ConsentStatus;
+import org.apache.fineract.portfolio.crb.domain.CrbReportType;
 import org.apache.fineract.portfolio.crb.domain.CreditValidationType;
 import org.apache.fineract.portfolio.crb.domain.CrbReportFormat;
+import org.apache.fineract.portfolio.crb.domain.ConsentStatus;
 import org.apache.fineract.portfolio.crb.domain.CrbRequestType;
 import org.apache.fineract.portfolio.crb.domain.CrbCheck;
+import org.apache.fineract.portfolio.crb.domain.CreditReports;
 import org.apache.fineract.portfolio.crb.domain.CrbConsent;
-import org.apache.fineract.portfolio.crb.domain.CrbConsentRepository;
 
 import org.apache.fineract.portfolio.crb.serializer.CrbDataValidator;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
@@ -177,6 +179,8 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
 
         Integer report = command.integerValueOfParameterNamed(CrbApiConstants.crbReportTypeParamName);
         Integer reportFormat = command.integerValueOfParameterNamed(CrbApiConstants.crbReportFormatParamName);
+        Integer reportAction = command.integerValueOfParameterNamed(CrbApiConstants.crbReportActionFormatParamName);
+
 
         if (!client.isActive() && !client.isPending()) {
             throw new GeneralPlatformDomainRuleException("error.msg.crb.client.inactive", "Kyc Report Check cannot be performed because the client is inactive.");
@@ -191,7 +195,7 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
 
         try{
 
-            var check = kycReport(client, reportFormat);
+            var check = kycReport(client, reportFormat, reportAction);
 
             var reportToken = check != null ? check.getReportToken() : null;
 
@@ -333,7 +337,7 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
                     pdfResponseData.getAccount_id(), crbCheck.getProviderReference(), timestamp, pdfResponseData.getToken(), crbReportAction.getDescription());
         }
 
-        final String reportUrl = CreditReportUrlBuilder.buildReportUrl(baseUrl, genData);
+        final String reportUrl = CreditReportUrlBuilder.buildReportUrl(baseUrl, genData, CrbReportType.CREDIT);
 
         //Todo: I assume that if the first enquiry was successful then we don't need a verification here
         final boolean verified = true;
@@ -347,20 +351,76 @@ public class GnugridCreditReportIntegrationWritePlatformServiceImpl implements G
                 .build();
     }
 
-    private CrbProviderResult kycReport(Client client, Integer reportFormat){
+    private CrbProviderResult kycReport(Client client, Integer reportFormat, Integer reportAction){
 
         CrbReportFormat crbReportFormat = CrbReportFormat.fromInt(reportFormat);
+        final CrbReportAction crbReportAction = CrbReportAction.fromInt(reportAction);
+
+
+        final LegalForm legalForm = LegalForm.fromInt(client.getLegalForm());
+
+        if (legalForm == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.client.legal.form.invalid", "Invalid client legal form.");
+        }
+
+        final CrbCheck crbCheck = findCreditEnquiryCheck(client, CreditValidationType.KYC_ENQUIRY.getValue());
+
+        if (!CRBStatus.VERIFIED.getValue().equals(crbCheck.getStatus())) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.not.verified",
+                    "Credit report cannot be generated because the client's CRB validation has not been verified."
+            );
+        }
 
         var request = kycClientTypeReport(client, crbReportFormat);
 
-        var response = gnugridService.kycReport(request);
+        if (crbReportFormat.equals(CrbReportFormat.JSON)) {
+
+            var response = gnugridService.kycReport(request);
+
+            //Todo: I assume that if the first enquiry was successful then we don't need a verification here
+            final boolean verified = true;
+
+            return CrbProviderResult.builder()
+                    .verified(verified)
+                    .responsePayload(serializeResponse(response))
+                    .build();
+        }
+        final var pdfResponseData = gnugridService.kycPdfReport(request);
+
+        if (pdfResponseData == null || pdfResponseData.getToken() == null || pdfResponseData.getAccount_id() == null) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.credit.report.pdf.invalid.response",
+                    "CRB returned an incomplete PDF report response."
+            );
+        }
+
+        final String baseUrl = getProperty("crb.ui.url");
+
+        final Long timestamp = crbCheck.getValidationTimestamp();
+
+        final CreditReportGenerationData genData;
+
+        if (legalForm.isEntity()) {
+
+            genData = new CreditReportGenerationData(request.getEnquiry_id(), null, request.getNon_individual_id(),
+                    pdfResponseData.getAccount_id(), crbCheck.getProviderReference(), timestamp, pdfResponseData.getToken(), crbReportAction.getDescription());
+
+        } else {
+
+            genData = new CreditReportGenerationData(request.getEnquiry_id(), request.getIndividual_id(), null,
+                    pdfResponseData.getAccount_id(), crbCheck.getProviderReference(), timestamp, pdfResponseData.getToken(), crbReportAction.getDescription());
+        }
+
+        final String reportUrl = CreditReportUrlBuilder.buildReportUrl(baseUrl, genData, CrbReportType.KYC);
 
         //Todo: I assume that if the first enquiry was successful then we don't need a verification here
         final boolean verified = true;
 
         return CrbProviderResult.builder()
                 .verified(verified)
-                .responsePayload(serializeResponse(response))
+                .responsePayload(serializeResponse(pdfResponseData))
+                .reportToken(pdfResponseData.getToken())
+                .reportAccountId(pdfResponseData.getAccount_id())
+                .reportUrl(reportUrl)
                 .build();
     }
 

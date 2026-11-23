@@ -184,6 +184,44 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
     }
 
     @Override
+    public CreditReportPdfResponseData kycPdfReport(KycReportRequestData kycReportRequestData) {
+        boolean isKycReportEnabled = configurationDomainService.isCrbKycReportEnabled();
+
+
+        if (!isKycReportEnabled) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.kyc.report.disabled", "CRB KYC PDF REPORT is disabled.");
+        }
+
+        final boolean hasIndividualId = kycReportRequestData.getIndividual_id() != null;
+
+        final boolean hasNonIndividualId = kycReportRequestData.getNon_individual_id() != null;
+
+        if (hasIndividualId == hasNonIndividualId) {
+            throw new GeneralPlatformDomainRuleException("error.msg.kyc.identifier.invalid", "Exactly one identifier must be provided: individual_id or non_individual_id.");
+        }
+
+        final String endpoint = hasIndividualId ? "kyc-enquiries/individual/kyc-report" : "kyc-enquiries/non-individual/kyc-report";
+
+        final String url = baseUrl() + endpoint;
+
+        final var responseData = executeCrbRequest(
+                url,
+                HttpMethod.POST,
+                kycReportRequestData,
+                CreditReportPdfResponseData.class,
+                "error.msg.crb.kyc.report.invalid.response",
+                "KYC Report returned an invalid personal information validation response.",
+                response -> response.getToken() != null,
+                "error.msg.crb..kyc.report.request.failed",
+                "error.msg.crb..kyc.report.connection.failed"
+        );
+
+        log.info("KYC Report: {}", responseData);
+
+        return responseData;
+    }
+
+    @Override
     public KycReportResponseJsonData kycReport(final KycReportRequestData kycReportRequestData) {
 
         boolean isKycReportEnabled = configurationDomainService.isCrbKycReportEnabled();

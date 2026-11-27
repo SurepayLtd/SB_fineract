@@ -20,7 +20,6 @@ package org.apache.fineract.infrastructure.security.service;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
@@ -43,6 +42,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @ConditionalOnProperty("fineract.security.2fa.enabled")
@@ -169,6 +169,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
     @Override
     @Cacheable(value = "userTFAccessToken", key = "T(org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil)"
             + ".getTenant().getTenantIdentifier().concat(#user.username).concat(#token + 'tok')")
+    @Transactional(readOnly = true)
     public TFAccessToken fetchAccessTokenForUser(final AppUser user, final String token) {
         return tfAccessTokenRepository.findByUserAndToken(user, token);
     }
@@ -185,7 +186,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
         if (user.getStaff() == null) {
             return null;
         }
-        String mobileNo = user.getStaff().mobileNo();
+        String mobileNo = user.getStaff().getMobileNo();
         if (StringUtils.isBlank(mobileNo)) {
             return null;
         }

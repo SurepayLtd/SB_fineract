@@ -8,7 +8,7 @@ import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentOverdueRemi
 import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.ExecuteBatchJobConstant;
 import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.LoanInstallmentSkipPolicy;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.BatchSmSReadService;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.integration.partition.RemotePartitioningWorkerStepBuilderFactory;
 import org.springframework.beans.factory.annotation.Autowired;

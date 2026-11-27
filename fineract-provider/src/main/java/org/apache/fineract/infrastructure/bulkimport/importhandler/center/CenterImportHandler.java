@@ -197,7 +197,7 @@ public class CenterImportHandler implements ImportHandler {
                 statusCell.setCellStyle(ImportHandlerUtils.getCellStyle(workbook, IndexedColors.LIGHT_GREEN));
             } catch (RuntimeException ex) {
                 errorCount++;
-                LOG.error("Runtime Exception occured in importEntity function", ex);
+                LOG.error("Runtime Exception occurred in importEntity function", ex);
                 errorMessage = ImportHandlerUtils.getErrorMessage(ex);
                 writeCenterErrorMessage(workbook, centerId, errorMessage, progressLevel, statusCell, errorReportCell, row);
             }
@@ -268,7 +268,7 @@ public class CenterImportHandler implements ImportHandler {
         String payload = gsonBuilder.create().toJson(calendarData);
         CommandWrapper commandWrapper = new CommandWrapper(result.getOfficeId(), result.getGroupId(), result.getClientId(),
                 result.getLoanId(), result.getSavingsId(), null, null, null, null, null, payload, result.getTransactionId(),
-                result.getProductId(), null, null, null, null, idempotencyKeyGenerator.create(), null);
+                result.getProductId(), null, null, null, null, idempotencyKeyGenerator.create(), null, null);
         final CommandWrapper commandRequest = new CommandWrapperBuilder() //
                 .createCalendar(commandWrapper, TemplatePopulateImportConstants.CENTER_ENTITY_TYPE, result.getGroupId()) //
                 .withJson(payload) //

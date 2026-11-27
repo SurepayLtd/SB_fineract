@@ -21,15 +21,17 @@ package org.apache.fineract.portfolio.savings.service;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.accounting.common.AccountingEnumerations;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.core.domain.JdbcSupport;
+import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
 import org.apache.fineract.portfolio.interestratechart.data.InterestRateChartData;
-import org.apache.fineract.portfolio.interestratechart.service.InterestRateChartReadPlatformService;
+import org.apache.fineract.portfolio.interestratechart.service.InterestRateChartReadService;
 import org.apache.fineract.portfolio.savings.DepositAccountType;
 import org.apache.fineract.portfolio.savings.data.DepositProductData;
 import org.apache.fineract.portfolio.savings.data.FixedDepositProductData;
@@ -48,7 +50,7 @@ public class DepositProductReadPlatformServiceImpl implements DepositProductRead
     private static final DepositProductLookupMapper DEPOSIT_PRODUCT_LOOKUP_MAPPER = new DepositProductLookupMapper();
     private final PlatformSecurityContext context;
     private final JdbcTemplate jdbcTemplate;
-    private final InterestRateChartReadPlatformService chartReadPlatformService;
+    private final InterestRateChartReadService chartReadPlatformService;
 
     @Override
     public Collection<DepositProductData> retrieveAll(final DepositAccountType depositAccountType) {
@@ -106,9 +108,9 @@ public class DepositProductReadPlatformServiceImpl implements DepositProductRead
         DepositProductData depositProduct = this.retrieveOne(depositAccountType, depositProductId);
         Collection<InterestRateChartData> charts = this.chartReadPlatformService.retrieveAllWithSlabsWithTemplate(depositProductId);
 
-        if (depositAccountType.isFixedDeposit()) {
+        if (depositAccountType == DepositAccountType.FIXED_DEPOSIT) {
             depositProduct = FixedDepositProductData.withInterestChart(depositProduct, charts);
-        } else if (depositAccountType.isRecurringDeposit()) {
+        } else if (depositAccountType == DepositAccountType.RECURRING_DEPOSIT) {
             depositProduct = RecurringDepositProductData.withInterestChart(depositProduct, charts);
         }
 
@@ -116,9 +118,9 @@ public class DepositProductReadPlatformServiceImpl implements DepositProductRead
     }
 
     private DepositProductMapper getDepositProductMapper(final DepositAccountType depositAccountType) {
-        if (depositAccountType.isFixedDeposit()) {
+        if (depositAccountType == DepositAccountType.FIXED_DEPOSIT) {
             return FIXED_DEPOSIT_PRODUCT_MAPPER;
-        } else if (depositAccountType.isRecurringDeposit()) {
+        } else if (depositAccountType == DepositAccountType.RECURRING_DEPOSIT) {
             return RECURRING_DEPOSIT_PRODUCT_MAPPER;
         }
         return null;
@@ -144,6 +146,7 @@ public class DepositProductReadPlatformServiceImpl implements DepositProductRead
             sqlBuilder.append("sp.lockin_period_frequency_enum as lockinPeriodFrequencyType, ");
             sqlBuilder.append("sp.accounting_type as accountingType, ");
             sqlBuilder.append("sp.min_balance_for_interest_calculation as minBalanceForInterestCalculation, ");
+            sqlBuilder.append("sp.start_date as startDate, sp.close_date as closeDate, ");
             sqlBuilder.append("sp.withhold_tax as withHoldTax,");
             sqlBuilder.append("tg.id as taxGroupId, tg.name as taxGroupName ");
             this.schemaSql = sqlBuilder.toString();
@@ -197,6 +200,10 @@ public class DepositProductReadPlatformServiceImpl implements DepositProductRead
                 lockinPeriodFrequencyType = SavingsEnumerations.lockinPeriodFrequencyType(lockinPeriodFrequencyTypeValue);
             }
             final BigDecimal minBalanceForInterestCalculation = rs.getBigDecimal("minBalanceForInterestCalculation");
+            final LocalDate startDate = JdbcSupport.getLocalDate(rs, "startDate");
+            final LocalDate closeDate = JdbcSupport.getLocalDate(rs, "closeDate");
+            final String status = closeDate != null && DateUtils.isBeforeBusinessDate(closeDate) ? "savingsProduct.inActive"
+                    : "savingsProduct.active";
 
             final boolean withHoldTax = rs.getBoolean("withHoldTax");
             final Long taxGroupId = JdbcSupport.getLong(rs, "taxGroupId");
@@ -209,7 +216,7 @@ public class DepositProductReadPlatformServiceImpl implements DepositProductRead
             return DepositProductData.instance(id, name, shortName, description, currency, nominalAnnualInterestRate,
                     compoundingInterestPeriodType, interestPostingPeriodType, interestCalculationType, interestCalculationDaysInYearType,
                     lockinPeriodFrequency, lockinPeriodFrequencyType, accountingRuleType, minBalanceForInterestCalculation, withHoldTax,
-                    taxGroupData);
+                    taxGroupData, startDate, closeDate, status);
         }
     }
 

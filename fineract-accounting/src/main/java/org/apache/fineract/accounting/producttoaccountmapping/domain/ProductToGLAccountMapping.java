@@ -31,7 +31,6 @@ import lombok.experimental.Accessors;
 import org.apache.fineract.accounting.glaccount.domain.GLAccount;
 import org.apache.fineract.infrastructure.codes.domain.CodeValue;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
-import org.apache.fineract.portfolio.charge.domain.Charge;
 import org.apache.fineract.portfolio.paymenttype.domain.PaymentType;
 
 @Getter
@@ -54,9 +53,8 @@ public class ProductToGLAccountMapping extends AbstractPersistableCustom<Long> {
     @JoinColumn(name = "payment_type", nullable = true)
     private PaymentType paymentType;
 
-    @ManyToOne
-    @JoinColumn(name = "charge_id", nullable = true)
-    private Charge charge;
+    @Column(name = "charge_id", nullable = true)
+    private Long chargeId;
 
     @Column(name = "product_type", nullable = true)
     private int productType;
@@ -68,10 +66,24 @@ public class ProductToGLAccountMapping extends AbstractPersistableCustom<Long> {
     @JoinColumn(name = "charge_off_reason_id", nullable = true)
     private CodeValue chargeOffReason;
 
+    @ManyToOne
+    @JoinColumn(name = "write_off_reason_id", nullable = true)
+    private CodeValue writeOffReason;
+
+    @ManyToOne
+    @JoinColumn(name = "capitalized_income_classification_id", nullable = true)
+    private CodeValue capitalizedIncomeClassification;
+
+    @ManyToOne
+    @JoinColumn(name = "buydown_fee_classification_id", nullable = true)
+    private CodeValue buydownFeeClassification;
+
     public static ProductToGLAccountMapping createNew(final GLAccount glAccount, final Long productId, final int productType,
-            final int financialAccountType, final CodeValue chargeOffReason) {
+            final int financialAccountType, final CodeValue chargeOffReason, final CodeValue capitalizedIncomeClassification,
+            final CodeValue buydownFeeClassification) {
 
         return new ProductToGLAccountMapping().setGlAccount(glAccount).setProductId(productId).setProductType(productType)
-                .setFinancialAccountType(financialAccountType).setChargeOffReason(chargeOffReason);
+                .setFinancialAccountType(financialAccountType).setChargeOffReason(chargeOffReason)
+                .setCapitalizedIncomeClassification(capitalizedIncomeClassification).setBuydownFeeClassification(buydownFeeClassification);
     }
 }

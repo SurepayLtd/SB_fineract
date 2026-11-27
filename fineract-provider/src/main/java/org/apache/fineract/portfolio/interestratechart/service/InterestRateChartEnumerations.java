@@ -43,6 +43,9 @@ public final class InterestRateChartEnumerations {
 
         switch (type) {
             case INVALID:
+                // SEMI_MONTHLY is a loan repayment frequency; it is left out of PeriodFrequencyType.integerValues(), so
+                // an interest rate chart can never be validated into it and it reports as invalid here.
+            case SEMI_MONTHLY:
             break;
             case DAYS:
                 optionData = new EnumOptionData(PeriodFrequencyType.DAYS.getValue().longValue(), PeriodFrequencyType.DAYS.getCode(),
@@ -72,7 +75,7 @@ public final class InterestRateChartEnumerations {
     public static List<EnumOptionData> periodType(final PeriodFrequencyType[] periodTypes) {
         final List<EnumOptionData> optionDatas = new ArrayList<>();
         for (final PeriodFrequencyType periodType : periodTypes) {
-            if (!periodType.isInvalid()) {
+            if (periodType != PeriodFrequencyType.INVALID) {
                 optionDatas.add(periodType(periodType));
             }
         }

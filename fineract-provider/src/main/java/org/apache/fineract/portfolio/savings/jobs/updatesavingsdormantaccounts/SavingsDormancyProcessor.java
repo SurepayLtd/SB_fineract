@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.infrastructure.campaigns.sms.domain.SmsTransactionRepository;
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.portfolio.savings.data.SavingsDormancyReminderData;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @Slf4j
 @RequiredArgsConstructor

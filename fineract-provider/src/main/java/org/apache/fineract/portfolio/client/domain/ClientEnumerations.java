@@ -76,8 +76,7 @@ public final class ClientEnumerations {
     }
 
     public static EnumOptionData legalForm(final LegalForm legalForm) {
-        final EnumOptionData optionData = new EnumOptionData(legalForm.getValue().longValue(), legalForm.getCode(), legalForm.toString());
-        return optionData;
+        return new EnumOptionData(legalForm.getValue().longValue(), legalForm.getCode(), legalForm.toString());
     }
 
     public static List<EnumOptionData> legalForm(final LegalForm[] legalForms) {
@@ -93,9 +92,8 @@ public final class ClientEnumerations {
     }
 
     public static EnumOptionData clientTransactionType(final ClientTransactionType clientTransactionType) {
-        final EnumOptionData optionData = new EnumOptionData(clientTransactionType.getValue().longValue(), clientTransactionType.getCode(),
+        return new EnumOptionData(clientTransactionType.getValue().longValue(), clientTransactionType.getCode(),
                 clientTransactionType.toString());
-        return optionData;
     }
 
     public static List<EnumOptionData> clientTransactionType(final ClientTransactionType[] clientTransactionTypes) {

@@ -18,8 +18,10 @@
  */
 package org.apache.fineract.portfolio.search.data;
 
+import lombok.Getter;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 
+@Getter
 public class SearchData {
 
     private final Long entityId;
@@ -33,10 +35,26 @@ public class SearchData {
     private final EnumOptionData entityStatus;
     private final String parentType;
     private final String subEntityType;
+    private final Long transactionId;
+    private final String transactionType;
+    private final String transactionExternalId;
+    private final String transactionRefNo;
+    private final Long accountId;
+    private final String accountNo;
+    private final String accountType;
 
     public SearchData(final Long entityId, final String entityAccountNo, final String entityExternalId, final String entityName,
             final String entityType, final Long parentId, final String parentName, final String parentType, final String entityMobileNo,
             final EnumOptionData entityStatus, final String subEntityType) {
+        this(entityId, entityAccountNo, entityExternalId, entityName, entityType, parentId, parentName, parentType, entityMobileNo,
+                entityStatus, subEntityType, null, null, null, null, null, null, null);
+    }
+
+    public SearchData(final Long entityId, final String entityAccountNo, final String entityExternalId, final String entityName,
+            final String entityType, final Long parentId, final String parentName, final String parentType, final String entityMobileNo,
+            final EnumOptionData entityStatus, final String subEntityType, final Long transactionId, final String transactionType,
+            final String transactionExternalId, final String transactionRefNo, final Long accountId, final String accountNo,
+            final String accountType) {
 
         this.entityId = entityId;
         this.entityAccountNo = entityAccountNo;
@@ -49,50 +67,13 @@ public class SearchData {
         this.entityMobileNo = entityMobileNo;
         this.entityStatus = entityStatus;
         this.subEntityType = subEntityType;
-    }
-
-    public Long getEntityId() {
-        return this.entityId;
-    }
-
-    public String getEntityAccountNo() {
-        return this.entityAccountNo;
-    }
-
-    public String getEntityExternalId() {
-        return this.entityExternalId;
-    }
-
-    public String getEntityName() {
-        return this.entityName;
-    }
-
-    public String getEntityType() {
-        return this.entityType;
-    }
-
-    public Long getParentId() {
-        return this.parentId;
-    }
-
-    public String getParentName() {
-        return this.parentName;
-    }
-
-    public String getParentType() {
-        return this.parentType;
-    }
-
-    public String getEntityMobileNo() {
-        return this.entityMobileNo;
-    }
-
-    public EnumOptionData getEntityStatus() {
-        return this.entityStatus;
-    }
-
-    public String getSubEntityType() {
-        return this.subEntityType;
+        this.transactionId = transactionId;
+        this.transactionType = transactionType;
+        this.transactionExternalId = transactionExternalId;
+        this.transactionRefNo = transactionRefNo;
+        this.accountId = accountId;
+        this.accountNo = accountNo;
+        this.accountType = accountType;
     }
 
 }

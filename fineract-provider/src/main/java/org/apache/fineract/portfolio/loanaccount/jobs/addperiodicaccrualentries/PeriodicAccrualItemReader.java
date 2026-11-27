@@ -2,17 +2,18 @@ package org.apache.fineract.portfolio.loanaccount.jobs.addperiodicaccrualentries
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.fineract.infrastructure.configuration.domain.ChargeAccrualDateConfig;
 import org.apache.fineract.accounting.common.AccountingRuleType;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.portfolio.loanaccount.data.LoanAccrualData;
 import org.apache.fineract.portfolio.loanaccount.service.LoanAccrualBatchReadService;
-import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.core.annotation.BeforeStep;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.NonTransientResourceException;
-import org.springframework.batch.item.ParseException;
-import org.springframework.batch.item.UnexpectedInputException;
+import org.springframework.batch.infrastructure.item.ItemReader;
+import org.springframework.batch.infrastructure.item.NonTransientResourceException;
+import org.springframework.batch.infrastructure.item.ParseException;
+import org.springframework.batch.infrastructure.item.UnexpectedInputException;
 import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.ExecuteBatchJobConstant;
 
 import java.time.LocalDate;
@@ -25,7 +26,6 @@ import java.util.List;
 public class PeriodicAccrualItemReader implements ItemReader<LoanAccrualData> {
 
     private final int pageSize;
-    private static final String ACCRUAL_ON_CHARGE_SUBMITTED_ON_DATE = "submitted-date";
 
     private final ConfigurationDomainService configurationDomainService;
     private final LoanAccrualBatchReadService readService;
@@ -92,7 +92,6 @@ public class PeriodicAccrualItemReader implements ItemReader<LoanAccrualData> {
     }
 
     private boolean isChargeOnDueDate() {
-        final String chargeAccrualDateType = configurationDomainService.getAccrualDateConfigForCharge();
-        return !ACCRUAL_ON_CHARGE_SUBMITTED_ON_DATE.equalsIgnoreCase(chargeAccrualDateType);
+        return configurationDomainService.getAccrualDateConfigForCharge() != ChargeAccrualDateConfig.SUBMITTED_DATE;
     }
 }

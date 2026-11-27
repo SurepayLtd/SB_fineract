@@ -26,12 +26,18 @@ include::batch-jobs.adoc[leveloffset=+1]
 
 include::loan-locking.adoc[leveloffset=+1]
 
+include::office-hierarchy-access.adoc[leveloffset=+1]
+
 include::technology.adoc[leveloffset=+1]
 
 include::modules.adoc[leveloffset=+1]
+
+include::cross-feature-boundary-violations.adoc[leveloffset=+1]
 
 include::business-date.adoc[leveloffset=+1]
 
 include::reliable-event-framework.adoc[leveloffset=+1]
 
 include::advanced-payment-allocation.adoc[leveloffset=+1]
+
+include::api-backward-compatibility.adoc[leveloffset=+1]

@@ -18,10 +18,12 @@
  */
 package org.apache.fineract.portfolio.loanproduct.domain;
 
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.portfolio.delinquency.domain.DelinquencyBucket;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -34,14 +36,18 @@ public interface LoanProductRepository extends JpaRepository<LoanProduct, Long>,
 
     Long countByDelinquencyBucket(DelinquencyBucket delinquencyBucket);
 
-    List<LoanProduct> findByDelinquencyBucketNotNull();
-
     LoanProduct findByExternalId(ExternalId externalId);
 
     @Override
     @Query("SELECT CASE WHEN COUNT(loanProduct)>0 THEN TRUE ELSE FALSE END FROM LoanProduct loanProduct WHERE loanProduct.id = :loanProductId")
-    boolean existsById(@NotNull @Param("loanProductId") Long loanProductId);
+    boolean existsById(@NonNull @Param("loanProductId") Long loanProductId);
 
     @Query("SELECT COUNT(lp) FROM LoanProduct lp WHERE lp.isUssd = true")
     Long countUssdLoanProducts();
+
+    @Query("select loanProduct from LoanProduct loanProduct where loanProduct.closeDate is null or loanProduct.closeDate >= :businessDate")
+    List<LoanProduct> fetchActiveLoanProducts(LocalDate businessDate);
+
+    @Query("select loanProduct from LoanProduct loanProduct where lower(loanProduct.name) in :productNames")
+    List<LoanProduct> findAllByNameIgnoreCase(@Param("productNames") Collection<String> productNames);
 }

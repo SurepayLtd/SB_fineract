@@ -20,13 +20,12 @@ package org.apache.fineract.infrastructure.event.external.producer.kafka;
 
 import static org.mockito.Mockito.times;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import org.apache.fineract.infrastructure.core.config.FineractProperties;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +36,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressFBWarnings(value = "RV_EXCEPTION_NOT_THROWN", justification = "False positive")
+
 class KafkaExternalEventProducerTest {
 
     public static final String TOPIC_NAME = "unit-test";
@@ -112,7 +111,7 @@ class KafkaExternalEventProducerTest {
         Mockito.verifyNoMoreInteractions(kafkaTemplate);
     }
 
-    @NotNull
+    @NonNull
     private static FineractProperties createProperties() {
         FineractProperties props = new FineractProperties();
 

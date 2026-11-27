@@ -510,11 +510,11 @@ public class SelfLoansApiResource {
   @Path("{loanId}/guarantors")
   @Consumes({MediaType.APPLICATION_JSON})
   @Produces({MediaType.APPLICATION_JSON})
-  public String retrieveGuarantorDetails(
+  public List<GuarantorData> retrieveGuarantorDetails(
       @PathParam("loanId") final Long loanId, @Context final UriInfo uriInfo) {
 
     validateAppSelfServiceUserLoanMapping(loanId);
-    return this.guarantorsApiResource.retrieveGuarantorDetails(uriInfo, loanId);
+    return this.guarantorsApiResource.retrieveGuarantorDetails(loanId);
   }
 
   // --- Helper Methods for Notifications ---

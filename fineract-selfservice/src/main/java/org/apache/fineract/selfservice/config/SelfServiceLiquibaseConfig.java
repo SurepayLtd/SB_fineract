@@ -7,7 +7,7 @@
 package org.apache.fineract.selfservice.config;
 
 import java.util.List;
-import javax.sql.DataSource;
+import org.apache.fineract.infrastructure.core.service.database.RoutingDataSource;
 import liquibase.integration.spring.SpringLiquibase;
 import org.apache.fineract.infrastructure.core.domain.FineractPlatformTenant;
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
@@ -26,7 +26,7 @@ public class SelfServiceLiquibaseConfig {
 
   @Autowired private TenantDetailsService tenantDetailsService;
 
-  @Autowired private DataSource routingDataSource;
+  @Autowired private RoutingDataSource routingDataSource;
 
   @Bean
   @DependsOn("tenantDatabaseUpgradeService") // Must run AFTER Fineract core DB is set up

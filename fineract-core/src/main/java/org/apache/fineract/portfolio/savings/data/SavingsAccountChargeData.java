@@ -18,6 +18,7 @@
  */
 package org.apache.fineract.portfolio.savings.data;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -25,6 +26,7 @@ import java.time.MonthDay;
 import java.util.Collection;
 import lombok.Getter;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
+import org.apache.fineract.infrastructure.core.jersey.serializer.legacy.JsonLocalDateArrayFormat;
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
 import org.apache.fineract.portfolio.charge.data.ChargeData;
 import org.apache.fineract.portfolio.charge.domain.ChargeTimeType;
@@ -33,6 +35,7 @@ import org.apache.fineract.portfolio.charge.domain.ChargeTimeType;
  * Immutable data object for Savings Account charge data.
  */
 @Getter
+@JsonLocalDateArrayFormat
 public class SavingsAccountChargeData implements Serializable {
 
     private final Long id;
@@ -41,6 +44,7 @@ public class SavingsAccountChargeData implements Serializable {
     private final String name;
     private final EnumOptionData chargeTimeType;
     private final LocalDate dueDate;
+    @Schema(type = "string", example = "--01-15", description = "The recurring day the fee falls due, as an ISO-8601 month-day")
     private final MonthDay feeOnMonthDay;
     private final Integer feeInterval;
     private final EnumOptionData chargeCalculationType;
@@ -62,6 +66,11 @@ public class SavingsAccountChargeData implements Serializable {
     private final LocalDate inactivationDate;
     private final Collection<ChargeData> chargeOptions;
     private ChargeData chargeData;
+    private Collection<SavingsChargeTransactionData> transactions;
+
+    public void setTransactions(final Collection<SavingsChargeTransactionData> transactions) {
+        this.transactions = transactions;
+    }
 
     public SavingsAccountChargeData(Long chargeId, BigDecimal amount, LocalDate dueDate) {
         this.chargeId = chargeId;

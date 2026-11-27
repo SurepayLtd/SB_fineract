@@ -264,7 +264,7 @@ public class AppSelfServiceUser extends AbstractPersistableCustom<Long>
     final String passwordParamName = "password";
     if (command.hasParameter(passwordParamName)) {
       if (command.isChangeInPasswordParameterNamed(
-          passwordParamName, this.password, platformPasswordEncoder, getId())) {
+          passwordParamName, this.password, platformPasswordEncoder)) {
         final String passwordEncodedValue =
             command.passwordValueOfParameterNamed(
                 passwordParamName, platformPasswordEncoder, getId());
@@ -782,7 +782,7 @@ public class AppSelfServiceUser extends AbstractPersistableCustom<Long>
 
     if (command.hasParameter(passwordParamName)) {
       if (command.isChangeInPasswordParameterNamed(
-          passwordParamName, this.password, platformPasswordEncoder, getId())) {
+          passwordParamName, this.password, platformPasswordEncoder)) {
         passwordEncodedValue =
             command.passwordValueOfParameterNamed(
                 passwordParamName, platformPasswordEncoder, getId());

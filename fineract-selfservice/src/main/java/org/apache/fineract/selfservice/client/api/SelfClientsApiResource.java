@@ -40,15 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.apache.fineract.infrastructure.core.domain.Base64EncodedImage;
-import org.apache.fineract.infrastructure.documentmanagement.contentrepository.ContentRepositoryUtils;
-import org.apache.fineract.infrastructure.documentmanagement.contentrepository.ContentRepositoryUtils.ImageFileExtension;
-import org.apache.fineract.infrastructure.documentmanagement.data.FileData;
-import org.apache.fineract.infrastructure.documentmanagement.data.ImageResizer;
-import org.apache.fineract.infrastructure.documentmanagement.exception.ContentManagementException;
-import java.io.IOException;
-import java.util.Base64;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.fineract.infrastructure.documentmanagement.api.ImagesApiResource;
 import org.apache.fineract.infrastructure.core.api.ApiRequestParameterHelper;
 import org.apache.fineract.infrastructure.core.data.UploadRequest;
 import org.apache.fineract.infrastructure.core.serialization.ApiRequestJsonSerializationSettings;
@@ -56,9 +48,6 @@ import org.apache.fineract.infrastructure.core.serialization.DefaultToApiJsonSer
 import org.apache.fineract.infrastructure.core.serialization.ToApiJsonSerializer;
 import org.apache.fineract.infrastructure.core.service.Page;
 import org.apache.fineract.infrastructure.core.service.SearchParameters;
-import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
-import org.apache.fineract.infrastructure.documentmanagement.service.ImageReadPlatformService;
-import org.apache.fineract.infrastructure.documentmanagement.service.ImageWritePlatformService;
 import org.apache.fineract.portfolio.accountdetails.data.AccountSummaryCollectionData;
 import org.apache.fineract.portfolio.accountdetails.service.AccountDetailsReadPlatformService;
 import org.apache.fineract.portfolio.client.api.ClientApiConstants;
@@ -108,9 +97,8 @@ public class SelfClientsApiResource {
   private final ApiRequestParameterHelper apiRequestParameterHelper;
   private final AppSelfServiceUserClientMapperReadService appUserClientMapperReadService;
   private final SelfClientDataValidator dataValidator;
-  private final ImageReadPlatformService imageReadPlatformService;
-  private final ImageWritePlatformService imageWritePlatformService;
-  private final ImageResizer imageResizer;
+  // SurePay: image handling is delegated to upstream's ImagesApiResource (new command-processing image API)
+  private final ImagesApiResource imagesApiResource;
 
   @GET
   @Consumes({MediaType.APPLICATION_JSON})
@@ -268,28 +256,7 @@ public class SelfClientsApiResource {
     validateAppuserClientsMapping(clientId);
     this.context.validateHasReadPermission("CLIENTIMAGE");
 
-    final FileData imageData =
-        imageReadPlatformService.retrieveImage(ClientApiConstants.clientEntityName, clientId);
-    final FileData resizedImage = imageResizer.resize(imageData, maxWidth, maxHeight);
-
-    String imageDataURISuffix = ContentRepositoryUtils.ImageDataURIsuffix.JPEG.getValue();
-    if (StringUtils.endsWith(imageData.name(), ContentRepositoryUtils.ImageFileExtension.GIF.getValue())) {
-        imageDataURISuffix = ContentRepositoryUtils.ImageDataURIsuffix.GIF.getValue();
-    } else if (StringUtils.endsWith(imageData.name(), ContentRepositoryUtils.ImageFileExtension.PNG.getValue())) {
-        imageDataURISuffix = ContentRepositoryUtils.ImageDataURIsuffix.PNG.getValue();
-    }
-
-    try {
-        byte[] resizedImageBytes = resizedImage.getByteSource().read();
-        if (resizedImageBytes != null) {
-            final String clientImageAsBase64Text = imageDataURISuffix + Base64.getMimeEncoder().encodeToString(resizedImageBytes);
-            return Response.ok(clientImageAsBase64Text, MediaType.TEXT_PLAIN_TYPE).build();
-        } else {
-            return Response.serverError().build();
-        }
-    } catch (IOException e) {
-        throw new ContentManagementException(imageData.name(), e.getMessage(), e);
-    }
+    return this.imagesApiResource.retrieveImage(ClientApiConstants.clientEntityName, clientId, maxWidth, maxHeight, output, null);
   }
 
   @GET
@@ -494,13 +461,9 @@ public class SelfClientsApiResource {
 
     this.context.validateHasCreatePermission("CLIENTIMAGE");
 
-    final CommandProcessingResult result = this.imageWritePlatformService.saveOrUpdateImage(
-        ClientApiConstants.clientEntityName,
-        clientId,
-        fileDetails.getFileName(),
-        is,
-        fileSize);
-    return new ImageCreateResponse(result.getResourceId());
+    final var response = this.imagesApiResource.createImage(ClientApiConstants.clientEntityName, clientId, fileSize, is, fileDetails,
+        filePart);
+    return new ImageCreateResponse(response.getResourceId());
   }
 
   @POST
@@ -513,13 +476,9 @@ public class SelfClientsApiResource {
 
     this.context.validateHasCreatePermission("CLIENTIMAGE");
 
-    final Base64EncodedImage base64EncodedImage = ContentRepositoryUtils.extractImageFromDataURL(jsonRequestBody);
-
-    final CommandProcessingResult result = this.imageWritePlatformService.saveOrUpdateImage(
-        ClientApiConstants.clientEntityName,
-        clientId,
-        base64EncodedImage);
-    return new ImageCreateResponse(result.getResourceId());
+    final var response = this.imagesApiResource.createImage(ClientApiConstants.clientEntityName, clientId,
+        new java.io.ByteArrayInputStream(jsonRequestBody.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    return new ImageCreateResponse(response.getResourceId());
   }
 
   @DELETE
@@ -531,7 +490,7 @@ public class SelfClientsApiResource {
 
     this.context.validateHasDeletePermission("CLIENTIMAGE");
 
-    this.imageWritePlatformService.deleteImage(ClientApiConstants.clientEntityName, clientId);
+    this.imagesApiResource.deleteImage(ClientApiConstants.clientEntityName, clientId);
     return new ImageDeleteResponse(clientId);
   }
 

@@ -18,20 +18,20 @@
  */
 package org.apache.fineract.portfolio.client.domain;
 
+import java.util.List;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.portfolio.client.domain.search.SearchingClientRepository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import java.util.List;
 
 public interface ClientRepository extends JpaRepository<Client, Long>, JpaSpecificationExecutor<Client>, SearchingClientRepository {
 
     String FIND_CLIENT_BY_ACCOUNT_NUMBER = "select client from Client client where client.accountNumber = :accountNumber";
 
-    String HAPPY_BIRTHDAY = "SELECT c FROM Client c WHERE c.status = :status AND c.isStaff = :staff AND c.mobileNo IS NOT NULL AND c.dateOfBirth IS NOT NULL AND FUNCTION('DAY', c.dateOfBirth) = FUNCTION('DAY', CURRENT_DATE) AND FUNCTION('MONTH', c.dateOfBirth) = FUNCTION('MONTH', CURRENT_DATE)";
+    String HAPPY_BIRTHDAY = "SELECT c FROM Client c WHERE c.status = :status AND c.isStaff = :staff AND c.mobileNo IS NOT NULL AND c.dateOfBirth IS NOT NULL AND FUNCTION('DAY', c.dateOfBirth) = :day AND FUNCTION('MONTH', c.dateOfBirth) = :month";
 
     @Query(FIND_CLIENT_BY_ACCOUNT_NUMBER)
     Client getClientByAccountNumber(@Param("accountNumber") String accountNumber);
@@ -54,6 +54,14 @@ public interface ClientRepository extends JpaRepository<Client, Long>, JpaSpecif
     Client findByOtpCode(@Param("otpCode") Integer otpCode);
 
     @Query(HAPPY_BIRTHDAY)
-    List<Client> findBirthdays(@Param("status") Integer status, @Param("staff") boolean staff);
+    List<Client> findBirthdays(@Param("status") Integer status, @Param("staff") boolean staff, @Param("day") Integer day,
+            @Param("month") Integer month);
 
+    @Modifying
+    @Query("UPDATE Client client SET client.imageId = :imageId WHERE client.id = :clientId")
+    void updateByIdAndImageId(@Param("clientId") Long staffId, @Param("imageId") Long imageId);
+
+    @Modifying
+    @Query("UPDATE Client client SET client.imageId = null WHERE client.id = :clientId")
+    void removeImageId(@Param("clientId") Long clientId);
 }

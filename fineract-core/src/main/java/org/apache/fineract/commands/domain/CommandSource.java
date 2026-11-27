@@ -23,6 +23,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,6 +35,7 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
+import org.apache.fineract.infrastructure.core.service.IpAddressUtils;
 import org.apache.fineract.useradministration.domain.AppUser;
 
 @Entity
@@ -45,12 +47,19 @@ import org.apache.fineract.useradministration.domain.AppUser;
 @Table(name = "m_portfolio_command_source")
 public class CommandSource extends AbstractPersistableCustom<Long> {
 
+    public static final int IDEMPOTENCY_KEY_LENGTH = 63;
+
     @Column(name = "action_name", nullable = true, length = 100)
     private String actionName;
 
     @Column(name = "entity_name", nullable = true, length = 100)
     private String entityName;
 
+    /*
+     * The identifier columns below (office, group, client, loan, savings, product, transaction, resource, subresource
+     * and their external ids) hold what the command was submitted with. On rows where resultIdsWritten is set, what the
+     * command returned is in the matching result_* columns; older rows hold the returned values here instead.
+     */
     @Column(name = "office_id")
     private Long officeId;
 
@@ -118,7 +127,7 @@ public class CommandSource extends AbstractPersistableCustom<Long> {
     @Column(name = "job_name")
     private String jobName;
 
-    @Column(name = "idempotency_key", length = 50)
+    @Column(name = "idempotency_key", length = IDEMPOTENCY_KEY_LENGTH)
     private String idempotencyKey;
 
     @Column(name = "resource_external_id")
@@ -136,9 +145,66 @@ public class CommandSource extends AbstractPersistableCustom<Long> {
     @Column(name = "loan_external_id", length = 100)
     private ExternalId loanExternalId;
 
-    public static CommandSource fullEntryFrom(final CommandWrapper wrapper, final JsonCommand command, final AppUser maker,
-            String idempotencyKey, Integer status) {
+    @Column(name = "client_ip", nullable = true)
+    private String clientIp;
 
+    @Column(name = "is_sanitized", nullable = false)
+    private boolean sanitized;
+
+    /*
+     * Identifiers returned by the command. The columns above keep the identifiers the command was submitted with.
+     */
+    @Column(name = "result_office_id")
+    private Long resultOfficeId;
+
+    @Column(name = "result_group_id")
+    private Long resultGroupId;
+
+    @Column(name = "result_client_id")
+    private Long resultClientId;
+
+    @Column(name = "result_loan_id")
+    private Long resultLoanId;
+
+    @Column(name = "result_savings_account_id")
+    private Long resultSavingsId;
+
+    @Column(name = "result_product_id")
+    private Long resultProductId;
+
+    @Column(name = "result_transaction_id", length = 100)
+    private String resultTransactionId;
+
+    @Column(name = "result_resource_id")
+    private Long resultResourceId;
+
+    @Column(name = "result_resource_external_id", length = 100)
+    private ExternalId resultResourceExternalId;
+
+    @Column(name = "result_subresource_id")
+    private Long resultSubResourceId;
+
+    @Column(name = "result_subresource_external_id", length = 100)
+    private ExternalId resultSubResourceExternalId;
+
+    @Column(name = "result_loan_external_id", length = 100)
+    private ExternalId resultLoanExternalId;
+
+    /*
+     * Rows written before the result columns existed have the returned identifiers in the request columns instead.
+     */
+    @Column(name = "result_ids_written", nullable = false)
+    private boolean resultIdsWritten;
+
+    /*
+     * Set on every row inserted since the request columns stopped being overwritten, so they hold the submitted
+     * identifiers whatever happens to the command afterwards.
+     */
+    @Column(name = "submitted_ids_kept", nullable = false)
+    private boolean submittedIdsKept;
+
+    public static CommandSource fullEntryFrom(final CommandWrapper wrapper, final JsonCommand command, final AppUser maker,
+            String idempotencyKey, Integer status, boolean sanitized) {
         return CommandSource.builder() //
                 .actionName(wrapper.actionName()) //
                 .entityName(wrapper.entityName()) //
@@ -159,45 +225,72 @@ public class CommandSource extends AbstractPersistableCustom<Long> {
                 .transactionId(command.getTransactionId()) //
                 .creditBureauId(command.getCreditBureauId()) //
                 .organisationCreditBureauId(command.getOrganisationCreditBureauId()) //
-                .loanExternalId(command.getLoanExternalId()).build(); //
+                .clientIp(IpAddressUtils.getClientIp()) //
+                .loanExternalId(command.getLoanExternalId()).sanitized(sanitized).submittedIdsKept(true).build(); //
     }
 
     public String getPermissionCode() {
         return this.actionName + "_" + this.entityName;
     }
 
-    public void markAsAwaitingApproval() {
-        this.status = CommandProcessingResultType.AWAITING_APPROVAL.getValue();
+    @NotNull
+    public CommandProcessingResultType getStatusEnum() {
+        return CommandProcessingResultType.fromInt(status);
     }
 
-    public boolean isMarkedAsAwaitingApproval() {
-        return this.status.equals(CommandProcessingResultType.AWAITING_APPROVAL.getValue());
+    public void setStatus(@NotNull CommandProcessingResultType status) {
+        this.status = status.getValue();
+    }
+
+    public void markAsAwaitingApproval() {
+        setStatus(CommandProcessingResultType.AWAITING_APPROVAL);
+    }
+
+    public boolean isAwaitingApproval() {
+        return getStatusEnum().isAwaitingApproval();
+    }
+
+    public boolean isProcessed() {
+        return getStatusEnum().isProcessed();
     }
 
     public void markAsChecked(final AppUser checker) {
         this.checker = checker;
         this.checkedOnDate = DateUtils.getAuditOffsetDateTime();
-        this.status = CommandProcessingResultType.PROCESSED.getValue();
+        setStatus(CommandProcessingResultType.PROCESSED);
+    }
+
+    public boolean isChecked() {
+        return checker != null && isProcessed();
     }
 
     public void markAsRejected(final AppUser checker) {
         this.checker = checker;
         this.checkedOnDate = DateUtils.getAuditOffsetDateTime();
-        this.status = CommandProcessingResultType.REJECTED.getValue();
+        setStatus(CommandProcessingResultType.REJECTED);
     }
 
+    public boolean isRejected() {
+        return checker != null && isRejected();
+    }
+
+    /**
+     * Stores the identifiers returned by the command in the result columns, leaving the request columns untouched so
+     * the command stays searchable by what it was submitted with.
+     */
     public void updateForAudit(final CommandProcessingResult result) {
-        this.officeId = result.getOfficeId();
-        this.groupId = result.getGroupId();
-        this.clientId = result.getClientId();
-        this.loanId = result.getLoanId();
-        this.savingsId = result.getSavingsId();
-        this.productId = result.getProductId();
-        this.transactionId = result.getTransactionId();
-        this.resourceId = result.getResourceId();
-        this.resourceExternalId = result.getResourceExternalId();
-        this.subResourceId = result.getSubResourceId();
-        this.subResourceExternalId = result.getSubResourceExternalId();
-        this.loanExternalId = result.getLoanExternalId();
+        this.resultOfficeId = result.getOfficeId();
+        this.resultGroupId = result.getGroupId();
+        this.resultClientId = result.getClientId();
+        this.resultLoanId = result.getLoanId();
+        this.resultSavingsId = result.getSavingsId();
+        this.resultProductId = result.getProductId();
+        this.resultTransactionId = result.getTransactionId();
+        this.resultResourceId = result.getResourceId();
+        this.resultResourceExternalId = result.getResourceExternalId();
+        this.resultSubResourceId = result.getSubResourceId();
+        this.resultSubResourceExternalId = result.getSubResourceExternalId();
+        this.resultLoanExternalId = result.getLoanExternalId();
+        this.resultIdsWritten = true;
     }
 }

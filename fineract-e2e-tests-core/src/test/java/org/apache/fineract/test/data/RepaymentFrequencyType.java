@@ -20,7 +20,10 @@ package org.apache.fineract.test.data;
 
 public enum RepaymentFrequencyType {
 
-    DAYS(0), WEEKS(1), MONTHS(2);
+    DAYS(0), //
+    WEEKS(1), //
+    MONTHS(2), //
+    SEMI_MONTHLY(6); //
 
     public final Integer value;
 

@@ -51,13 +51,13 @@
         <modifyDataType tableName="m_product_loan" columnName="supported_interest_refund_types" newDataType="VARCHAR(255)"/>
     </changeSet>
 
-    <changeSet author="fineract" id="clean_m_product_loan_supported_interest_refund_types1">
+    <changeSet author="fineract" id="clean_m_product_loan_supported_interest_refund_types1" dbms="mysql,mariadb">
 
         <sql>
             UPDATE m_product_loan t SET t.supported_interest_refund_types = NULL WHERE t.id > 0
         </sql>
     </changeSet>
-    <changeSet author="fineract" id="clean_m_product_loan_loan_transaction_strategy_code_loan_transaction_strategy_name">
+    <changeSet author="fineract" id="clean_m_product_loan_loan_transaction_strategy_code_loan_transaction_strategy_name" dbms="mysql,mariadb">
         <sql>
             UPDATE m_product_loan t SET t.loan_transaction_strategy_code = 'interest-principal-penalties-fees-order-strategy', t.loan_transaction_strategy_name = 'Interest, Principal, Penalties, Fees Order' WHERE t.loan_transaction_strategy_code = '-'  AND t.loan_transaction_strategy_name = '-'
         </sql>

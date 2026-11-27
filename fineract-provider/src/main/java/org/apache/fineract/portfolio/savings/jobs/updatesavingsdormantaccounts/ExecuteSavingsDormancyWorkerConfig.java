@@ -9,7 +9,7 @@ import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.LoanInst
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.BatchSmSReadService;
 import org.apache.fineract.portfolio.savings.data.SavingsDormancyReminderData;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccountRepositoryWrapper;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.integration.partition.RemotePartitioningWorkerStepBuilderFactory;
 import org.springframework.beans.factory.annotation.Autowired;

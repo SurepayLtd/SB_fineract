@@ -18,22 +18,28 @@
  */
 package org.apache.fineract.portfolio.delinquency.service;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import org.apache.fineract.portfolio.delinquency.data.DelinquencyBucketData;
 import org.apache.fineract.portfolio.delinquency.data.DelinquencyRangeData;
 import org.apache.fineract.portfolio.delinquency.data.LoanDelinquencyTagHistoryData;
 import org.apache.fineract.portfolio.delinquency.data.LoanInstallmentDelinquencyTagData;
+import org.apache.fineract.portfolio.delinquency.domain.DelinquencyBucketType;
 import org.apache.fineract.portfolio.delinquency.domain.LoanDelinquencyAction;
 import org.apache.fineract.portfolio.loanaccount.data.CollectionData;
+import org.apache.fineract.portfolio.loanaccount.domain.Loan;
+import org.jspecify.annotations.NonNull;
 
 public interface DelinquencyReadPlatformService {
 
-    Collection<DelinquencyRangeData> retrieveAllDelinquencyRanges();
+    List<DelinquencyRangeData> retrieveAllDelinquencyRanges();
 
     DelinquencyRangeData retrieveDelinquencyRange(Long delinquencyRangeId);
 
-    Collection<DelinquencyBucketData> retrieveAllDelinquencyBuckets();
+    List<DelinquencyBucketData> retrieveAllDelinquencyBuckets();
+
+    List<DelinquencyBucketData> retrieveDelinquencyBucketsByType(DelinquencyBucketType bucketType);
 
     DelinquencyBucketData retrieveDelinquencyBucket(Long delinquencyBucketId);
 
@@ -42,6 +48,8 @@ public interface DelinquencyReadPlatformService {
     Collection<LoanDelinquencyTagHistoryData> retrieveDelinquencyRangeHistory(Long loanId);
 
     CollectionData calculateLoanCollectionData(Long loanId);
+
+    BigDecimal calculateAvailableDisbursementAmountWithOverApplied(@NonNull Loan loan);
 
     Collection<LoanInstallmentDelinquencyTagData> retrieveLoanInstallmentsCurrentDelinquencyTag(Long loanId);
 

@@ -17,7 +17,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.InputStream;
@@ -28,8 +27,7 @@ import org.apache.fineract.infrastructure.core.serialization.ToApiJsonSerializer
 import org.apache.fineract.infrastructure.core.service.Page;
 import org.apache.fineract.infrastructure.core.service.SearchParameters;
 import org.apache.fineract.selfservice.client.api.ImageCreateResponse;
-import org.apache.fineract.infrastructure.documentmanagement.service.ImageReadPlatformService;
-import org.apache.fineract.infrastructure.documentmanagement.service.ImageWritePlatformService;
+import org.apache.fineract.infrastructure.documentmanagement.api.ImagesApiResource;
 import org.apache.fineract.infrastructure.security.exception.NoAuthorizationException;
 import org.apache.fineract.portfolio.accountdetails.data.AccountSummaryCollectionData;
 import org.apache.fineract.portfolio.accountdetails.service.AccountDetailsReadPlatformService;
@@ -47,7 +45,6 @@ import org.apache.fineract.selfservice.client.service.SelfServiceClientReadPlatf
 import org.apache.fineract.selfservice.client.service.SelfServiceSearchParameters;
 import org.apache.fineract.selfservice.security.service.PlatformSelfServiceSecurityContext;
 import org.apache.fineract.selfservice.useradministration.domain.AppSelfServiceUser;
-import org.apache.fineract.infrastructure.documentmanagement.data.ImageResizer;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,8 +71,7 @@ class SelfClientsApiResourceTest {
   @Mock private ApiRequestParameterHelper apiRequestParameterHelper;
   @Mock private AppSelfServiceUserClientMapperReadService appUserClientMapperReadService;
   @Mock private SelfClientDataValidator dataValidator;
-  @Mock private ImageReadPlatformService imageReadPlatformService;
-  @Mock private ImageWritePlatformService imageWritePlatformService;
+  @Mock private ImagesApiResource imagesApiResource;
   @Mock private UriInfo uriInfo;
 
   private SelfClientsApiResource resource;
@@ -101,10 +97,7 @@ class SelfClientsApiResourceTest {
             apiRequestParameterHelper,
             appUserClientMapperReadService,
             dataValidator,
-            imageReadPlatformService,
-            imageWritePlatformService,
-            null // imageResizer
-            );
+            imagesApiResource);
 
     org.mockito.Mockito.lenient()
         .when(uriInfo.getQueryParameters())
@@ -244,12 +237,11 @@ class SelfClientsApiResourceTest {
     FormDataContentDisposition fileDetails = mock(FormDataContentDisposition.class);
     FormDataBodyPart filePart = mock(FormDataBodyPart.class);
 
-    when(fileDetails.getFileName()).thenReturn("image.png");
-    when(filePart.getMediaType()).thenReturn(MediaType.valueOf("image/png"));
-
-    org.apache.fineract.infrastructure.core.data.CommandProcessingResult response = mock(org.apache.fineract.infrastructure.core.data.CommandProcessingResult.class);
-    when(response.getResourceId()).thenReturn(CLIENT_ID);
-    when(imageWritePlatformService.saveOrUpdateImage(any(), any(), any(), any(), any())).thenReturn(response);
+    when(imagesApiResource.createImage(any(), any(), any(), any(), any(), any()))
+        .thenReturn(
+            org.apache.fineract.infrastructure.documentmanagement.data.ImageCreateResponse.builder()
+                .resourceId(CLIENT_ID)
+                .build());
 
     ImageCreateResponse result =
         resource.addNewClientImage(CLIENT_ID, 123L, is, fileDetails, filePart);
@@ -272,7 +264,7 @@ class SelfClientsApiResourceTest {
     assertThrows(
         NoAuthorizationException.class,
         () -> resource.addNewClientImage(CLIENT_ID, 123L, is, fileDetails, filePart));
-    verify(imageWritePlatformService, never()).saveOrUpdateImage(any(), any(), any(), any(), any());
+    verify(imagesApiResource, never()).createImage(any(), any(), any(), any(), any(), any());
   }
 
   // --- deleteClientImage ---
@@ -286,6 +278,6 @@ class SelfClientsApiResourceTest {
         .validateHasDeletePermission("CLIENTIMAGE");
 
     assertThrows(NoAuthorizationException.class, () -> resource.deleteClientImage(CLIENT_ID));
-    verify(imageWritePlatformService, never()).deleteImage(any(), any());
+    verify(imagesApiResource, never()).deleteImage(any(), any());
   }
 }

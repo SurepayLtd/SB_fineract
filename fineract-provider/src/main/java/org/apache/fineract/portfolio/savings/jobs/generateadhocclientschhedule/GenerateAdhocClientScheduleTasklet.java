@@ -30,10 +30,10 @@ import org.apache.fineract.adhocquery.domain.ReportRunFrequency;
 import org.apache.fineract.adhocquery.service.AdHocReadPlatformService;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
-import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Slf4j
@@ -46,7 +46,7 @@ public class GenerateAdhocClientScheduleTasklet implements Tasklet {
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
         final Collection<AdHocData> adhocs = adHocReadPlatformService.retrieveAllActiveAdHocQuery();
-        if (adhocs.size() > 0) {
+        if (!adhocs.isEmpty()) {
             adhocs.forEach(adhoc -> {
                 boolean run = true;
                 LocalDate next = null;
@@ -83,7 +83,7 @@ public class GenerateAdhocClientScheduleTasklet implements Tasklet {
                     final StringBuilder insertSqlBuilder = new StringBuilder(900);
                     insertSqlBuilder.append("INSERT INTO ").append(adhoc.getTableName()).append("(").append(adhoc.getTableFields())
                             .append(") ").append(adhoc.getQuery());
-                    if (insertSqlBuilder.length() > 0) {
+                    if (!insertSqlBuilder.isEmpty()) {
                         final int result = jdbcTemplate.update(insertSqlBuilder.toString());
                         log.debug("{}: Records affected by generateClientSchedule: {}", ThreadLocalContextUtil.getTenant().getName(),
                                 result);

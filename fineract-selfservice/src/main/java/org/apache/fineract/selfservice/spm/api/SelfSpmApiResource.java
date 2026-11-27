@@ -45,6 +45,7 @@ public class SelfSpmApiResource {
   @Produces({MediaType.APPLICATION_JSON})
   @Transactional
   @Operation(
+      operationId = "retrieveAllSelfSurveys",
       summary = "List Active Surveys",
       description =
           "Retrieves all active surveys available for the authenticated self-service user.")

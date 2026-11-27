@@ -6,7 +6,7 @@ import org.apache.fineract.infrastructure.campaigns.sms.domain.SmsTransactionRep
 import org.apache.fineract.notification.data.SmsTypeEnum;
 import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentOverdueReminderData;
 import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.ExecuteBatchJobConstant;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @Slf4j
 @RequiredArgsConstructor

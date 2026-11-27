@@ -18,7 +18,10 @@
  */
 package org.apache.fineract.infrastructure.bulkimport.populator.savings;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import org.apache.fineract.infrastructure.bulkimport.constants.SavingsConstants;
 import org.apache.fineract.infrastructure.bulkimport.constants.TemplatePopulateImportConstants;
 import org.apache.fineract.infrastructure.bulkimport.populator.AbstractWorkbookPopulator;
@@ -31,6 +34,7 @@ import org.apache.fineract.portfolio.savings.data.SavingsProductData;
 import org.apache.poi.hssf.usermodel.HSSFDataValidationHelper;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.ss.SpreadsheetVersion;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.DataValidationConstraint;
@@ -132,6 +136,7 @@ public class SavingsWorkbookPopulator extends AbstractWorkbookPopulator {
         writeString(SavingsConstants.INTEREST_CALCULATION_DAYS_IN_YEAR_COL, rowHeader, "# Days in Year*");
         writeString(SavingsConstants.MIN_OPENING_BALANCE_COL, rowHeader, "Min Opening Balance");
         writeString(SavingsConstants.LOCKIN_PERIOD_COL, rowHeader, "Locked In For");
+        writeString(SavingsConstants.LOCKIN_PERIOD_FREQUENCY_COL, rowHeader, "Locked periodod frecuency*");
         writeString(SavingsConstants.APPLY_WITHDRAWAL_FEE_FOR_TRANSFERS, rowHeader, "Apply Withdrawal Fee For Transfers");
 
         writeString(SavingsConstants.LOOKUP_CLIENT_NAME_COL, rowHeader, "Client Name");
@@ -157,6 +162,7 @@ public class SavingsWorkbookPopulator extends AbstractWorkbookPopulator {
         dateCellStyle.setDataFormat(df);
         for (Integer rowNo = 1; rowNo < 1000; rowNo++) {
             Row row = worksheet.createRow(rowNo);
+            setFormatStyle(worksheet, row);
             writeFormula(SavingsConstants.CURRENCY_COL, row, "IF(ISERROR(INDIRECT(CONCATENATE(\"Currency_\",$D" + (rowNo + 1)
                     + "))),\"\",INDIRECT(CONCATENATE(\"Currency_\",$D" + (rowNo + 1) + ")))");
             writeFormula(SavingsConstants.DECIMAL_PLACES_COL, row, "IF(ISERROR(INDIRECT(CONCATENATE(\"Decimal_Places_\",$D" + (rowNo + 1)
@@ -187,6 +193,18 @@ public class SavingsWorkbookPopulator extends AbstractWorkbookPopulator {
             writeFormula(SavingsConstants.OVER_DRAFT_LIMIT_COL, row, "IF(ISERROR(INDIRECT(CONCATENATE(\"Overdraft_Limit_\",$D" + (rowNo + 1)
                     + "))),\"\",INDIRECT(CONCATENATE(\"Overdraft_Limit_\",$D" + (rowNo + 1) + ")))");
         }
+    }
+
+    private void setFormatStyle(Sheet worksheet, Row row) {
+        Workbook workbook = worksheet.getWorkbook();
+        CellStyle dateCellStyle = workbook.createCellStyle();
+        short df = workbook.createDataFormat().getFormat("dd/MM/yyyy");
+        dateCellStyle.setDataFormat(df);
+        Cell submittedOnCell = row.getCell(SavingsConstants.SUBMITTED_ON_DATE_COL);
+        if (submittedOnCell == null) {
+            submittedOnCell = row.createCell(SavingsConstants.SUBMITTED_ON_DATE_COL);
+        }
+        submittedOnCell.setCellStyle(dateCellStyle);
     }
 
     private void setRules(Sheet worksheet, String dateFormat) {
@@ -234,8 +252,8 @@ public class SavingsWorkbookPopulator extends AbstractWorkbookPopulator {
         DataValidationConstraint fieldOfficerNameConstraint = validationHelper
                 .createFormulaListConstraint("INDIRECT(CONCATENATE(\"Staff_\",$A1))");
         DataValidationConstraint submittedDateConstraint = validationHelper.createDateConstraint(
-                DataValidationConstraint.OperatorType.BETWEEN,
-                "=VLOOKUP($C1,$AF$2:$AG$" + (clientSheetPopulator.getClientsSize() + groupSheetPopulator.getGroupsSize() + 1) + ",2,FALSE)",
+                DataValidationConstraint.OperatorType.BETWEEN, "=DATEVALUE(VLOOKUP($C1,$AF$2:$AG$"
+                        + (clientSheetPopulator.getClientsSize() + groupSheetPopulator.getGroupsSize() + 1) + ",2,FALSE))",
                 "=TODAY()", dateFormat);
         DataValidationConstraint approvalDateConstraint = validationHelper
                 .createDateConstraint(DataValidationConstraint.OperatorType.BETWEEN, "=$F1", "=TODAY()", dateFormat);
@@ -350,7 +368,16 @@ public class SavingsWorkbookPopulator extends AbstractWorkbookPopulator {
         // Withdrawal Fee Amount, Withdrawal Fee Type, Annual Fee, Annual Fee on
         // Date
         // Names for each product
+        Set<String> seenProductNames = new HashSet<>();
         for (Integer i = 0; i < products.size(); i++) {
+            SavingsProductData product = products.get(i);
+            String productName = product.getName();
+            // Guard against duplicate product-keyed defined names — POI rejects a duplicate and 500s the whole
+            // template. Excel defined names are case-insensitive, so key on the sanitised, upper-cased name. The name
+            // is resolved before any createName() call so a skipped product leaves no orphan Name in the workbook.
+            if (!seenProductNames.add(sanitizeName(productName).toUpperCase(Locale.ROOT))) {
+                continue;
+            }
             Name interestRateName = savingsWorkbook.createName();
             Name interestCompoundingPeriodName = savingsWorkbook.createName();
             Name interestPostingPeriodName = savingsWorkbook.createName();
@@ -365,8 +392,6 @@ public class SavingsWorkbookPopulator extends AbstractWorkbookPopulator {
             Name withdrawalFeeName = savingsWorkbook.createName();
             Name allowOverdraftName = savingsWorkbook.createName();
             Name overdraftLimitName = savingsWorkbook.createName();
-            SavingsProductData product = products.get(i);
-            String productName = product.getName();
             if (product.getNominalAnnualInterestRate() != null) {
                 setSanitized(interestRateName, "Interest_Rate_" + productName);
                 interestRateName.setRefersToFormula("Products!$C$" + (i + 2));

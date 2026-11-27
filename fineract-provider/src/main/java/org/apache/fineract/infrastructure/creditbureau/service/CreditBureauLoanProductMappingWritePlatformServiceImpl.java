@@ -89,7 +89,10 @@ public class CreditBureauLoanProductMappingWritePlatformServiceImpl implements C
 
         this.creditBureauLoanProductMappingRepository.saveAndFlush(cb_lp);
 
-        return new CommandProcessingResultBuilder().withCommandId(command.commandId()).withEntityId(cb_lp.getId()).build();
+        return new CommandProcessingResultBuilder() //
+                .withCommandId(command.commandId()) //
+                .withEntityId(cb_lp.getId()) //
+                .build();
 
     }
 

@@ -55,7 +55,7 @@ import org.springframework.stereotype.Component;
 @Path("/v1/self/offices")
 @Component
 @Tag(
-    name = "Offices",
+    name = "Self Offices",
     description =
         "Offices are used to model an MFIs structure. A hierarchical representation of offices is supported. There will always be at least one office (which represents the MFI or an MFIs head office). All subsequent offices added must have a parent office.")
 @RequiredArgsConstructor

@@ -26,6 +26,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -34,7 +35,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.accounting.glaccount.domain.GLAccount;
 import org.apache.fineract.accounting.glaccount.domain.GLAccountType;
@@ -44,7 +48,8 @@ import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.portfolio.tax.api.TaxApiConstants;
 
 @Entity
-@Table(name = "m_tax_component")
+@Getter
+@Table(name = "m_tax_component", uniqueConstraints = { @UniqueConstraint(columnNames = { "name" }, name = "uq_m_tax_component_name") })
 public class TaxComponent extends AbstractAuditableCustom {
 
     @Column(name = "name", length = 100)
@@ -58,20 +63,19 @@ public class TaxComponent extends AbstractAuditableCustom {
 
     @ManyToOne
     @JoinColumn(name = "debit_account_id")
-    private GLAccount debitAcount;
+    private GLAccount debitAccount;
 
     @Column(name = "credit_account_type_enum")
     private Integer creditAccountType;
 
     @ManyToOne
     @JoinColumn(name = "credit_account_id")
-    private GLAccount creditAcount;
+    private GLAccount creditAccount;
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @JoinColumn(name = "tax_component_id", referencedColumnName = "id", nullable = false)
+    @OneToMany(mappedBy = "taxComponent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private Set<TaxComponentHistory> taxComponentHistories = new HashSet<>();
 
     @OneToMany(cascade = CascadeType.DETACH, mappedBy = "taxComponent", orphanRemoval = false, fetch = FetchType.EAGER)
@@ -81,24 +85,24 @@ public class TaxComponent extends AbstractAuditableCustom {
 
     }
 
-    private TaxComponent(final String name, final BigDecimal percentage, final GLAccountType debitAccountType, final GLAccount debitAcount,
-            final GLAccountType creditAccountType, final GLAccount creditAcount, final LocalDate startDate) {
+    private TaxComponent(final String name, final BigDecimal percentage, final GLAccountType debitAccountType, final GLAccount debitAccount,
+            final GLAccountType creditAccountType, final GLAccount creditAccount, final LocalDate startDate) {
         this.name = name;
         this.percentage = percentage;
         if (debitAccountType != null) {
             this.debitAccountType = debitAccountType.getValue();
         }
-        this.debitAcount = debitAcount;
+        this.debitAccount = debitAccount;
         if (creditAccountType != null) {
             this.creditAccountType = creditAccountType.getValue();
         }
-        this.creditAcount = creditAcount;
+        this.creditAccount = creditAccount;
         this.startDate = startDate;
     }
 
     public static TaxComponent createTaxComponent(final String name, final BigDecimal percentage, final GLAccountType debitAccountType,
-            final GLAccount debitAcount, final GLAccountType creditAccountType, final GLAccount creditAcount, final LocalDate startDate) {
-        return new TaxComponent(name, percentage, debitAccountType, debitAcount, creditAccountType, creditAcount, startDate);
+            final GLAccount debitAccount, final GLAccountType creditAccountType, final GLAccount creditAccount, final LocalDate startDate) {
+        return new TaxComponent(name, percentage, debitAccountType, debitAccount, creditAccountType, creditAccount, startDate);
     }
 
     public Map<String, Object> update(final JsonCommand command) {
@@ -118,12 +122,53 @@ public class TaxComponent extends AbstractAuditableCustom {
             updateStartDate(command, changes, true);
             LocalDate newStartDate = this.startDate;
 
-            TaxComponentHistory history = TaxComponentHistory.createTaxComponentHistory(this.percentage, oldStartDate, newStartDate);
+            TaxComponentHistory history = TaxComponentHistory.createTaxComponentHistory(this, this.percentage, oldStartDate, newStartDate);
             this.taxComponentHistories.add(history);
             this.percentage = newValue;
 
+        } else if (command.isChangeInLocalDateParameterNamed(TaxApiConstants.startDateParamName, this.startDate)) {
+            final LocalDate newStartDate = command.localDateValueOfParameterNamed(TaxApiConstants.startDateParamName);
+            if (newStartDate != null) {
+                findPreviousRate().ifPresent(previousRate -> previousRate.updateEndDate(newStartDate));
+                changes.put(TaxApiConstants.startDateParamName, newStartDate);
+                this.startDate = newStartDate;
+            }
         }
 
+        return changes;
+    }
+
+    public Optional<TaxComponentHistory> findPreviousRate() {
+        return this.taxComponentHistories.stream().filter(history -> DateUtils.isEqual(history.endDate(), this.startDate)).findFirst();
+    }
+
+    public Map<String, Object> updateDebitAccount(final Integer accountType, final GLAccount account) {
+        final Map<String, Object> changes = accountChanges(TaxApiConstants.debitAccountTypeParamName, this.debitAccountType,
+                TaxApiConstants.debitAccountIdParamName, this.debitAccount, accountType, account);
+        this.debitAccountType = accountType;
+        this.debitAccount = account;
+        return changes;
+    }
+
+    public Map<String, Object> updateCreditAccount(final Integer accountType, final GLAccount account) {
+        final Map<String, Object> changes = accountChanges(TaxApiConstants.creditAccountTypeParamName, this.creditAccountType,
+                TaxApiConstants.creditAccountIdParamName, this.creditAccount, accountType, account);
+        this.creditAccountType = accountType;
+        this.creditAccount = account;
+        return changes;
+    }
+
+    private static Map<String, Object> accountChanges(final String accountTypeParamName, final Integer currentAccountType,
+            final String accountIdParamName, final GLAccount currentAccount, final Integer newAccountType, final GLAccount newAccount) {
+        final Map<String, Object> changes = new HashMap<>();
+        if (!Objects.equals(currentAccountType, newAccountType)) {
+            changes.put(accountTypeParamName, newAccountType);
+        }
+        final Long currentAccountId = currentAccount == null ? null : currentAccount.getId();
+        final Long newAccountId = newAccount == null ? null : newAccount.getId();
+        if (!Objects.equals(currentAccountId, newAccountId)) {
+            changes.put(accountIdParamName, newAccountId);
+        }
         return changes;
     }
 
@@ -192,15 +237,15 @@ public class TaxComponent extends AbstractAuditableCustom {
         return this.debitAccountType;
     }
 
-    public GLAccount getDebitAcount() {
-        return this.debitAcount;
+    public GLAccount getDebitAccount() {
+        return this.debitAccount;
     }
 
     public Integer getCreditAccountType() {
         return this.creditAccountType;
     }
 
-    public GLAccount getCreditAcount() {
-        return this.creditAcount;
+    public GLAccount getCreditAccount() {
+        return this.creditAccount;
     }
 }

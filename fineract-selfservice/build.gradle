@@ -21,6 +21,8 @@ description = 'Fineract Self Service Module'
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
+evaluationDependsOn(':fineract-provider')
+
 apply from: 'dependencies.gradle'
 
 /* http://stackoverflow.com/questions/19653311/jpa-repository-works-in-idea-and-production-but-not-in-gradle */
@@ -45,4 +47,11 @@ tasks.named('test') {
     if (project.hasProperty('cargoDisabled')) {
         systemProperty 'cargoDisabled', 'true'
     }
+}
+
+// fineract-provider's main output (used on this module's classpath) includes resources written by its
+// swagger 'resolve' task; Gradle 9 requires that producer to be declared explicitly.
+if (System.getProperty("idea.sync.active") != "true" && System.getProperty("idea.active") != "true") {
+    tasks.named('compileTestJava') { dependsOn ':fineract-provider:resolve' }
+    tasks.named('test') { dependsOn ':fineract-provider:resolve' }
 }

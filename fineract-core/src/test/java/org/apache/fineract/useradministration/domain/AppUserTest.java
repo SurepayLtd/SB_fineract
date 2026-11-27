@@ -28,17 +28,24 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
+import org.apache.fineract.infrastructure.core.domain.FineractPlatformTenant;
+import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.infrastructure.security.service.PlatformPasswordEncoder;
 import org.apache.fineract.organisation.office.domain.Office;
 import org.apache.fineract.useradministration.service.AppUserConstants;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.security.core.userdetails.User;
 
 @ExtendWith(MockitoExtension.class)
+// upstream's AppUser.update() also probes other parameters (e.g. password) on the mocked command
+@MockitoSettings(strictness = Strictness.LENIENT)
 class AppUserTest {
 
     @Mock
@@ -51,10 +58,16 @@ class AppUserTest {
 
     @BeforeEach
     void setUp() {
+        ThreadLocalContextUtil.setTenant(new FineractPlatformTenant(1L, "default", "Default", "UTC", null));
         Set<Role> roles = new HashSet<>();
         User springUser = new User("testuser", "password123", true, true, true, true, new HashSet<>());
         appUser = new AppUser(office, springUser, roles, "test@example.com", "Test", "User", null, false, false, null,
                 false, false);
+    }
+
+    @AfterEach
+    void tearDown() {
+        ThreadLocalContextUtil.reset();
     }
 
     @Test
@@ -86,7 +99,7 @@ class AppUserTest {
         when(command.booleanPrimitiveValueOfParameterNamed(AppUserConstants.BYPASS_TWO_FACTOR)).thenReturn(true);
 
         // When
-        Map<String, Object> changes = appUser.update(command, passwordEncoder, null);
+        Map<String, Object> changes = appUser.update(command, passwordEncoder);
 
         // Then
         assertTrue(changes.containsKey(AppUserConstants.BYPASS_TWO_FACTOR));
@@ -102,7 +115,7 @@ class AppUserTest {
         when(command.isChangeInBooleanParameterNamed(AppUserConstants.BYPASS_TWO_FACTOR, false)).thenReturn(false);
 
         // When
-        Map<String, Object> changes = appUser.update(command, passwordEncoder, null);
+        Map<String, Object> changes = appUser.update(command, passwordEncoder);
 
         // Then
         assertFalse(changes.containsKey(AppUserConstants.BYPASS_TWO_FACTOR));
@@ -116,7 +129,7 @@ class AppUserTest {
         when(command.hasParameter(AppUserConstants.BYPASS_TWO_FACTOR)).thenReturn(false);
 
         // When
-        Map<String, Object> changes = appUser.update(command, passwordEncoder, null);
+        Map<String, Object> changes = appUser.update(command, passwordEncoder);
 
         // Then
         assertFalse(changes.containsKey(AppUserConstants.BYPASS_TWO_FACTOR));

@@ -108,6 +108,8 @@ public final class LoanEnumerations {
                     codePrefix + PeriodFrequencyType.MONTHS.getCode(), "Months");
             case YEARS -> new EnumOptionData(PeriodFrequencyType.YEARS.getValue().longValue(),
                     codePrefix + PeriodFrequencyType.YEARS.getCode(), "Years");
+            case SEMI_MONTHLY -> new EnumOptionData(PeriodFrequencyType.SEMI_MONTHLY.getValue().longValue(),
+                    codePrefix + PeriodFrequencyType.SEMI_MONTHLY.getCode(), "Semi Monthly");
             default ->
                 new EnumOptionData(PeriodFrequencyType.INVALID.getValue().longValue(), PeriodFrequencyType.INVALID.getCode(), "Invalid");
         };
@@ -128,6 +130,8 @@ public final class LoanEnumerations {
                     codePrefix + PeriodFrequencyType.MONTHS.getCode(), "Months");
             case YEARS -> new EnumOptionData(PeriodFrequencyType.YEARS.getValue().longValue(),
                     codePrefix + PeriodFrequencyType.YEARS.getCode(), "Years");
+            case SEMI_MONTHLY -> new EnumOptionData(PeriodFrequencyType.SEMI_MONTHLY.getValue().longValue(),
+                    codePrefix + PeriodFrequencyType.SEMI_MONTHLY.getCode(), "Semi Monthly");
             default ->
                 new EnumOptionData(PeriodFrequencyType.INVALID.getValue().longValue(), PeriodFrequencyType.INVALID.getCode(), "Invalid");
         };
@@ -183,6 +187,8 @@ public final class LoanEnumerations {
                     codePrefix + PeriodFrequencyType.MONTHS.getCode(), "Months");
             case YEARS -> new EnumOptionData(PeriodFrequencyType.YEARS.getValue().longValue(),
                     codePrefix + PeriodFrequencyType.YEARS.getCode(), "Years");
+            case SEMI_MONTHLY -> new EnumOptionData(PeriodFrequencyType.SEMI_MONTHLY.getValue().longValue(),
+                    codePrefix + PeriodFrequencyType.SEMI_MONTHLY.getCode(), "Semi Monthly");
             default ->
                 new EnumOptionData(PeriodFrequencyType.INVALID.getValue().longValue(), PeriodFrequencyType.INVALID.getCode(), "Invalid");
         };
@@ -323,8 +329,45 @@ public final class LoanEnumerations {
                     LoanTransactionType.ACCRUAL_ACTIVITY.getCode(), "Accrual Activity");
             case INTEREST_REFUND -> new LoanTransactionEnumData(LoanTransactionType.INTEREST_REFUND.getValue().longValue(),
                     LoanTransactionType.INTEREST_REFUND.getCode(), "Interest Refund");
+            case FEE_REFUND -> new LoanTransactionEnumData(LoanTransactionType.FEE_REFUND.getValue().longValue(),
+                    LoanTransactionType.FEE_REFUND.getCode(), "Fee Refund");
             case ACCRUAL_ADJUSTMENT -> new LoanTransactionEnumData(LoanTransactionType.ACCRUAL_ADJUSTMENT.getValue().longValue(),
                     LoanTransactionType.ACCRUAL_ADJUSTMENT.getCode(), "Accrual Adjustment");
+            case CAPITALIZED_INCOME -> new LoanTransactionEnumData(LoanTransactionType.CAPITALIZED_INCOME.getValue().longValue(),
+                    LoanTransactionType.CAPITALIZED_INCOME.getCode(), "Capitalized Income");
+            case CAPITALIZED_INCOME_AMORTIZATION ->
+                new LoanTransactionEnumData(LoanTransactionType.CAPITALIZED_INCOME_AMORTIZATION.getValue().longValue(),
+                        LoanTransactionType.CAPITALIZED_INCOME_AMORTIZATION.getCode(), "Capitalized Income Amortization");
+            case CAPITALIZED_INCOME_ADJUSTMENT ->
+                new LoanTransactionEnumData(LoanTransactionType.CAPITALIZED_INCOME_ADJUSTMENT.getValue().longValue(),
+                        LoanTransactionType.CAPITALIZED_INCOME_ADJUSTMENT.getCode(), "Capitalized Income Adjustment");
+            case CONTRACT_TERMINATION -> new LoanTransactionEnumData(LoanTransactionType.CONTRACT_TERMINATION.getValue().longValue(),
+                    LoanTransactionType.CONTRACT_TERMINATION.getCode(), "Contract Termination");
+            case CAPITALIZED_INCOME_AMORTIZATION_ADJUSTMENT -> new LoanTransactionEnumData(
+                    LoanTransactionType.CAPITALIZED_INCOME_AMORTIZATION_ADJUSTMENT.getValue().longValue(),
+                    LoanTransactionType.CAPITALIZED_INCOME_AMORTIZATION_ADJUSTMENT.getCode(), "Capitalized Income Amortization Adjustment");
+            case BUY_DOWN_FEE -> new LoanTransactionEnumData(LoanTransactionType.BUY_DOWN_FEE.getValue().longValue(),
+                    LoanTransactionType.BUY_DOWN_FEE.getCode(), "Buy Down Fee");
+            case BUY_DOWN_FEE_ADJUSTMENT -> new LoanTransactionEnumData(LoanTransactionType.BUY_DOWN_FEE_ADJUSTMENT.getValue().longValue(),
+                    LoanTransactionType.BUY_DOWN_FEE_ADJUSTMENT.getCode(), "Buy Down Fee Adjustment");
+            case BUY_DOWN_FEE_AMORTIZATION ->
+                new LoanTransactionEnumData(LoanTransactionType.BUY_DOWN_FEE_AMORTIZATION.getValue().longValue(),
+                        LoanTransactionType.BUY_DOWN_FEE_AMORTIZATION.getCode(), "Buy Down Fee Amortization");
+            case BUY_DOWN_FEE_AMORTIZATION_ADJUSTMENT ->
+                new LoanTransactionEnumData(LoanTransactionType.BUY_DOWN_FEE_AMORTIZATION_ADJUSTMENT.getValue().longValue(),
+                        LoanTransactionType.BUY_DOWN_FEE_AMORTIZATION_ADJUSTMENT.getCode(), "Buy Down Fee Amortization Adjustment");
+            case DISCOUNT_FEE -> new LoanTransactionEnumData(LoanTransactionType.DISCOUNT_FEE.getValue().longValue(),
+                    LoanTransactionType.DISCOUNT_FEE.getCode(), "Discount Fee");
+            case DISCOUNT_FEE_AMORTIZATION ->
+                new LoanTransactionEnumData(LoanTransactionType.DISCOUNT_FEE_AMORTIZATION.getValue().longValue(),
+                        LoanTransactionType.DISCOUNT_FEE_AMORTIZATION.getCode(), "Discount Fee Amortization");
+            case DISCOUNT_FEE_ADJUSTMENT -> new LoanTransactionEnumData(LoanTransactionType.DISCOUNT_FEE_ADJUSTMENT.getValue().longValue(),
+                    LoanTransactionType.DISCOUNT_FEE_ADJUSTMENT.getCode(), "Discount Fee Adjustment");
+            case DISCOUNT_FEE_AMORTIZATION_ADJUSTMENT ->
+                new LoanTransactionEnumData(LoanTransactionType.DISCOUNT_FEE_AMORTIZATION_ADJUSTMENT.getValue().longValue(),
+                        LoanTransactionType.DISCOUNT_FEE_AMORTIZATION_ADJUSTMENT.getCode(), "Discount Fee Amortization Adjustment");
+            case LOAN_WITHDRAWAL -> new LoanTransactionEnumData(LoanTransactionType.LOAN_WITHDRAWAL.getValue().longValue(),
+                    LoanTransactionType.LOAN_WITHDRAWAL.getCode(), "Loan Withdrawal");
         };
     }
 

@@ -30,8 +30,10 @@ import org.apache.fineract.portfolio.loanaccount.service.LoanAccrualBatchReadSer
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.JobInstance;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.step.StepExecution;
 
 public class LoanAccrualItemReaderTest {
 
@@ -58,7 +60,7 @@ public class LoanAccrualItemReaderTest {
 
         reader = new PeriodicAccrualItemReader(PAGE_SIZE, configurationDomainService, readService);
 
-        StepExecution stepExecution = new StepExecution(ExecuteBatchJobConstant.PERIODIC_ACCRUAL_PARTITIONER_STEP, new JobExecution(1L));
+        StepExecution stepExecution = new StepExecution(ExecuteBatchJobConstant.PERIODIC_ACCRUAL_PARTITIONER_STEP, new JobExecution(1L, new JobInstance(1L, "test"), new JobParameters()));
 
         stepExecution.getExecutionContext().putLong(ExecuteBatchJobConstant.MIN_ACCOUNT_KEY, 1L);
         stepExecution.getExecutionContext().putLong(ExecuteBatchJobConstant.MAX_ACCOUNT_KEY, 100L);

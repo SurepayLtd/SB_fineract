@@ -21,34 +21,32 @@ package org.apache.fineract.portfolio.loanaccount.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
-import java.util.List;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.fineract.infrastructure.core.service.MathUtil;
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
 import org.apache.fineract.portfolio.loanaccount.data.LoanSummaryData;
 import org.apache.fineract.portfolio.loanaccount.data.LoanTransactionBalance;
-import org.apache.fineract.portfolio.loanaccount.domain.ChangedTransactionDetail;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleInstallment;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
-import org.apache.fineract.portfolio.loanaccount.domain.transactionprocessor.impl.AdvancedPaymentScheduleTransactionProcessor;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.data.LoanScheduleData;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.data.LoanSchedulePeriodData;
-import org.apache.fineract.portfolio.loanaccount.loanschedule.data.PeriodDueDetails;
-import org.apache.fineract.portfolio.loanaccount.loanschedule.data.ProgressiveLoanInterestScheduleModel;
 import org.apache.fineract.portfolio.loanproduct.calc.EMICalculator;
+import org.apache.fineract.portfolio.loanproduct.calc.data.OutstandingDetails;
+import org.apache.fineract.portfolio.loanproduct.calc.data.ProgressiveLoanInterestScheduleModel;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @AllArgsConstructor
 @Slf4j
 public class ProgressiveLoanSummaryDataProvider extends CommonLoanSummaryDataProvider {
 
-    private final AdvancedPaymentScheduleTransactionProcessor advancedPaymentScheduleTransactionProcessor;
     private final EMICalculator emiCalculator;
     private final LoanRepositoryWrapper loanRepository;
+    private final InterestScheduleModelRepositoryWrapper modelRepository;
 
     @Override
     public boolean accept(String loanProcessingStrategyCode) {
@@ -56,63 +54,60 @@ public class ProgressiveLoanSummaryDataProvider extends CommonLoanSummaryDataPro
     }
 
     @Override
+    @Transactional(readOnly = true)
     public LoanSummaryData withTransactionAmountsSummary(Long loanId, LoanSummaryData defaultSummaryData,
-            LoanScheduleData repaymentSchedule, Collection<LoanTransactionBalance> loanTransactionBalances) {
+            LoanScheduleData repaymentSchedule, Collection<? extends LoanTransactionBalance> loanTransactionBalances) {
         final Loan loan = loanRepository.findOneWithNotFoundDetection(loanId, true);
         return super.withTransactionAmountsSummary(loan, defaultSummaryData, repaymentSchedule, loanTransactionBalances);
     }
 
     @Override
     public LoanSummaryData withTransactionAmountsSummary(Loan loan, LoanSummaryData defaultSummaryData, LoanScheduleData repaymentSchedule,
-            Collection<LoanTransactionBalance> loanTransactionBalances) {
+            Collection<? extends LoanTransactionBalance> loanTransactionBalances) {
         return super.withTransactionAmountsSummary(loan, defaultSummaryData, repaymentSchedule, loanTransactionBalances);
     }
 
-    private LoanRepaymentScheduleInstallment getRelatedRepaymentScheduleInstallment(Loan loan, LocalDate businessDate) {
+    private Optional<LoanRepaymentScheduleInstallment> getRelatedRepaymentScheduleInstallment(Loan loan, LocalDate businessDate) {
         return loan.getRepaymentScheduleInstallments().stream().filter(i -> !i.isDownPayment() && !i.isAdditional()
-                && !businessDate.isBefore(i.getFromDate()) && businessDate.isBefore(i.getDueDate())).findFirst().orElseGet(() -> {
-                    List<LoanRepaymentScheduleInstallment> list = loan.getRepaymentScheduleInstallments().stream()
-                            .filter(i -> !i.isDownPayment() && !i.isAdditional()).toList();
-                    return !list.isEmpty() ? list.get(list.size() - 1) : null;
-                });
+                && businessDate.isAfter(i.getFromDate()) && !businessDate.isAfter(i.getDueDate())).findFirst();
     }
 
     @Override
     public BigDecimal computeTotalUnpaidPayableNotDueInterestAmountOnActualPeriod(final Loan loan,
-            final Collection<LoanSchedulePeriodData> periods, final LocalDate businessDate, final CurrencyData currency) {
-        if (loan.isMatured(businessDate)) {
+            final Collection<LoanSchedulePeriodData> periods, final LocalDate businessDate, final CurrencyData currency,
+            BigDecimal totalUnpaidPayableDueInterest) {
+        if (loan.isMatured(businessDate) || !loan.isInterestBearing()) {
             return BigDecimal.ZERO;
         }
 
-        LoanRepaymentScheduleInstallment loanRepaymentScheduleInstallment = getRelatedRepaymentScheduleInstallment(loan, businessDate);
-        if (loan.isInterestBearing() && loanRepaymentScheduleInstallment != null) {
-            if (loan.isChargedOff()) {
-                return loanRepaymentScheduleInstallment.getInterestOutstanding(loan.getCurrency()).getAmount();
-            } else {
-                List<LoanTransaction> transactionsToReprocess = loan.retrieveListOfTransactionsForReprocessing().stream()
-                        .filter(t -> !t.isAccrualActivity()).toList();
-                Pair<ChangedTransactionDetail, ProgressiveLoanInterestScheduleModel> changedTransactionDetailProgressiveLoanInterestScheduleModelPair = advancedPaymentScheduleTransactionProcessor
-                        .reprocessProgressiveLoanTransactions(loan.getDisbursementDate(), businessDate, transactionsToReprocess,
-                                loan.getCurrency(), loan.getRepaymentScheduleInstallments(), loan.getActiveCharges());
-                ProgressiveLoanInterestScheduleModel model = changedTransactionDetailProgressiveLoanInterestScheduleModelPair.getRight();
-                if (!changedTransactionDetailProgressiveLoanInterestScheduleModelPair.getLeft().getCurrentTransactionToOldId().isEmpty()
-                        || !changedTransactionDetailProgressiveLoanInterestScheduleModelPair.getLeft().getNewTransactionMappings()
-                                .isEmpty()) {
-                    List<Long> replayedTransactions = changedTransactionDetailProgressiveLoanInterestScheduleModelPair.getLeft()
-                            .getNewTransactionMappings().keySet().stream().toList();
-                    log.warn("Reprocessed transactions show differences: There are unsaved changes of the following transactions: {}",
-                            replayedTransactions);
+        Optional<LoanRepaymentScheduleInstallment> currentRepaymentPeriod = getRelatedRepaymentScheduleInstallment(loan, businessDate);
+
+        if (currentRepaymentPeriod.isPresent()) {
+            if (loan.isChargedOff() || loan.hasEarlyTerminationTransaction()) {
+                if (currentRepaymentPeriod.get().getDueDate().isEqual(businessDate)) {
+                    return BigDecimal.ZERO;
+                } else {
+                    return currentRepaymentPeriod.get().getInterestOutstanding(loan.getCurrency()).getAmount();
                 }
+            } else {
+
+                Optional<ProgressiveLoanInterestScheduleModel> savedModel = modelRepository.getSavedModel(loan, businessDate);
+
+                ProgressiveLoanInterestScheduleModel model = savedModel.orElse(null);
                 if (model != null) {
-                    PeriodDueDetails dueAmounts = emiCalculator.getDueAmounts(model, loanRepaymentScheduleInstallment.getDueDate(),
-                            businessDate);
-                    if (dueAmounts != null) {
-                        BigDecimal interestPaid = loanRepaymentScheduleInstallment.getInterestPaid();
-                        BigDecimal dueInterest = dueAmounts.getDueInterest().getAmount();
-                        if (interestPaid == null) {
-                            return dueInterest;
-                        }
-                        return dueInterest.subtract(interestPaid);
+                    // This bucket reports interest accrued so far in the current, not yet due period, so fixed
+                    // interest (equal-amortization re-aged periods) has to be counted only till the business date
+                    // as well. Otherwise the whole period's fixed interest lands in the bucket on day one and then
+                    // never moves, while daily accrual transactions keep posting underneath it.
+                    OutstandingDetails outstandingDetails = emiCalculator.getOutstandingAmountsTillDate(model, businessDate, true);
+                    if (!loan.isInterestRecalculationEnabled()) {
+                        BigDecimal interestPaid = periods.stream().map(LoanSchedulePeriodData::getInterestPaid).reduce(BigDecimal.ZERO,
+                                BigDecimal::add);
+                        BigDecimal dueInterest = outstandingDetails.getOutstandingInterest().getAmount();
+                        return MathUtil.subtractToZero(dueInterest, interestPaid, totalUnpaidPayableDueInterest);
+                    } else {
+                        return MathUtil.subtractToZero(outstandingDetails.getOutstandingInterest().getAmount(),
+                                totalUnpaidPayableDueInterest);
                     }
                 }
             }

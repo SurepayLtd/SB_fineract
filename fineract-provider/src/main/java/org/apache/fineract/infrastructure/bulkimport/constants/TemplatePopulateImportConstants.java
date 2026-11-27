@@ -122,7 +122,7 @@ public final class TemplatePopulateImportConstants {
     public static final String GROUP_ENTITY_TYPE = "GROUP";
     public static final String CLIENT_ENTITY_TYPE = "CLIENT";
     public static final String LOAN_PRODUCT_ENTITY_TYPE = "LOANPRODUCT";
-    public static final String FUNDS_ENTITY_TYPE = "FUNDS";
+    public static final String FUNDS_ENTITY_TYPE = "FUND";
     public static final String PAYMENT_TYPE_ENTITY_TYPE = "PAYMENTTYPE";
     public static final String CURRENCY_ENTITY_TYPE = "CURRENCY";
     public static final String GL_ACCOUNT_ENTITY_TYPE = "GLACCOUNT";
@@ -141,6 +141,7 @@ public final class TemplatePopulateImportConstants {
     // Guarantor Types
     public static final String GUARANTOR_INTERNAL = "Internal";
     public static final String GUARANTOR_EXTERNAL = "External";
+    public static final String GUARANTOR_GROUP = "Group";
 
     // Loan Account/Loan repayment Client External Id
     public static final Boolean CONTAINS_CLIENT_EXTERNAL_ID = true;

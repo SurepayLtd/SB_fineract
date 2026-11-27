@@ -19,8 +19,13 @@
 package org.apache.fineract.portfolio.tax.data;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.util.Collection;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
+@AllArgsConstructor
+@Getter
 public final class TaxGroupData implements Serializable {
 
     private final Long id;
@@ -31,38 +36,40 @@ public final class TaxGroupData implements Serializable {
     @SuppressWarnings("unused")
     private final Collection<TaxComponentData> taxComponents;
 
-    public static TaxGroupData instance(final Long id, final String name, final Collection<TaxGroupMappingsData> taxAssociations) {
-        final Collection<TaxComponentData> taxComponents = null;
-        return new TaxGroupData(id, name, taxAssociations, taxComponents);
-    }
+    // System business date, exposed so clients can validate a new tax component's start date client-side
+    private final LocalDate businessDate;
+
+    // Edit control flag: false if the tax group is linked to a charge, savings product or savings account
+    @SuppressWarnings("unused")
+    private final Boolean groupEditable;
 
     public static TaxGroupData lookup(final Long id, final String name) {
         final Collection<TaxComponentData> taxComponents = null;
         final Collection<TaxGroupMappingsData> taxAssociations = null;
-        return new TaxGroupData(id, name, taxAssociations, taxComponents);
+        return new TaxGroupData(id, name, taxAssociations, taxComponents, null, null);
     }
 
     public static TaxGroupData template(final Collection<TaxComponentData> taxComponents) {
         final Long id = null;
         final String name = null;
         final Collection<TaxGroupMappingsData> taxAssociations = null;
-        return new TaxGroupData(id, name, taxAssociations, taxComponents);
+        return new TaxGroupData(id, name, taxAssociations, taxComponents, null, null);
     }
 
     public static TaxGroupData template(final TaxGroupData taxGroupData, final Collection<TaxComponentData> taxComponents) {
-        return new TaxGroupData(taxGroupData.id, taxGroupData.name, taxGroupData.taxAssociations, taxComponents);
+        return new TaxGroupData(taxGroupData.id, taxGroupData.name, taxGroupData.taxAssociations, taxComponents, taxGroupData.businessDate,
+                taxGroupData.groupEditable);
     }
 
-    private TaxGroupData(final Long id, final String name, final Collection<TaxGroupMappingsData> taxAssociations,
-            final Collection<TaxComponentData> taxComponents) {
-        this.id = id;
-        this.name = name;
-        this.taxAssociations = taxAssociations;
-        this.taxComponents = taxComponents;
+    public static TaxGroupData template(final TaxGroupData taxGroupData, final Collection<TaxComponentData> taxComponents,
+            final Boolean groupEditable) {
+        return new TaxGroupData(taxGroupData.id, taxGroupData.name, taxGroupData.taxAssociations, taxComponents, taxGroupData.businessDate,
+                groupEditable);
     }
 
-    public Collection<TaxGroupMappingsData> getTaxAssociations() {
-        return this.taxAssociations;
+    public static TaxGroupData withBusinessDate(final TaxGroupData taxGroupData, final LocalDate businessDate) {
+        return new TaxGroupData(taxGroupData.id, taxGroupData.name, taxGroupData.taxAssociations, taxGroupData.taxComponents, businessDate,
+                taxGroupData.groupEditable);
     }
 
 }

@@ -25,7 +25,7 @@ import org.apache.fineract.infrastructure.core.domain.JdbcSupport;
 import org.apache.fineract.organisation.office.data.OfficeData;
 import org.apache.fineract.organisation.office.service.OfficeReadPlatformService;
 import org.apache.fineract.organisation.staff.data.StaffData;
-import org.apache.fineract.organisation.staff.service.StaffReadPlatformService;
+import org.apache.fineract.organisation.staff.service.StaffReadService;
 import org.apache.fineract.portfolio.client.data.ClientData;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.selfservice.security.service.PlatformSelfServiceSecurityContext;
@@ -51,7 +51,7 @@ public class AppSelfServiceUserReadPlatformServiceImpl
   private final OfficeReadPlatformService officeReadPlatformService;
   private final SelfServiceRoleReadPlatformService roleReadPlatformService;
   private final AppSelfServiceUserRepository appUserRepository;
-  private final StaffReadPlatformService staffReadPlatformService;
+  private final StaffReadService staffReadPlatformService;
 
   /*
    * used for caching in spring expression language.
@@ -169,11 +169,11 @@ public class AppSelfServiceUserReadPlatformServiceImpl
   private static final class AppSelfServiceUserMapper implements RowMapper<AppSelfServiceUserData> {
 
     private final SelfServiceRoleReadPlatformService roleReadPlatformService;
-    private final StaffReadPlatformService staffReadPlatformService;
+    private final StaffReadService staffReadPlatformService;
 
     AppSelfServiceUserMapper(
         final SelfServiceRoleReadPlatformService roleReadPlatformService,
-        final StaffReadPlatformService staffReadPlatformService) {
+        final StaffReadService staffReadPlatformService) {
       this.roleReadPlatformService = roleReadPlatformService;
       this.staffReadPlatformService = staffReadPlatformService;
     }

@@ -6,12 +6,12 @@ import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentOverdueRemi
 import org.apache.fineract.portfolio.loanaccount.data.LoanInstallmentReminderData;
 import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.ExecuteBatchJobConstant;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.BatchSmSReadService;
-import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.core.annotation.BeforeStep;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.NonTransientResourceException;
-import org.springframework.batch.item.ParseException;
-import org.springframework.batch.item.UnexpectedInputException;
+import org.springframework.batch.infrastructure.item.ItemReader;
+import org.springframework.batch.infrastructure.item.NonTransientResourceException;
+import org.springframework.batch.infrastructure.item.ParseException;
+import org.springframework.batch.infrastructure.item.UnexpectedInputException;
 
 import java.time.LocalDate;
 import java.util.ArrayDeque;

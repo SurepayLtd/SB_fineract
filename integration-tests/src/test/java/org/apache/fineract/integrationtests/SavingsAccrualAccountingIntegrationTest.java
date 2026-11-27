@@ -1,0 +1,595 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.fineract.integrationtests;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import org.apache.fineract.client.models.JournalEntryTransactionItem;
+import org.apache.fineract.client.models.PostSavingsProductsRequest;
+import org.apache.fineract.client.models.PutGlobalConfigurationsRequest;
+import org.apache.fineract.client.models.SavingsAccountTransactionData;
+import org.apache.fineract.infrastructure.configuration.api.GlobalConfigurationConstants;
+import org.apache.fineract.integrationtests.client.feign.FeignSavingsTestBase;
+import org.apache.fineract.integrationtests.client.feign.modules.SavingsRequestBuilders;
+import org.apache.fineract.integrationtests.client.feign.modules.SavingsTestData;
+import org.apache.fineract.integrationtests.client.feign.modules.SavingsTestValidators;
+import org.apache.fineract.integrationtests.common.accounting.Account;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+
+@Order(2)
+public class SavingsAccrualAccountingIntegrationTest extends FeignSavingsTestBase {
+
+    private static final String ACCRUAL_JOB = "Add Accrual Transactions For Savings";
+    private static final String POST_INTEREST_JOB = "Post Interest For Savings";
+    private static final String SAVINGS_TRANSACTION_ID_PREFIX = "S";
+    private static final String DEBIT = "DEBIT";
+    private static final String CREDIT = "CREDIT";
+
+    private static final String BUSINESS_DATE = "2021-08-12";
+    // after the August month end, so an account opened on the start date gets exactly one monthly interest posting
+    private static final String POST_INTEREST_BUSINESS_DATE = "2021-09-02";
+    private static final LocalDate TODAY = LocalDate.of(2021, 8, 12);
+    private static final int DAYS_TO_SUBTRACT = 10;
+    private static final String CLIENT_ACTIVATION_DATE = "01 January 2020";
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.US);
+
+    private static final String AMOUNT = "10000";
+    private static final Double INTEREST_RATE = 10.0;
+    private static final Double OVERDRAFT_INTEREST_RATE = 21.0;
+    private static final BigDecimal OVERDRAFT_LIMIT = new BigDecimal("10000");
+    private static final BigDecimal OVERDRAWN_BY = new BigDecimal("10");
+    private static final int DAYS_IN_CREDIT = 7;
+    // after the withdrawal and before the August month end posting
+    private static final String BACKDATED_DEPOSIT_DATE = "20 August 2021";
+    private static final String BACKDATED_DEPOSIT = "100";
+
+    private static final BigDecimal PERCENT = new BigDecimal("100");
+    private static final int DIGITS_AFTER_DECIMAL = 4;
+
+    @Test
+    public void testPositiveAccrualPostsCorrectJournalEntries() {
+        businessDateHelper.runAt(BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            final PostSavingsProductsRequest product = withMappings(accrualProduct(INTEREST_RATE), accounts);
+
+            final Long savingsProductId = savingsProductHelper.createSavingsProduct(product).getResourceId();
+            assertNotNull(savingsProductId, "Failed to create savings product.");
+
+            final Long savingsAccountId = createActiveSavingsAccount(savingsProductId);
+            deposit(savingsAccountId, AMOUNT, startDateString());
+
+            schedulerHelper.executeAndAwaitJob(ACCRUAL_JOB);
+
+            final List<SavingsAccountTransactionData> accrualTransactions = savingsTransactionHelper
+                    .getAccrualTransactions(savingsAccountId);
+            assertFalse(accrualTransactions.isEmpty(), "No accrual transactions were found.");
+
+            final List<JournalEntryTransactionItem> journalEntries = journalEntriesOf(accrualTransactions.get(0));
+            assertFalse(journalEntries.isEmpty(), "No journal entries found for positive accrual.");
+            assertHasEntry(journalEntries, DEBIT, accounts.interestOnSavings(),
+                    "DEBIT to Interest on Savings (Expense) Account not found for positive accrual.");
+            assertHasEntry(journalEntries, CREDIT, accounts.interestPayable(),
+                    "CREDIT to Interest Payable (Liability) Account not found for positive accrual.");
+
+            verifyEveryAccrualIsOneDayOfInterest(accrualTransactions, INTEREST_RATE);
+        });
+    }
+
+    @Test
+    public void testNegativeAccrualPostsCorrectJournalEntries() {
+        businessDateHelper.runAt(BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            final PostSavingsProductsRequest product = withMappings(accrualProduct(OVERDRAFT_INTEREST_RATE).allowOverdraft(true), accounts)
+                    .overdraftLimit(OVERDRAFT_LIMIT)//
+                    .nominalAnnualInterestRateOverdraft(BigDecimal.valueOf(OVERDRAFT_INTEREST_RATE));
+
+            final Long savingsProductId = savingsProductHelper.createSavingsProduct(product).getResourceId();
+            assertNotNull(savingsProductId, "Savings product with overdraft creation failed.");
+
+            final Long savingsAccountId = createActiveSavingsAccount(savingsProductId);
+            withdraw(savingsAccountId, AMOUNT, startDateString());
+
+            schedulerHelper.executeAndAwaitJob(ACCRUAL_JOB);
+
+            final List<SavingsAccountTransactionData> accrualTransactions = savingsTransactionHelper
+                    .getAccrualTransactions(savingsAccountId);
+            assertFalse(accrualTransactions.isEmpty(), "No accrual transactions were found for overdraft.");
+
+            final List<JournalEntryTransactionItem> journalEntries = journalEntriesOf(accrualTransactions.get(0));
+            assertFalse(journalEntries.isEmpty(), "No journal entries found for negative accrual.");
+            assertHasEntry(journalEntries, DEBIT, accounts.interestReceivable(),
+                    "DEBIT to Interest Receivable (Asset) Account not found for negative accrual.");
+            assertHasEntry(journalEntries, CREDIT, accounts.incomeFromInterest(),
+                    "CREDIT to Overdraft Interest Income Account not found for negative accrual.");
+
+            verifyEveryAccrualIsOneDayOfInterest(accrualTransactions, OVERDRAFT_INTEREST_RATE);
+        });
+    }
+
+    @Test
+    public void testPostInterestJobPostsCashBasedJournalEntries() {
+        businessDateHelper.runAt(POST_INTEREST_BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            final PostSavingsProductsRequest product = withCashMappings(accrualProduct(INTEREST_RATE), accounts);
+
+            final Long savingsProductId = savingsProductHelper.createSavingsProduct(product).getResourceId();
+            assertNotNull(savingsProductId, "Failed to create cash-based savings product.");
+
+            final Long savingsAccountId = createActiveSavingsAccount(savingsProductId);
+            deposit(savingsAccountId, AMOUNT, startDateString());
+
+            schedulerHelper.executeAndAwaitJob(POST_INTEREST_JOB);
+
+            final List<JournalEntryTransactionItem> journalEntries = journalEntriesOf(interestPostingOf(savingsAccountId));
+            assertHasEntry(journalEntries, DEBIT, accounts.interestOnSavings(),
+                    "DEBIT to Interest on Savings (Expense) Account not found for cash-based interest posting.");
+            assertHasEntry(journalEntries, CREDIT, accounts.savingsControl(),
+                    "CREDIT to Savings Control (Liability) Account not found for cash-based interest posting.");
+        });
+    }
+
+    @Test
+    public void testPostInterestJobPostsCashBasedOverdraftJournalEntries() {
+        businessDateHelper.runAt(POST_INTEREST_BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            final PostSavingsProductsRequest product = withCashMappings(accrualProduct(OVERDRAFT_INTEREST_RATE), accounts)//
+                    .allowOverdraft(true)//
+                    .overdraftLimit(OVERDRAFT_LIMIT)//
+                    .nominalAnnualInterestRateOverdraft(BigDecimal.valueOf(OVERDRAFT_INTEREST_RATE));
+
+            final Long savingsProductId = savingsProductHelper.createSavingsProduct(product).getResourceId();
+            assertNotNull(savingsProductId, "Failed to create cash-based savings product with overdraft.");
+
+            final Long savingsAccountId = createActiveSavingsAccount(savingsProductId);
+            withdraw(savingsAccountId, AMOUNT, startDateString());
+
+            schedulerHelper.executeAndAwaitJob(POST_INTEREST_JOB);
+
+            // the account is overdrawn, so the interest the client owes is added to the overdraft portfolio
+            final List<JournalEntryTransactionItem> journalEntries = journalEntriesOf(overdraftInterestPostingOf(savingsAccountId));
+            assertHasEntry(journalEntries, DEBIT, accounts.overdraftPortfolioControl(),
+                    "DEBIT to Overdraft Portfolio Control (Asset) Account not found for cash-based overdraft interest.");
+            assertHasEntry(journalEntries, CREDIT, accounts.incomeFromInterest(),
+                    "CREDIT to Overdraft Interest Income Account not found for cash-based overdraft interest.");
+        });
+    }
+
+    @Test
+    public void testPostInterestJobPostsAccrualJournalEntries() {
+        businessDateHelper.runAt(POST_INTEREST_BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            final PostSavingsProductsRequest product = withMappings(accrualProduct(INTEREST_RATE), accounts);
+
+            final Long savingsProductId = savingsProductHelper.createSavingsProduct(product).getResourceId();
+            assertNotNull(savingsProductId, "Failed to create savings product.");
+
+            final Long savingsAccountId = createActiveSavingsAccount(savingsProductId);
+            deposit(savingsAccountId, AMOUNT, startDateString());
+
+            schedulerHelper.executeAndAwaitJob(POST_INTEREST_JOB);
+
+            final List<JournalEntryTransactionItem> journalEntries = journalEntriesOf(interestPostingOf(savingsAccountId));
+            assertHasEntry(journalEntries, DEBIT, accounts.interestPayable(),
+                    "DEBIT to Interest Payable (Liability) Account not found for accrual interest posting.");
+            assertHasEntry(journalEntries, CREDIT, accounts.savingsControl(),
+                    "CREDIT to Savings Control (Liability) Account not found for accrual interest posting.");
+        });
+    }
+
+    /**
+     * With backdated transactions before the interest posting date disallowed, the job takes its pivot date path. It
+     * has to book the same entries there.
+     */
+    @Test
+    public void testPostInterestJobPostsAccrualJournalEntriesWithPivotDateConfiguration() {
+        businessDateHelper.runAt(POST_INTEREST_BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            final PostSavingsProductsRequest product = withMappings(accrualProduct(INTEREST_RATE), accounts);
+
+            final Long savingsProductId = savingsProductHelper.createSavingsProduct(product).getResourceId();
+            assertNotNull(savingsProductId, "Failed to create savings product.");
+
+            final Long savingsAccountId = createActiveSavingsAccount(savingsProductId);
+            deposit(savingsAccountId, AMOUNT, startDateString());
+
+            globalConfigurationHelper.updateGlobalConfiguration(
+                    GlobalConfigurationConstants.ALLOW_BACKDATED_TRANSACTION_BEFORE_INTEREST_POSTING,
+                    new PutGlobalConfigurationsRequest().enabled(false));
+            try {
+                schedulerHelper.executeAndAwaitJob(POST_INTEREST_JOB);
+            } finally {
+                globalConfigurationHelper.updateGlobalConfiguration(
+                        GlobalConfigurationConstants.ALLOW_BACKDATED_TRANSACTION_BEFORE_INTEREST_POSTING,
+                        new PutGlobalConfigurationsRequest().enabled(true));
+            }
+
+            final List<JournalEntryTransactionItem> journalEntries = journalEntriesOf(interestPostingOf(savingsAccountId));
+            assertHasEntry(journalEntries, DEBIT, accounts.interestPayable(),
+                    "DEBIT to Interest Payable (Liability) Account not found for accrual interest posting.");
+            assertHasEntry(journalEntries, CREDIT, accounts.savingsControl(),
+                    "CREDIT to Savings Control (Liability) Account not found for accrual interest posting.");
+        });
+    }
+
+    @Test
+    public void testPostInterestJobCreditsInterestThatPaysDownAnOverdraftToOverdraftPortfolioControl() {
+        businessDateHelper.runAt(POST_INTEREST_BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            final PostSavingsProductsRequest product = withCashMappings(accrualProduct(INTEREST_RATE), accounts);
+            final Long savingsAccountId = createAccountOverdrawnAtPostingDate(product);
+
+            schedulerHelper.executeAndAwaitJob(POST_INTEREST_JOB);
+
+            final SavingsAccountTransactionData posting = interestPostingOf(savingsAccountId);
+            final List<JournalEntryTransactionItem> journalEntries = journalEntriesOf(posting);
+            assertHasEntry(journalEntries, CREDIT, accounts.overdraftPortfolioControl(), OVERDRAWN_BY,
+                    "CREDIT to Overdraft Portfolio Control (Asset) Account not found for the interest that paid down the overdraft.");
+            assertHasEntry(journalEntries, CREDIT, accounts.savingsControl(), posting.getAmount().subtract(OVERDRAWN_BY),
+                    "CREDIT to Savings Control (Liability) Account not found for the rest of the interest.");
+            assertHasEntry(journalEntries, DEBIT, accounts.interestOnSavings(), OVERDRAWN_BY,
+                    "DEBIT to Interest on Savings (Expense) Account not found for the interest that paid down the overdraft.");
+            assertHasEntry(journalEntries, DEBIT, accounts.interestOnSavings(), posting.getAmount().subtract(OVERDRAWN_BY),
+                    "DEBIT to Interest on Savings (Expense) Account not found for the rest of the interest.");
+        });
+    }
+
+    @Test
+    public void testPostInterestJobCreditsAccrualInterestThatPaysDownAnOverdraftToOverdraftPortfolioControl() {
+        businessDateHelper.runAt(POST_INTEREST_BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            final PostSavingsProductsRequest product = withMappings(accrualProduct(INTEREST_RATE), accounts);
+            final Long savingsAccountId = createAccountOverdrawnAtPostingDate(product);
+
+            schedulerHelper.executeAndAwaitJob(POST_INTEREST_JOB);
+
+            final SavingsAccountTransactionData posting = interestPostingOf(savingsAccountId);
+            final List<JournalEntryTransactionItem> journalEntries = journalEntriesOf(posting);
+            assertHasEntry(journalEntries, CREDIT, accounts.overdraftPortfolioControl(), OVERDRAWN_BY,
+                    "CREDIT to Overdraft Portfolio Control (Asset) Account not found for the interest that paid down the overdraft.");
+            assertHasEntry(journalEntries, CREDIT, accounts.savingsControl(), posting.getAmount().subtract(OVERDRAWN_BY),
+                    "CREDIT to Savings Control (Liability) Account not found for the rest of the interest.");
+            // the interest was already expensed when it accrued, so both parts still come out of Interest Payable
+            assertHasEntry(journalEntries, DEBIT, accounts.interestPayable(), OVERDRAWN_BY,
+                    "DEBIT to Interest Payable (Liability) Account not found for the interest that paid down the overdraft.");
+            assertHasEntry(journalEntries, DEBIT, accounts.interestPayable(), posting.getAmount().subtract(OVERDRAWN_BY),
+                    "DEBIT to Interest Payable (Liability) Account not found for the rest of the interest.");
+        });
+    }
+
+    @Test
+    public void testReversingACashBasedJobPostingThatPaysDownAnOverdraftNetsEveryAccountToZero() {
+        businessDateHelper.runAt(POST_INTEREST_BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            final Long savingsAccountId = createAccountOverdrawnAtPostingDate(withCashMappings(accrualProduct(INTEREST_RATE), accounts));
+
+            verifyReversedJobPostingNetsEveryAccountToZero(savingsAccountId, accounts);
+        });
+    }
+
+    @Test
+    public void testReversingAnAccrualJobPostingThatPaysDownAnOverdraftNetsEveryAccountToZero() {
+        businessDateHelper.runAt(POST_INTEREST_BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            final Long savingsAccountId = createAccountOverdrawnAtPostingDate(withMappings(accrualProduct(INTEREST_RATE), accounts));
+
+            verifyReversedJobPostingNetsEveryAccountToZero(savingsAccountId, accounts);
+        });
+    }
+
+    @Test
+    public void testReversingAJobPostedOverdraftInterestPostingNetsEveryAccountToZero() {
+        businessDateHelper.runAt(POST_INTEREST_BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            final PostSavingsProductsRequest product = withCashMappings(accrualProduct(OVERDRAFT_INTEREST_RATE), accounts)//
+                    .allowOverdraft(true)//
+                    .overdraftLimit(OVERDRAFT_LIMIT)//
+                    .nominalAnnualInterestRateOverdraft(BigDecimal.valueOf(OVERDRAFT_INTEREST_RATE));
+            final Long savingsProductId = savingsProductHelper.createSavingsProduct(product).getResourceId();
+            assertNotNull(savingsProductId, "Failed to create cash-based savings product with overdraft.");
+            final Long savingsAccountId = createActiveSavingsAccount(savingsProductId);
+            withdraw(savingsAccountId, AMOUNT, startDateString());
+
+            schedulerHelper.executeAndAwaitJob(POST_INTEREST_JOB);
+            final SavingsAccountTransactionData posting = overdraftInterestPostingOf(savingsAccountId);
+
+            // the deposit lowers the overdraft, and with it the overdraft interest of the period, so the posting is
+            // reversed and posted again
+            deposit(savingsAccountId, BACKDATED_DEPOSIT, BACKDATED_DEPOSIT_DATE);
+
+            assertReversed(savingsAccountId, posting);
+            final List<JournalEntryTransactionItem> journalEntries = journalEntriesOf(posting);
+            assertHasEntry(journalEntries, DEBIT, accounts.overdraftPortfolioControl(),
+                    "DEBIT to Overdraft Portfolio Control (Asset) Account not found for the job's overdraft interest posting.");
+            // the job books overdraft interest from its own rule; the reversal mirrors those entries
+            assertEveryAccountNetsToZero(journalEntries);
+        });
+    }
+
+    @Test
+    public void testUndoingCashBasedDepositsAndWithdrawalsNetsEveryAccountToZero() {
+        businessDateHelper.runAt(BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            verifyUndoingDepositsAndWithdrawalsNetsEveryAccountToZero(withCashMappings(accrualProduct(INTEREST_RATE), accounts), accounts);
+        });
+    }
+
+    @Test
+    public void testUndoingAccrualDepositsAndWithdrawalsNetsEveryAccountToZero() {
+        businessDateHelper.runAt(BUSINESS_DATE, () -> {
+            final AccrualAccounts accounts = createDistinctAccrualAccounts();
+
+            verifyUndoingDepositsAndWithdrawalsNetsEveryAccountToZero(withMappings(accrualProduct(INTEREST_RATE), accounts), accounts);
+        });
+    }
+
+    /**
+     * Every reversed savings transaction mirrors the entries stored for it, not only interest postings. The second
+     * withdrawal takes the account past zero, so it is booked in two parts: Savings Control for what was in credit and
+     * Overdraft Portfolio Control for the rest.
+     */
+    private void verifyUndoingDepositsAndWithdrawalsNetsEveryAccountToZero(final PostSavingsProductsRequest product,
+            final AccrualAccounts accounts) {
+        final Long savingsProductId = savingsProductHelper.createSavingsProduct(product//
+                .allowOverdraft(true)//
+                .overdraftLimit(OVERDRAFT_LIMIT)//
+                .nominalAnnualInterestRateOverdraft(BigDecimal.ZERO)).getResourceId();
+        assertNotNull(savingsProductId, "Failed to create savings product with overdraft.");
+        final Long savingsAccountId = createActiveSavingsAccount(savingsProductId);
+        final Long depositId = deposit(savingsAccountId, AMOUNT, startDateString()).getResourceId();
+        final Long withdrawalId = withdraw(savingsAccountId, OVERDRAWN_BY.toPlainString(), startDateString()).getResourceId();
+        final Long overdrawingWithdrawalId = withdraw(savingsAccountId, AMOUNT, startDateString()).getResourceId();
+
+        // the deposit last, so that no undo takes the account past its overdraft limit
+        for (final Long transactionId : List.of(overdrawingWithdrawalId, withdrawalId, depositId)) {
+            savingsTransactionHelper.undoTransaction(savingsAccountId, transactionId);
+
+            final List<JournalEntryTransactionItem> journalEntries = journalEntriesOf(transactionId);
+            assertFalse(journalEntries.isEmpty(), "No journal entries found for savings transaction " + transactionId);
+            assertEveryAccountNetsToZero(journalEntries);
+        }
+        final List<JournalEntryTransactionItem> overdrawingWithdrawal = journalEntriesOf(overdrawingWithdrawalId);
+        assertHasEntry(overdrawingWithdrawal, DEBIT, accounts.overdraftPortfolioControl(), OVERDRAWN_BY,
+                "DEBIT to Overdraft Portfolio Control (Asset) Account not found for the withdrawal into overdraft.");
+        assertHasEntry(overdrawingWithdrawal, CREDIT, accounts.overdraftPortfolioControl(), OVERDRAWN_BY,
+                "CREDIT to Overdraft Portfolio Control (Asset) Account not found for the undo of the withdrawal into overdraft.");
+    }
+
+    /**
+     * Reversals don't go through the job: the accounting processor reverses the entries stored for the reversed
+     * posting, so they cancel the job's entries whichever rules booked them.
+     */
+    private void verifyReversedJobPostingNetsEveryAccountToZero(final Long savingsAccountId, final AccrualAccounts accounts) {
+        schedulerHelper.executeAndAwaitJob(POST_INTEREST_JOB);
+        final SavingsAccountTransactionData posting = interestPostingOf(savingsAccountId);
+
+        // the deposit changes the interest of the posting period, so the posting is reversed and posted again
+        deposit(savingsAccountId, BACKDATED_DEPOSIT, BACKDATED_DEPOSIT_DATE);
+
+        assertReversed(savingsAccountId, posting);
+        final List<JournalEntryTransactionItem> journalEntries = journalEntriesOf(posting);
+        assertHasEntry(journalEntries, CREDIT, accounts.overdraftPortfolioControl(), OVERDRAWN_BY,
+                "CREDIT to Overdraft Portfolio Control (Asset) Account not found for the job's posting.");
+        assertHasEntry(journalEntries, DEBIT, accounts.overdraftPortfolioControl(), OVERDRAWN_BY,
+                "DEBIT to Overdraft Portfolio Control (Asset) Account not found for the reversal of the job's posting.");
+        assertEveryAccountNetsToZero(journalEntries);
+    }
+
+    private void assertReversed(final Long savingsAccountId, final SavingsAccountTransactionData posting) {
+        assertTrue(Boolean.TRUE.equals(savingsTransactionHelper.getTransaction(savingsAccountId, posting.getId()).getReversed()),
+                "The backdated deposit did not reverse the posting.");
+    }
+
+    private void assertEveryAccountNetsToZero(final List<JournalEntryTransactionItem> journalEntries) {
+        final Map<Long, BigDecimal> balances = journalEntries.stream()
+                .collect(Collectors.groupingBy(JournalEntryTransactionItem::getGlAccountId,
+                        Collectors.reducing(BigDecimal.ZERO,
+                                entry -> DEBIT.equals(entry.getEntryType().getValue()) ? BigDecimal.valueOf(entry.getAmount())
+                                        : BigDecimal.valueOf(entry.getAmount()).negate(),
+                                BigDecimal::add)));
+        balances.forEach((accountId, balance) -> assertEquals(0, balance.compareTo(BigDecimal.ZERO),
+                () -> "GL account " + accountId + " does not net to zero after the reversal, entries " + journalEntries));
+    }
+
+    /**
+     * The deposit earns interest for a week, then a withdrawal leaves the account overdrawn until the month end
+     * posting, so the posted interest first pays down the overdraft. No overdraft interest is charged, which keeps the
+     * overdraft at exactly the amount withdrawn beyond the deposit.
+     */
+    private Long createAccountOverdrawnAtPostingDate(final PostSavingsProductsRequest product) {
+        final Long savingsProductId = savingsProductHelper.createSavingsProduct(product//
+                .allowOverdraft(true)//
+                .overdraftLimit(OVERDRAFT_LIMIT)//
+                .nominalAnnualInterestRateOverdraft(BigDecimal.ZERO)).getResourceId();
+        assertNotNull(savingsProductId, "Failed to create savings product with overdraft.");
+
+        final Long savingsAccountId = createActiveSavingsAccount(savingsProductId);
+        deposit(savingsAccountId, AMOUNT, startDateString());
+        withdraw(savingsAccountId, new BigDecimal(AMOUNT).add(OVERDRAWN_BY).toPlainString(),
+                DATE_FORMATTER.format(TODAY.minusDays(DAYS_TO_SUBTRACT).plusDays(DAYS_IN_CREDIT)));
+        return savingsAccountId;
+    }
+
+    private SavingsAccountTransactionData interestPostingOf(final Long savingsAccountId) {
+        return firstPostingOf(savingsAccountId, transaction -> Boolean.TRUE.equals(transaction.getTransactionType().getInterestPosting()));
+    }
+
+    private SavingsAccountTransactionData overdraftInterestPostingOf(final Long savingsAccountId) {
+        return firstPostingOf(savingsAccountId,
+                transaction -> Boolean.TRUE.equals(transaction.getTransactionType().getOverDraftInterestPosting()));
+    }
+
+    private SavingsAccountTransactionData firstPostingOf(final Long savingsAccountId, final Predicate<SavingsAccountTransactionData> type) {
+        final List<SavingsAccountTransactionData> postings = savingsTransactionHelper.getTransactions(savingsAccountId).stream()
+                .filter(transaction -> transaction.getTransactionType() != null).filter(type).toList();
+        assertFalse(postings.isEmpty(), "The Post Interest job did not post interest.");
+        // the API lists the newest transaction first
+        return postings.stream().min(Comparator.comparing(SavingsAccountTransactionData::getId)).orElseThrow();
+    }
+
+    private void verifyEveryAccrualIsOneDayOfInterest(final List<SavingsAccountTransactionData> accrualTransactions,
+            final Double interestRate) {
+        final BigDecimal expectedDailyInterest = dailyInterest(interestRate);
+        for (SavingsAccountTransactionData accrual : accrualTransactions) {
+            SavingsTestValidators.verifyAmount(expectedDailyInterest, accrual.getAmount(), "Verifying the accrual of " + accrual.getDate());
+        }
+    }
+
+    /** Ordered the way the server does it: the annual rate becomes a daily one before it is applied. */
+    private BigDecimal dailyInterest(final Double interestRate) {
+        final BigDecimal interestRateAsFraction = BigDecimal.valueOf(interestRate).divide(PERCENT);
+        final BigDecimal multiplicand = BigDecimal.ONE
+                .divide(BigDecimal.valueOf(SavingsTestData.InterestCalculationDaysInYearType.DAYS_365), MathContext.DECIMAL64);
+        final BigDecimal dailyInterestRate = interestRateAsFraction.multiply(multiplicand, MathContext.DECIMAL64);
+        return new BigDecimal(AMOUNT).multiply(dailyInterestRate, MathContext.DECIMAL64).setScale(DIGITS_AFTER_DECIMAL,
+                RoundingMode.HALF_EVEN);
+    }
+
+    private List<JournalEntryTransactionItem> journalEntriesOf(final SavingsAccountTransactionData transaction) {
+        return journalEntriesOf(transaction.getId());
+    }
+
+    private List<JournalEntryTransactionItem> journalEntriesOf(final Long transactionId) {
+        final List<JournalEntryTransactionItem> pageItems = journalEntryHelper
+                .getJournalEntriesByTransactionId(SAVINGS_TRANSACTION_ID_PREFIX + transactionId).getPageItems();
+        return pageItems == null ? List.of() : pageItems;
+    }
+
+    private void assertHasEntry(final List<JournalEntryTransactionItem> journalEntries, final String entryType, final Account account,
+            final String message) {
+        final Long expectedAccountId = SavingsRequestBuilders.accountId(account);
+        assertTrue(journalEntries.stream().anyMatch(entry -> entry.getEntryType() != null
+                && entryType.equals(entry.getEntryType().getValue()) && expectedAccountId.equals(entry.getGlAccountId())), message);
+    }
+
+    private void assertHasEntry(final List<JournalEntryTransactionItem> journalEntries, final String entryType, final Account account,
+            final BigDecimal amount, final String message) {
+        final Long expectedAccountId = SavingsRequestBuilders.accountId(account);
+        assertTrue(
+                journalEntries.stream()
+                        .anyMatch(entry -> entry.getEntryType() != null && entryType.equals(entry.getEntryType().getValue())
+                                && expectedAccountId.equals(entry.getGlAccountId()) && entry.getAmount() != null
+                                && amount.compareTo(BigDecimal.valueOf(entry.getAmount())) == 0),
+                () -> message + " Amount " + amount + ", entries " + journalEntries);
+    }
+
+    /**
+     * Every mapping gets its own account so that a journal entry posted against the wrong one cannot satisfy an
+     * assertion aimed at another.
+     */
+    private AccrualAccounts createDistinctAccrualAccounts() {
+        return new AccrualAccounts(accountHelper.createAssetAccount("Savings Reference"),
+                accountHelper.createAssetAccount("Overdraft Portfolio Control"), accountHelper.createAssetAccount("Fees Receivable"),
+                accountHelper.createAssetAccount("Penalties Receivable"), accountHelper.createAssetAccount("Interest Receivable (Asset)"),
+                accountHelper.createLiabilityAccount("Savings Control"), accountHelper.createLiabilityAccount("Transfers In Suspense"),
+                accountHelper.createLiabilityAccount("Interest Payable (Liability)"), accountHelper.createIncomeAccount("Income from Fees"),
+                accountHelper.createIncomeAccount("Income from Penalties"), accountHelper.createIncomeAccount("Overdraft Interest Income"),
+                accountHelper.createExpenseAccount("Interest on Savings (Expense)"), accountHelper.createExpenseAccount("Write Off"));
+    }
+
+    private PostSavingsProductsRequest withMappings(final PostSavingsProductsRequest request, final AccrualAccounts accounts) {
+        return request//
+                .savingsReferenceAccountId(SavingsRequestBuilders.accountId(accounts.savingsReference()))//
+                .overdraftPortfolioControlId(SavingsRequestBuilders.accountId(accounts.overdraftPortfolioControl()))//
+                .feesReceivableAccountId(SavingsRequestBuilders.accountId(accounts.feesReceivable()))//
+                .penaltiesReceivableAccountId(SavingsRequestBuilders.accountId(accounts.penaltiesReceivable()))//
+                .interestReceivableAccountId(SavingsRequestBuilders.accountId(accounts.interestReceivable()))//
+                .savingsControlAccountId(SavingsRequestBuilders.accountId(accounts.savingsControl()))//
+                .transfersInSuspenseAccountId(SavingsRequestBuilders.accountId(accounts.transfersInSuspense()))//
+                .interestPayableAccountId(SavingsRequestBuilders.accountId(accounts.interestPayable()))//
+                .incomeFromFeeAccountId(SavingsRequestBuilders.accountId(accounts.incomeFromFee()))//
+                .incomeFromPenaltyAccountId(SavingsRequestBuilders.accountId(accounts.incomeFromPenalty()))//
+                .incomeFromInterestId(SavingsRequestBuilders.accountId(accounts.incomeFromInterest()))//
+                .interestOnSavingsAccountId(SavingsRequestBuilders.accountId(accounts.interestOnSavings()))//
+                .writeOffAccountId(SavingsRequestBuilders.accountId(accounts.writeOff()));
+    }
+
+    /** Switches the product to cash-based accounting, which takes no receivable or payable mappings. */
+    private PostSavingsProductsRequest withCashMappings(final PostSavingsProductsRequest request, final AccrualAccounts accounts) {
+        return request//
+                .accountingRule(SavingsTestData.AccountingRule.CASH_BASED)//
+                .savingsReferenceAccountId(SavingsRequestBuilders.accountId(accounts.savingsReference()))//
+                .overdraftPortfolioControlId(SavingsRequestBuilders.accountId(accounts.overdraftPortfolioControl()))//
+                .savingsControlAccountId(SavingsRequestBuilders.accountId(accounts.savingsControl()))//
+                .transfersInSuspenseAccountId(SavingsRequestBuilders.accountId(accounts.transfersInSuspense()))//
+                .incomeFromFeeAccountId(SavingsRequestBuilders.accountId(accounts.incomeFromFee()))//
+                .incomeFromPenaltyAccountId(SavingsRequestBuilders.accountId(accounts.incomeFromPenalty()))//
+                .incomeFromInterestId(SavingsRequestBuilders.accountId(accounts.incomeFromInterest()))//
+                .interestOnSavingsAccountId(SavingsRequestBuilders.accountId(accounts.interestOnSavings()))//
+                .writeOffAccountId(SavingsRequestBuilders.accountId(accounts.writeOff()));
+    }
+
+    private record AccrualAccounts(Account savingsReference, Account overdraftPortfolioControl, Account feesReceivable,
+            Account penaltiesReceivable, Account interestReceivable, Account savingsControl, Account transfersInSuspense,
+            Account interestPayable, Account incomeFromFee, Account incomeFromPenalty, Account incomeFromInterest,
+            Account interestOnSavings, Account writeOff) {
+    }
+
+    private Long createActiveSavingsAccount(final Long savingsProductId) {
+        final Long clientId = createClient(CLIENT_ACTIVATION_DATE);
+        assertNotNull(clientId);
+
+        final String startDateString = startDateString();
+        final Long savingsAccountId = submitSavingsApplication(clientId, savingsProductId, startDateString).getSavingsId();
+        assertNotNull(savingsAccountId);
+
+        approveSavings(savingsAccountId, startDateString);
+        activateSavings(savingsAccountId, startDateString);
+        SavingsTestValidators.verifySavingsIsActive(savingsHelper.getSavingsStatus(savingsAccountId));
+        return savingsAccountId;
+    }
+
+    private String startDateString() {
+        return DATE_FORMATTER.format(TODAY.minusDays(DAYS_TO_SUBTRACT));
+    }
+
+    private PostSavingsProductsRequest accrualProduct(final Double nominalAnnualInterestRate) {
+        return SavingsRequestBuilders
+                .savingsProduct(SavingsTestData.InterestCompoundingPeriodType.MONTHLY, SavingsTestData.InterestPostingPeriodType.MONTHLY,
+                        SavingsTestData.InterestCalculationType.DAILY_BALANCE)
+                .nominalAnnualInterestRate(nominalAnnualInterestRate)//
+                .accountingRule(SavingsTestData.AccountingRule.ACCRUAL_PERIODIC);
+    }
+}

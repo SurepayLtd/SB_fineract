@@ -27,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.MonthDay;
+import java.time.OffsetTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
@@ -178,7 +179,7 @@ public final class JsonCommand {
         this.parsedCommand = parsedCommand;
         this.resourceId = resourceId;
         this.commandId = null;
-        this.jsonCommand = null;
+        this.jsonCommand = parsedCommand.toString();
         this.fromApiJsonHelper = fromApiJsonHelper;
         this.entityName = null;
         this.subresourceId = null;
@@ -275,6 +276,19 @@ public final class JsonCommand {
         return this.fromApiJsonHelper.parameterHasValue(parameterName, this.parsedCommand);
     }
 
+    /**
+     * Checks whether a request parameter is present with a non-null JSON value. Empty arrays and empty objects are
+     * considered present.
+     *
+     * @param parameterName
+     *            request parameter to inspect
+     * @return true when the parameter exists and is not JSON null
+     */
+    public boolean hasNonNullParameter(final String parameterName) {
+        final JsonElement parameter = jsonElement(parameterName);
+        return parameter != null && !parameter.isJsonNull();
+    }
+
     public String dateFormat() {
         return stringValueOfParameterNamed("dateFormat");
     }
@@ -344,6 +358,10 @@ public final class JsonCommand {
         return this.fromApiJsonHelper.extractLocalTimeNamed(parameterName, this.parsedCommand);
     }
 
+    public OffsetTime offsetTimeValueOfParameterNamed(final String parameterName) {
+        return this.fromApiJsonHelper.extractOffsetTimeNamed(parameterName, this.parsedCommand);
+    }
+
     public MonthDay extractMonthDayNamed(final String parameterName) {
         return this.fromApiJsonHelper.extractMonthDayNamed(parameterName, this.parsedCommand);
     }
@@ -362,16 +380,7 @@ public final class JsonCommand {
     }
 
     public <T extends Enum<T>> T enumValueOfParameterNamed(String parameterName, Class<T> enumType) {
-        try {
-            String value = stringValueOfParameterNamedAllowingNull(parameterName);
-            if (value != null) {
-                return Enum.valueOf(enumType, value);
-            } else {
-                return null;
-            }
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
+        return this.fromApiJsonHelper.enumValueOfParameterNamed(parameterName, this.parsedCommand, enumType);
     }
 
     public String stringValueOfParameterNamed(final String parameterName) {
@@ -549,7 +558,7 @@ public final class JsonCommand {
      */
     public boolean booleanPrimitiveValueOfParameterNamed(final String parameterName) {
         final Boolean value = this.fromApiJsonHelper.extractBooleanNamed(parameterName, this.parsedCommand);
-        return ObjectUtils.defaultIfNull(value, Boolean.FALSE);
+        return ObjectUtils.getIfNull(value, Boolean.FALSE);
     }
 
     public boolean isChangeInArrayParameterNamed(final String parameterName, final String[] existingValue) {
@@ -570,11 +579,11 @@ public final class JsonCommand {
     }
 
     public boolean isChangeInPasswordParameterNamed(final String parameterName, final String existingValue,
-            final PlatformPasswordEncoder platformPasswordEncoder, final Long saltValue) {
+            final PlatformPasswordEncoder platformPasswordEncoder) {
         boolean isChanged = false;
         if (parameterExists(parameterName)) {
-            final String workingValue = passwordValueOfParameterNamed(parameterName, platformPasswordEncoder, saltValue);
-            isChanged = differenceExists(existingValue, workingValue);
+            final String workingValue = stringValueOfParameterNamed(parameterName);
+            isChanged = !platformPasswordEncoder.matches(workingValue, existingValue);
         }
         return isChanged;
     }
@@ -605,5 +614,4 @@ public final class JsonCommand {
     public void checkForUnsupportedParameters(final Type typeOfMap, final String json, final Set<String> requestDataParameters) {
         this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, requestDataParameters);
     }
-
 }

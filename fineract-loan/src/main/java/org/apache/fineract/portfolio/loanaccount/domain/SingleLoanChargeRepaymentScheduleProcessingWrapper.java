@@ -37,7 +37,6 @@ public class SingleLoanChargeRepaymentScheduleProcessingWrapper {
 
     public void reprocess(final MonetaryCurrency currency, final LocalDate disbursementDate,
             final List<LoanRepaymentScheduleInstallment> installments, LoanCharge loanCharge) {
-        Loan loan = loanCharge.getLoan();
         Money zero = Money.zero(currency);
         Money totalInterest = zero;
         Money totalPrincipal = zero;
@@ -54,6 +53,11 @@ public class SingleLoanChargeRepaymentScheduleProcessingWrapper {
             accruals = loanCharge.getLoanChargePaidBySet().stream().filter(e -> !e.getLoanTransaction().isReversed()
                     && (e.getLoanTransaction().isAccrual() || e.getLoanTransaction().isAccrualAdjustment())).toList();
         }
+        if (loanCharge.isDueAtDownPayment()) {
+            applyDownPaymentFee(currency, installments, loanCharge);
+            return;
+        }
+
         LocalDate startDate = disbursementDate;
         int firstNormalInstallmentNumber = LoanRepaymentScheduleProcessingWrapper.fetchFirstNormalInstallmentNumber(installments);
         for (final LoanRepaymentScheduleInstallment installment : installments) {
@@ -63,7 +67,7 @@ public class SingleLoanChargeRepaymentScheduleProcessingWrapper {
             boolean installmentChargeApplicable = !installment.isRecalculatedInterestComponent();
             Integer installmentNumber = installment.getInstallmentNumber();
             boolean isFirstPeriod = installmentNumber.equals(firstNormalInstallmentNumber);
-            Predicate<LoanCharge> feePredicate = e -> e.isFeeCharge() && !e.isDueAtDisbursement();
+            Predicate<LoanCharge> feePredicate = e -> e.isFeeCharge() && !e.isDueAtDisbursementOrDownPayment();
             LocalDate dueDate = installment.getDueDate();
             final Money feeChargesDue = calcChargeDue(startDate, dueDate, loanCharge, currency, installment, totalPrincipal, totalInterest,
                     installmentChargeApplicable, isFirstPeriod, feePredicate);
@@ -101,6 +105,22 @@ public class SingleLoanChargeRepaymentScheduleProcessingWrapper {
         }
     }
 
+    private void applyDownPaymentFee(final MonetaryCurrency currency, final List<LoanRepaymentScheduleInstallment> installments,
+            final LoanCharge loanCharge) {
+        if (!loanCharge.isFeeCharge() || loanCharge.isDownPaymentFeeAwaitingDisbursement()) {
+            return;
+        }
+        final List<LoanRepaymentScheduleInstallment> periodsOnDate = DownPaymentFees.downPaymentPeriodsOn(installments,
+                loanCharge.getDueLocalDate());
+        if (periodsOnDate.isEmpty()) {
+            return;
+        }
+        final int periodIndex = DownPaymentFees.periodIndexOf(loanCharge, periodsOnDate.size());
+        final Money zero = Money.zero(currency);
+        periodsOnDate.get(periodIndex).addToChargePortion(loanCharge.getAmount(currency), loanCharge.getAmountWaived(currency),
+                loanCharge.getAmountWrittenOff(currency), zero, zero, zero);
+    }
+
     @NotNull
     private Money calcChargeDue(final LocalDate periodStart, final LocalDate periodEnd, final LoanCharge loanCharge,
             final MonetaryCurrency currency, LoanRepaymentScheduleInstallment period, final Money totalPrincipal, final Money totalInterest,
@@ -109,7 +129,7 @@ public class SingleLoanChargeRepaymentScheduleProcessingWrapper {
         if (!predicate.test(loanCharge)) {
             return zero;
         }
-        if (loanCharge.isFeeCharge() && loanCharge.isDueAtDisbursement()) {
+        if (loanCharge.isFeeCharge() && loanCharge.isDueAtDisbursementOrDownPayment()) {
             return zero;
         }
         if (loanCharge.isInstalmentFee() && isInstallmentChargeApplicable) {
@@ -133,13 +153,15 @@ public class SingleLoanChargeRepaymentScheduleProcessingWrapper {
             // Then we need to get as of this loan charge due date how much amount disbursed.
             for (final LoanDisbursementDetails loanDisbursementDetails : loan.getDisbursementDetails()) {
                 if (!DateUtils.isAfter(loanDisbursementDetails.expectedDisbursementDate(), loanCharge.getDueDate())) {
-                    baseAmount = MathUtil.add(baseAmount, loanDisbursementDetails.principal());
+                    baseAmount = MathUtil.add(baseAmount, loanDisbursementDetails.getPrincipal());
                 }
             }
         } else {
             baseAmount = getBaseAmount(loanCharge, totalPrincipal.getAmount(), totalInterest.getAmount());
         }
-        return Money.of(currency, MathUtil.percentageOf(baseAmount, loanCharge.getPercentage(), MoneyHelper.getMathContext()));
+        // capped like the charge's own amount, so the installment never carries more than the charge
+        final BigDecimal chargeAmount = MathUtil.percentageOf(baseAmount, loanCharge.getPercentage(), MoneyHelper.getMathContext());
+        return Money.of(currency, loanCharge.minimumAndMaximumCap(chargeAmount));
     }
 
     private Money calcChargeWaived(final LocalDate periodStart, final LocalDate periodEnd, final LoanCharge loanCharge,

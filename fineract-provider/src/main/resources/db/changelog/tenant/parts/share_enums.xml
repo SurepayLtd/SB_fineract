@@ -23,13 +23,14 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
     <changeSet id="share_enums" author="victor">
+        <validCheckSum>ANY</validCheckSum>
 
         <insert tableName="r_enum_value">
             <column name="enum_name" value="purchased_shares_status_type_enum"/>
             <column name="enum_id" valueNumeric="0"/>
             <column name="enum_message_property" value="INVALID"/>
             <column name="enum_value" value="Invalid"/>
-            <column name="enum_type" valueNumeric="0"/>
+            <column name="enum_type" valueBoolean="false"/>
         </insert>
 
         <insert tableName="r_enum_value">
@@ -37,7 +38,7 @@
             <column name="enum_id" valueNumeric="100"/>
             <column name="enum_message_property" value="APPLIED"/>
             <column name="enum_value" value="Applied"/>
-            <column name="enum_type" valueNumeric="0"/>
+            <column name="enum_type" valueBoolean="false"/>
         </insert>
 
         <insert tableName="r_enum_value">
@@ -45,7 +46,7 @@
             <column name="enum_id" valueNumeric="300"/>
             <column name="enum_message_property" value="APPROVED"/>
             <column name="enum_value" value="Approved"/>
-            <column name="enum_type" valueNumeric="0"/>
+            <column name="enum_type" valueBoolean="false"/>
         </insert>
 
         <insert tableName="r_enum_value">
@@ -53,7 +54,7 @@
             <column name="enum_id" valueNumeric="400"/>
             <column name="enum_message_property" value="REJECTED"/>
             <column name="enum_value" value="Rejected"/>
-            <column name="enum_type" valueNumeric="0"/>
+            <column name="enum_type" valueBoolean="false"/>
         </insert>
 
         <insert tableName="r_enum_value">
@@ -61,7 +62,7 @@
             <column name="enum_id" valueNumeric="500"/>
             <column name="enum_message_property" value="PURCHASED"/>
             <column name="enum_value" value="Purchased"/>
-            <column name="enum_type" valueNumeric="0"/>
+            <column name="enum_type" valueBoolean="false"/>
         </insert>
 
         <insert tableName="r_enum_value">
@@ -69,7 +70,7 @@
             <column name="enum_id" valueNumeric="600"/>
             <column name="enum_message_property" value="REDEEMED"/>
             <column name="enum_value" value="Redeemed"/>
-            <column name="enum_type" valueNumeric="0"/>
+            <column name="enum_type" valueBoolean="false"/>
         </insert>
 
         <insert tableName="r_enum_value">
@@ -77,7 +78,7 @@
             <column name="enum_id" valueNumeric="700"/>
             <column name="enum_message_property" value="CHARGE_PAYMENT"/>
             <column name="enum_value" value="Charge"/>
-            <column name="enum_type" valueNumeric="0"/>
+            <column name="enum_type" valueBoolean="false"/>
         </insert>
 
     </changeSet>

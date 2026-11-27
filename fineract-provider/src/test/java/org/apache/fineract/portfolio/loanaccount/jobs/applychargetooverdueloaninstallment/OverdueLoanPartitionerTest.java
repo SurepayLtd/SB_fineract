@@ -6,7 +6,7 @@ import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.ExecuteB
 import org.apache.fineract.portfolio.loanaccount.service.LoanReadPlatformService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 

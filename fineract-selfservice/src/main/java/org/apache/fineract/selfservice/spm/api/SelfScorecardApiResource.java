@@ -52,6 +52,7 @@ public class SelfScorecardApiResource {
   @Produces({MediaType.APPLICATION_JSON})
   @Transactional
   @Operation(
+      operationId = "retrieveSelfScorecardsByClient",
       summary = "List Scorecards for Client",
       description = "Retrieves all scorecards associated with the given client.")
   @ApiResponses({
@@ -71,6 +72,7 @@ public class SelfScorecardApiResource {
   @Produces({MediaType.APPLICATION_JSON})
   @Transactional
   @Operation(
+      operationId = "createSelfScorecard",
       summary = "Create a Scorecard",
       description = "Submits a scorecard entry for the specified survey.")
   @ApiResponses({

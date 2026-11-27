@@ -125,14 +125,11 @@ public class SavingsApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
 
         JsonArray gsimApplications = command.arrayOfParameterNamed("clientArray");
 
-        final Object lock = new Object();
-        synchronized (lock) {
-            for (JsonElement gsimApplication : gsimApplications) {
-                // result=submitApplication(JsonCommand.fromExistingCommand(command,
-                // gsimApplication));
-                result = submitApplication(JsonCommand.fromExistingCommand(command, gsimApplication,
-                        gsimApplication.getAsJsonObject().get("clientId").getAsLong()));
-            }
+        for (JsonElement gsimApplication : gsimApplications) {
+            // result=submitApplication(JsonCommand.fromExistingCommand(command,
+            // gsimApplication));
+            result = submitApplication(JsonCommand.fromExistingCommand(command, gsimApplication,
+                    gsimApplication.getAsJsonObject().get("clientId").getAsLong()));
         }
 
         return result;
@@ -171,7 +168,9 @@ public class SavingsApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
 
                     Group group = this.groupRepositoryWrapper.findOneWithNotFoundDetection(groupId);
 
-                    if (command.booleanObjectValueOfParameterNamed("isParentAccount") != null) {
+                    if (command.booleanObjectValueOfParameterNamed("isParentAccount") != null
+                            && ("1".equals(command.stringValueOfParameterNamed("isParentAccount"))
+                                    || command.booleanObjectValueOfParameterNamed("isParentAccount"))) {
                         // empty table check
                         if (gsimRepository.count() != 0) {
                             // Parent-Not an empty table
@@ -196,7 +195,12 @@ public class SavingsApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
                     } else {
                         if (gsimRepository.count() != 0) {
                             // Child-Not an empty table check
-                            gsimAccount = gsimRepository.findOneByIsAcceptingChildAndApplicationId(true, applicationId);
+                            if (applicationId.compareTo(BigDecimal.ZERO) == 0) {
+                                gsimAccount = gsimRepository.findOneByIsAcceptingChildAndApplicationIdAndGroupId(true, applicationId,
+                                        groupId);
+                            } else {
+                                gsimAccount = gsimRepository.findOneByIsAcceptingChildAndApplicationId(true, applicationId);
+                            }
                             accountNumber = gsimAccount.getAccountNumber() + (gsimAccount.getChildAccountsCount() + 1);
                             account.updateAccountNo(accountNumber);
                             this.gsimWritePlatformService.incrementChildAccountCount(gsimAccount);
@@ -246,7 +250,8 @@ public class SavingsApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
                     .withClientId(account.clientId()) //
                     .withGroupId(account.groupId()) //
                     .withSavingsId(savingsId) //
-                    .withGsimId(gsimAccount == null ? 0 : gsimAccount.getId()).build();
+                    .withGsimId(gsimAccount == null ? 0 : gsimAccount.getId()) //
+                    .build();
         } catch (final DataAccessException dve) {
             handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
             return CommandProcessingResult.empty();
@@ -398,9 +403,7 @@ public class SavingsApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
             }
         }
 
-        final List<Note> relatedNotes = this.noteRepository.findBySavingsAccount(account);
-        this.noteRepository.deleteAllInBatch(relatedNotes);
-
+        this.noteRepository.deleteAllBySavingsAccount(account);
         this.savingAccountRepository.delete(account);
 
         return new CommandProcessingResultBuilder() //
@@ -682,7 +685,7 @@ public class SavingsApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
 
         return new CommandProcessingResultBuilder() //
                 .withSavingsId(account.getId()) //
-                .setRollbackTransaction(rollbackTransaction)//
+                .setRollbackTransaction(rollbackTransaction) //
                 .build();
     }
 
@@ -695,13 +698,14 @@ public class SavingsApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
         String param = null;
         Object[] msgArgs;
         Throwable checkEx = realCause == null ? dve : realCause;
-        if (checkEx.getMessage().contains("sa_account_no_UNIQUE")) {
+        if (checkEx.getMessage().contains("sa_account_no_UNIQUE") || checkEx.getMessage().contains("m_savings_account_account_no_key")) {
             final String accountNo = command.stringValueOfParameterNamed("accountNo");
             msgCode += ".duplicate.accountNo";
             msg = "Savings account with accountNo " + accountNo + " already exists";
             param = "accountNo";
             msgArgs = new Object[] { accountNo, dve };
-        } else if (checkEx.getMessage().contains("sa_externalid_UNIQUE")) {
+        } else if (checkEx.getMessage().contains("sa_externalid_UNIQUE")
+                || checkEx.getMessage().contains("m_savings_account_external_id_key")) {
             final String externalId = command.stringValueOfParameterNamed("externalId");
             msgCode += ".duplicate.externalId";
             msg = "Savings account with externalId " + externalId + " already exists";
@@ -711,7 +715,7 @@ public class SavingsApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
             msgCode += ".unknown.data.integrity.issue";
             msgArgs = new Object[] { dve };
         }
-        log.error("Error occured.", dve);
+        log.error("Error occurred.", dve);
         throw ErrorHandler.getMappable(dve, msgCode, msg, param, msgArgs);
     }
 }

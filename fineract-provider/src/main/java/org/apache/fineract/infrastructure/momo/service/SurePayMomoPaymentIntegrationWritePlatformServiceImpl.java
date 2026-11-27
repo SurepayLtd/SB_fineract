@@ -40,7 +40,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.fineract.infrastructure.configuration.api.GlobalConfigurationConstants;
-import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationProperty;
+import org.apache.fineract.infrastructure.configuration.data.GlobalConfigurationPropertyData;
 import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.momo.data.MomoPaymentData;
@@ -74,7 +74,7 @@ public class SurePayMomoPaymentIntegrationWritePlatformServiceImpl implements Su
     @Override
     public void payOut(MomoPaymentData momoPaymentData, Loan loan, LoanTransaction loanTransaction) throws IOException {
 
-        final GlobalConfigurationProperty property = this.configurationRepositoryWrapper
+        final GlobalConfigurationPropertyData property = this.configurationRepositoryWrapper
                 .findOneByNameWithNotFoundDetection(GlobalConfigurationConstants.ENABLE_SURE_MOBILE_MONEY_PAYMENT);
 
         if (!property.isEnabled()) {

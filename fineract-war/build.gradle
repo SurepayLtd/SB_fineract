@@ -51,7 +51,6 @@ war {
     def legalFiles = [
         file("$rootDir/LICENSE_RELEASE"),
         file("$rootDir/NOTICE_RELEASE"),
-        file("$rootDir/DISCLAIMER")
     ].findAll { it.exists() }
 
     if (!legalFiles.empty) {
@@ -86,13 +85,15 @@ dependencies {
     implementation project(':fineract-charge')
     implementation project(':fineract-rates')
     implementation project(':fineract-loan')
+    implementation project(':fineract-loan-origination')
     implementation project(':fineract-progressive-loan')
     implementation project(':fineract-savings')
     implementation project(':fineract-provider')
+    implementation project(':fineract-working-capital-loan')
 }
 
 tasks.withType(Tar) {
-    compression Compression.GZIP
+    compression = Compression.GZIP
     archiveExtension = 'tar.gz'
 
     // Enable caching for all tar tasks
@@ -105,7 +106,7 @@ tasks.withType(Tar) {
 
 distributions {
     binary {
-        distributionBaseName = 'apache-fineract-binary'
+        distributionBaseName = 'apache-fineract-bin'
         contents {
             // Track inputs explicitly for binary distribution
             filesMatching('**/*.jar') {
@@ -123,7 +124,10 @@ distributions {
                 exclude 'fineract-provider-*-plain.jar'
             }
             from war
-            from("$rootDir/licenses/") {
+            // Taken from the task rather than from the path, so the merged dependency licence
+            // report is a declared input of the distribution and is regenerated on demand instead
+            // of being whatever happens to be sitting in $rootDir/licenses.
+            from(rootProject.tasks.named('aggregateLicenseReport')) {
                 into "licenses/"
             }
             from "$rootDir/LICENSE_RELEASE"
@@ -131,11 +135,13 @@ distributions {
             rename ('LICENSE_RELEASE', 'LICENSE')
             rename ('NOTICE_RELEASE', 'NOTICE')
 
-            from "$rootDir/DISCLAIMER"
             from "$rootDir/README.md"
 
             // from "$rootDir/fineract-doc/build/docs/pdf/en/index.pdf"
             // rename ('index.pdf', 'fineract-documentation.pdf')
+
+            from "$rootDir/.atr-rat-excludes-bin.txt"
+            rename ('.atr-rat-excludes-bin.txt', '.rat-excludes')
         }
     }
     src {
@@ -143,19 +149,27 @@ distributions {
         contents {
             // Track inputs explicitly for source distribution
             from("$rootDir/") {
-                exclude '**/build' , '.git', '**/.gradle', '.github', '**/.settings', '**/.project',
-                        '**/.classpath', '.idea', 'out', '._.DS_Store', '.DS_Store', 'WebContent',
-                        '**/.externalToolbuilders', '.theia', '.gitpod.yml', 'LICENSE_RELEASE',
-                        'NOTICE_RELEASE', '**/licenses', '*.class', '**/bin', '*.log', '.dockerignore',
-                        '**/.gitkeep'
-
+                exclude '**/build' , '.git', '**/.gradle', '.github', '**/.settings', '**/.project', 
+                        '**/.classpath', '.idea', 'out', '._.DS_Store', '.DS_Store', 'WebContent', 
+                        '**/.externalToolbuilders', '.theia', '.gitpod.yml', 'LICENSE_RELEASE', 
+                        'NOTICE_RELEASE', '**/licenses', '*.class', '**/bin', '*.log', '.dockerignore', 
+                        '**/.gitkeep', '*.swp', '.atr-rat-excludes-bin.txt', '.claude'
+                
                 // Ensure consistent file paths for caching
                 eachFile { details ->
                     details.path = details.path.replace('\\', '/')
                 }
+
+                // Gradle 9 archives store every file as 0644, so keep the wrapper and scripts executable
+                filesMatching(['gradlew', '**/*.sh']) {
+                    permissions {
+                        unix('rwxr-xr-x')
+                    }
+                }
             }
             rename ('LICENSE_SOURCE', 'LICENSE')
             rename ('NOTICE_SOURCE', 'NOTICE')
+            rename ('.atr-rat-excludes-src.txt', '.rat-excludes')
         }
     }
 }
@@ -170,25 +184,13 @@ tasks.named('binaryDistTar') {
               ':fineract-provider:build',
               ':fineract-client:javadocJar', ':fineract-client:sourcesJar',
               ':fineract-avro-schemas:javadocJar', ':fineract-avro-schemas:sourcesJar')
-
-    doLast {
-        file("${buildDir}/distributions/apache-fineract-binary-${version}.tar.gz")
-            .renameTo("${buildDir}/distributions/apache-fineract-${version}-binary.tar.gz")
-    }
 }
 
 tasks.named('srcDistTar') {
     description = 'Assembles the source distribution as a tar archive'
     outputs.cacheIf { true }
-
-    doLast {
-        file("${buildDir}/distributions/apache-fineract-src-${version}.tar.gz")
-            .renameTo("${buildDir}/distributions/apache-fineract-${version}-src.tar.gz")
-    }
 }
 
 // Disable zip distributions as they're not needed
-binaryDistZip.enabled false
-srcDistZip.enabled false
-// NOTE: Gradle suggested these dependencies
-binaryDistTar.dependsOn(war, ':fineract-client:jar', ':fineract-avro-schemas:jar', ':fineract-provider:build')
+binaryDistZip.enabled = false
+srcDistZip.enabled = false

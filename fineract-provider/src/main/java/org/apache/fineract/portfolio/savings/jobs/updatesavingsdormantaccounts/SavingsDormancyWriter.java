@@ -7,8 +7,8 @@ import org.apache.fineract.notification.service.SmsNotificationWritePlatformServ
 import org.apache.fineract.portfolio.savings.data.SavingsDormancyReminderData;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccountRepositoryWrapper;
-import org.springframework.batch.item.Chunk;
-import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.infrastructure.item.Chunk;
+import org.springframework.batch.infrastructure.item.ItemWriter;
 
 import static org.apache.fineract.portfolio.savings.jobs.updatesavingsdormantaccounts.SavingsDormancyProcessor.resolveSmsType;
 

@@ -9,14 +9,16 @@ import org.apache.fineract.useradministration.domain.AppUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-public class FineractDaoAuthenticationProvider extends DaoAuthenticationProvider {
+/**
+ * SurePay: adds max-login-attempt blocking on top of upstream's temporary-password-aware provider.
+ */
+public class FineractDaoAuthenticationProvider extends TemporaryPasswordAwareAuthenticationProvider {
 
     private final AppUserRepository appUserRepository;
     private final ConfigurationDomainService configurationDomainService;
@@ -24,12 +26,11 @@ public class FineractDaoAuthenticationProvider extends DaoAuthenticationProvider
 
     public FineractDaoAuthenticationProvider(AppUserRepository appUserRepository, ConfigurationDomainService configurationDomainService,SmsNotificationWritePlatformService smsNotificationWritePlatformService,
             UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
-
+        super(userDetailsService);
         this.appUserRepository = appUserRepository;
         this.configurationDomainService = configurationDomainService;
         this.smsNotificationWritePlatformService = smsNotificationWritePlatformService;
 
-        setUserDetailsService(userDetailsService);
         setPasswordEncoder(passwordEncoder);
     }
 

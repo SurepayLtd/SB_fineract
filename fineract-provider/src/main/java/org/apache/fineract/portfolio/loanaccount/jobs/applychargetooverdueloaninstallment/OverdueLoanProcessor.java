@@ -2,7 +2,7 @@ package org.apache.fineract.portfolio.loanaccount.jobs.applychargetooverdueloani
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.data.OverdueLoanScheduleData;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @Slf4j
 public class OverdueLoanProcessor implements ItemProcessor<OverdueLoanScheduleData, OverdueLoanScheduleData> {

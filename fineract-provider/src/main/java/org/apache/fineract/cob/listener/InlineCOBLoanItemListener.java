@@ -19,13 +19,13 @@
 package org.apache.fineract.cob.listener;
 
 import org.apache.fineract.cob.domain.LockOwner;
-import org.apache.fineract.cob.loan.LoanLockingService;
+import org.apache.fineract.cob.domain.LockingService;
 import org.springframework.transaction.support.TransactionTemplate;
 
 public class InlineCOBLoanItemListener extends AbstractLoanItemListener {
 
-    public InlineCOBLoanItemListener(LoanLockingService loanLockingService, TransactionTemplate transactionTemplate) {
-        super(loanLockingService, transactionTemplate);
+    public InlineCOBLoanItemListener(LockingService lockingService, TransactionTemplate requiresNewTransactionTemplate) {
+        super(lockingService, requiresNewTransactionTemplate);
     }
 
     @Override

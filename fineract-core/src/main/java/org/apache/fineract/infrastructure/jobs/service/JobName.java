@@ -58,12 +58,16 @@ public enum JobName {
     PURGE_EXTERNAL_EVENTS("Purge External Events"), //
     PURGE_PROCESSED_COMMANDS("Purge Processed Commands"), //
     ACCRUAL_ACTIVITY_POSTING("Accrual Activity Posting"), //
-    PROCESS_LOAN_TRANSACTIONS_ON_MOMO_PAYMENT("Process Loan Transactions On Momo Payment"),//
-    EXECUTE_STAFF_CLIENT_BIRTHDAYS("Execute Happy Birthday Message"),
-    EXECUTE_DORMANT_ACCOUNTS_SMS("Execute Dormant Savings Account Reminder"),
-    EXECUTE_LOAN_INSTALLMENT_PAYMENT_REMINDER("Execute Loan Installment Payment Reminder"),
-    EXECUTE_LOAN_INSTALLMENT_OVERDUE_REMINDER("Execute Loan Installment Overdue Reminder"),
-    ;
+    ADD_PERIODIC_ACCRUAL_ENTRIES_FOR_SAVINGS_WITH_INCOME_POSTED_AS_TRANSACTIONS("Add Accrual Transactions For Savings"), //
+    JOURNAL_ENTRY_AGGREGATION("Journal Entry Aggregation"), //
+    WORKING_CAPITAL_LOAN_COB_JOB("Working Capital Loan COB"), //
+    RETAINED_EARNING("Retained Earning Job"), //
+    PROCESS_LOAN_TRANSACTIONS_ON_MOMO_PAYMENT("Process Loan Transactions On Momo Payment"), //
+    EXECUTE_STAFF_CLIENT_BIRTHDAYS("Execute Happy Birthday Message"), //
+    EXECUTE_DORMANT_ACCOUNTS_SMS("Execute Dormant Savings Account Reminder"), //
+    EXECUTE_LOAN_INSTALLMENT_PAYMENT_REMINDER("Execute Loan Installment Payment Reminder"), //
+    EXECUTE_LOAN_INSTALLMENT_OVERDUE_REMINDER("Execute Loan Installment Overdue Reminder"), //
+    ; //
 
     private final String name;
 

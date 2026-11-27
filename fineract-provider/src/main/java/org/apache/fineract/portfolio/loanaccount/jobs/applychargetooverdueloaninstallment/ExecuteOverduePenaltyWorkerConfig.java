@@ -8,7 +8,7 @@ import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.LoanInst
 import org.apache.fineract.portfolio.loanaccount.loanschedule.data.OverdueLoanScheduleData;
 import org.apache.fineract.portfolio.loanaccount.service.LoanChargeWritePlatformService;
 import org.apache.fineract.portfolio.loanaccount.service.LoanReadPlatformService;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.integration.partition.RemotePartitioningWorkerStepBuilderFactory;
 import org.springframework.beans.factory.annotation.Autowired;

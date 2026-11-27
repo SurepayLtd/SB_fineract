@@ -19,11 +19,9 @@
 package org.apache.fineract.notification.starter;
 
 import org.apache.fineract.infrastructure.core.config.FineractProperties;
-import org.apache.fineract.infrastructure.core.service.PaginationHelper;
-import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
-import org.apache.fineract.infrastructure.security.utils.ColumnValidator;
+import org.apache.fineract.notification.domain.NotificationMapperRepository;
 import org.apache.fineract.notification.eventandlistener.NotificationEventPublisher;
 import org.apache.fineract.notification.service.NotificationDomainService;
 import org.apache.fineract.notification.service.NotificationDomainServiceImpl;
@@ -41,7 +39,6 @@ import org.apache.fineract.useradministration.domain.AppUserRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 @Configuration
 public class NotificationConfiguration {
@@ -55,9 +52,9 @@ public class NotificationConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(NotificationReadPlatformService.class)
-    public NotificationReadPlatformService notificationReadPlatformService(JdbcTemplate jdbcTemplate, PlatformSecurityContext context,
-            ColumnValidator columnValidator, PaginationHelper paginationHelper, DatabaseSpecificSQLGenerator sqlGenerator) {
-        return new NotificationReadPlatformServiceImpl(jdbcTemplate, context, columnValidator, paginationHelper, sqlGenerator);
+    public NotificationReadPlatformService notificationReadPlatformService(PlatformSecurityContext context,
+            NotificationMapperRepository notificationMapperRepository) {
+        return new NotificationReadPlatformServiceImpl(context, notificationMapperRepository);
     }
 
     @Bean

@@ -22,7 +22,7 @@ import static org.apache.fineract.infrastructure.core.domain.AuditableFieldsCons
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.SAVINGS_ACCOUNT_RESOURCE_NAME;
 
 import com.google.gson.JsonObject;
-import jakarta.validation.constraints.NotNull;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -38,8 +38,8 @@ import org.apache.fineract.infrastructure.core.service.database.SqlOperator;
 import org.apache.fineract.infrastructure.dataqueries.data.DataTableValidator;
 import org.apache.fineract.infrastructure.dataqueries.data.EntityTables;
 import org.apache.fineract.infrastructure.dataqueries.data.ResultsetColumnHeaderData;
+import org.apache.fineract.infrastructure.dataqueries.service.DatatableReadService;
 import org.apache.fineract.infrastructure.dataqueries.service.GenericDataService;
-import org.apache.fineract.infrastructure.dataqueries.service.ReadWriteNonCoreDataService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.savings.SavingsAccountTransactionType;
 import org.apache.fineract.portfolio.savings.data.SavingsAccountTransactionData;
@@ -50,7 +50,8 @@ import org.apache.fineract.portfolio.search.data.ColumnFilterData;
 import org.apache.fineract.portfolio.search.data.TableQueryData;
 import org.apache.fineract.portfolio.search.data.TransactionSearchRequest;
 import org.apache.fineract.portfolio.search.service.SearchUtil;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -66,14 +67,15 @@ public class SavingsAccountTransactionsSearchServiceImpl implements SavingsAccou
     private final PlatformSecurityContext context;
     private final GenericDataService genericDataService;
     private final DatabaseSpecificSQLGenerator sqlGenerator;
-    private final ReadWriteNonCoreDataService datatableService;
+    private final DatatableReadService datatableReadService;
     private final DataTableValidator dataTableValidator;
     private final JdbcTemplate jdbcTemplate;
     private final SearchUtil searchUtil;
+    protected SavingsAccountReadPlatformServiceImpl.SavingsAccountTransactionsMapper tm = new SavingsAccountReadPlatformServiceImpl.SavingsAccountTransactionsMapper();
 
     @Override
-    public Page<SavingsAccountTransactionData> searchTransactions(@NotNull Long savingsId,
-            @NotNull TransactionSearchRequest searchParameters) {
+    public Page<SavingsAccountTransactionData> searchTransactions(@NonNull Long savingsId,
+            @NonNull TransactionSearchRequest searchParameters) {
         context.authenticatedUser().validateHasReadPermission(SAVINGS_ACCOUNT_RESOURCE_NAME);
 
         String apptable = EntityTables.SAVINGS_TRANSACTION.getApptableName();
@@ -111,7 +113,6 @@ public class SavingsAccountTransactionsSearchServiceImpl implements SavingsAccou
         ArrayList<Object> params = new ArrayList<>();
         searchUtil.buildQueryCondition(columnFilters, where, params, alias, headersByName, null, null, null, false, sqlGenerator);
 
-        SavingsAccountReadPlatformServiceImpl.SavingsAccountTransactionsMapper tm = new SavingsAccountReadPlatformServiceImpl.SavingsAccountTransactionsMapper();
         Object[] args = params.toArray();
 
         String countQuery = "SELECT COUNT(*) " + tm.from() + where;
@@ -130,8 +131,8 @@ public class SavingsAccountTransactionsSearchServiceImpl implements SavingsAccou
         return PageableExecutionUtils.getPage(results, pageable, () -> totalElements);
     }
 
-    private static void addFromToFilter(@NotNull String column, String fromValue, String toValue,
-            @NotNull List<ColumnFilterData> columnFilters) {
+    private static void addFromToFilter(@NonNull String column, String fromValue, String toValue,
+            @NonNull List<ColumnFilterData> columnFilters) {
         if (fromValue != null) {
             columnFilters.add(toValue == null ? ColumnFilterData.create(column, SqlOperator.GTE, fromValue)
                     : ColumnFilterData.btw(column, fromValue, toValue));
@@ -141,7 +142,8 @@ public class SavingsAccountTransactionsSearchServiceImpl implements SavingsAccou
     }
 
     @Nullable
-    private static Boolean addTransactionTypesFilter(@NotNull TransactionSearchRequest searchParameters,
+    @SuppressFBWarnings("NP_BOOLEAN_RETURN_NULL")
+    private static Boolean addTransactionTypesFilter(@NonNull TransactionSearchRequest searchParameters,
             List<ColumnFilterData> columnFilters) {
         Predicate<SavingsAccountTransactionType> filter = null;
         Boolean credit = searchParameters.getCredit();
@@ -164,7 +166,7 @@ public class SavingsAccountTransactionsSearchServiceImpl implements SavingsAccou
             filter = filter == null ? tf : filter.and(tf);
         }
         if (filter != null) {
-            filter = filter.and(SavingsAccountTransactionType::isValid);
+            filter = filter.and(t -> t != SavingsAccountTransactionType.INVALID);
             List<SavingsAccountTransactionType> filteredTypes = SavingsAccountTransactionType.getFiltered(filter);
             if (filteredTypes.isEmpty()) {
                 return null;
@@ -178,7 +180,7 @@ public class SavingsAccountTransactionsSearchServiceImpl implements SavingsAccou
     }
 
     @Override
-    public Page<JsonObject> queryAdvanced(@NotNull Long savingsId, @NotNull PagedLocalRequest<AdvancedQueryRequest> pagedRequest) {
+    public Page<JsonObject> queryAdvanced(@NonNull Long savingsId, @NonNull PagedLocalRequest<AdvancedQueryRequest> pagedRequest) {
         context.authenticatedUser().validateHasReadPermission(SAVINGS_ACCOUNT_RESOURCE_NAME);
         String apptable = EntityTables.SAVINGS_TRANSACTION.getApptableName();
 
@@ -239,7 +241,7 @@ public class SavingsAccountTransactionsSearchServiceImpl implements SavingsAccou
             ArrayList<Object> dataParams = new ArrayList<>();
             for (int i = 0; i < datatableQueries.size(); i++) {
                 TableQueryData tableQuery = datatableQueries.get(i);
-                boolean added = datatableService.buildDataQueryEmbedded(EntityTables.SAVINGS_TRANSACTION, tableQuery.getTable(),
+                boolean added = datatableReadService.buildDataQueryEmbedded(EntityTables.SAVINGS_TRANSACTION, tableQuery.getTable(),
                         tableQuery.getQuery(), selectColumns, dataSelect, dataFrom, dataWhere, dataParams, alias, ("d" + i), dateFormat,
                         dateTimeFormat, locale);
                 if (added) {

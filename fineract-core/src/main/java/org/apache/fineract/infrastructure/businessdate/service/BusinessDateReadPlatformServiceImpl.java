@@ -18,13 +18,14 @@
  */
 package org.apache.fineract.infrastructure.businessdate.service;
 
+import io.github.resilience4j.retry.annotation.Retry;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.fineract.infrastructure.businessdate.data.BusinessDateData;
+import org.apache.fineract.infrastructure.businessdate.data.service.BusinessDateDTO;
 import org.apache.fineract.infrastructure.businessdate.domain.BusinessDate;
 import org.apache.fineract.infrastructure.businessdate.domain.BusinessDateRepository;
 import org.apache.fineract.infrastructure.businessdate.domain.BusinessDateType;
@@ -33,24 +34,26 @@ import org.apache.fineract.infrastructure.businessdate.mapper.BusinessDateMapper
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class BusinessDateReadPlatformServiceImpl implements BusinessDateReadPlatformService {
 
     private final BusinessDateRepository repository;
-    private final BusinessDateMapper mapper;
+    private final BusinessDateMapper businessDateMapper;
     private final ConfigurationDomainService configurationDomainService;
 
     @Override
-    public List<BusinessDateData> findAll() {
-        List<BusinessDate> businessDateList = repository.findAll();
-        return mapper.map(businessDateList);
+    public List<BusinessDateDTO> findAll() {
+        List<BusinessDate> businessDateList = repository.findAllBusinessDates();
+        return businessDateMapper.mapEntity(businessDateList);
     }
 
     @Override
-    public BusinessDateData findByType(String type) {
+    public BusinessDateDTO findByType(String type) {
         BusinessDateType businessDateType;
         try {
             businessDateType = BusinessDateType.valueOf(type);
@@ -63,19 +66,20 @@ public class BusinessDateReadPlatformServiceImpl implements BusinessDateReadPlat
             log.error("Business date with the provided type cannot be found {}", type);
             throw BusinessDateNotFoundException.notFound(type);
         }
-        return mapper.map(businessDate.get());
+        return businessDateMapper.mapEntity(businessDate.get());
     }
 
     @Override
+    @Retry(name = "tenantContextLookup")
     public HashMap<BusinessDateType, LocalDate> getBusinessDates() {
         HashMap<BusinessDateType, LocalDate> businessDateMap = new HashMap<>();
         LocalDate tenantDate = DateUtils.getLocalDateOfTenant();
         businessDateMap.put(BusinessDateType.BUSINESS_DATE, tenantDate);
         businessDateMap.put(BusinessDateType.COB_DATE, tenantDate);
         if (configurationDomainService.isBusinessDateEnabled()) {
-            final List<BusinessDateData> businessDateDataList = this.findAll();
-            for (BusinessDateData businessDateData : businessDateDataList) {
-                businessDateMap.put(BusinessDateType.valueOf(businessDateData.getType()), businessDateData.getDate());
+            final List<BusinessDateDTO> businessDateResponseList = this.findAll();
+            for (BusinessDateDTO businessDateResponse : businessDateResponseList) {
+                businessDateMap.put(businessDateResponse.getType(), businessDateResponse.getDate());
             }
         }
         return businessDateMap;

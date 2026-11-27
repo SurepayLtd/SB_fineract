@@ -81,9 +81,9 @@ public class CreditReportWritePlatformServiceImpl implements CreditReportWritePl
 
             CreditBureauIntegrationWritePlatformService integration = creditBureauIntegrationFactory.getIntegration(creditBureau.getImplementationKey());
 
-            if (integration instanceof ThitsaWorksCreditBureauIntegrationWritePlatformService thitsaWorksIntegration) {
+            if (integration instanceof ExternalCreditBureauIntegrationWritePlatformServiceImpl thitsaWorksIntegration) {
 
-                CreditBureauReportData reportobj = thitsaWorksIntegration.getCreditReportFromThitsaWorks(command);
+                CreditBureauReportData reportobj = thitsaWorksIntegration.getCreditReportFromExternalCredit(command);
 
                 Map<String, Object> reportMap = Map.of("name", reportobj.getName(), "gender", reportobj.getGender(), "address",
                         reportobj.getAddress(), "creditScore", reportobj.getCreditScore(), "borrowerInfo", reportobj.getBorrowerInfo(),
@@ -125,7 +125,7 @@ public class CreditReportWritePlatformServiceImpl implements CreditReportWritePl
         CreditBureau creditBureau = getCreditBureau(bureauId);
         CreditBureauIntegrationWritePlatformService integration = creditBureauIntegrationFactory.getIntegration(creditBureau.getImplementationKey());
 
-        if (integration instanceof ThitsaWorksCreditBureauIntegrationWritePlatformService thitsaWorksIntegration) {
+        if (integration instanceof ExternalCreditBureauIntegrationWritePlatformService thitsaWorksIntegration) {
 
             return thitsaWorksIntegration.addCreditReport(bureauId, creditReport, fileDetail);
         }
@@ -162,7 +162,7 @@ public class CreditReportWritePlatformServiceImpl implements CreditReportWritePl
             CreditBureau creditBureau = getCreditBureau(creditBureauId);
             CreditBureauIntegrationWritePlatformService integration = creditBureauIntegrationFactory.getIntegration(creditBureau.getImplementationKey());            CreditReport creditReport = null;
 
-            if (integration instanceof ThitsaWorksCreditBureauIntegrationWritePlatformService thitsaWorksIntegration) {
+            if (integration instanceof ExternalCreditBureauIntegrationWritePlatformService thitsaWorksIntegration) {
 
                 // checks whether creditReport for same nationalId was saved before. if yes, then deletes it & replaces
                 // with new one.

@@ -2,14 +2,15 @@ package org.apache.fineract.portfolio.loanaccount.jobs.addperiodicaccrualentries
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.fineract.infrastructure.configuration.domain.ChargeAccrualDateConfig;
 import org.apache.fineract.accounting.common.AccountingRuleType;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.portfolio.loanaccount.data.LoanAccrualPartition;
 import org.apache.fineract.portfolio.loanaccount.jobs.paymentdueremider.ExecuteBatchJobConstant;
 import org.apache.fineract.portfolio.loanaccount.service.LoanAccrualBatchReadService;
-import org.springframework.batch.core.partition.support.Partitioner;
-import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.core.partition.Partitioner;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -22,7 +23,6 @@ import java.util.stream.Collectors;
 public class PeriodicAccrualItemPartitioner implements Partitioner {
 
     private static final int PARTITION_SIZE = 100;
-    private static final String ACCRUAL_ON_CHARGE_SUBMITTED_ON_DATE = "submitted-date";
 
 
     private final LoanAccrualBatchReadService loanAccrualBatchReadService;
@@ -68,7 +68,6 @@ public class PeriodicAccrualItemPartitioner implements Partitioner {
     }
 
     private boolean isChargeOnDueDate() {
-        final String chargeAccrualDateType = configurationDomainService.getAccrualDateConfigForCharge();
-        return !ACCRUAL_ON_CHARGE_SUBMITTED_ON_DATE.equalsIgnoreCase(chargeAccrualDateType);
+        return configurationDomainService.getAccrualDateConfigForCharge() != ChargeAccrualDateConfig.SUBMITTED_DATE;
     }
 }

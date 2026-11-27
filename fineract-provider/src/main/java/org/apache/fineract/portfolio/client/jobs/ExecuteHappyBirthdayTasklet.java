@@ -1,5 +1,6 @@
 package org.apache.fineract.portfolio.client.jobs;
 
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -11,10 +12,10 @@ import org.apache.fineract.notification.service.SmsNotificationWritePlatformServ
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientRepository;
 import org.apache.fineract.portfolio.client.domain.ClientStatus;
-import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -34,9 +35,12 @@ public class ExecuteHappyBirthdayTasklet implements Tasklet {
 
         final List<Throwable> exceptions = new ArrayList<>();
 
-        final List<Client> birthdayClients = this.clientRepository.findBirthdays(ClientStatus.ACTIVE.getValue(), false);
+        final LocalDate today = DateUtils.getLocalDateOfTenant();
+        final List<Client> birthdayClients = this.clientRepository.findBirthdays(ClientStatus.ACTIVE.getValue(), false,
+                today.getDayOfMonth(), today.getMonthValue());
 
-        final List<Client> birthdayStaff = this.clientRepository.findBirthdays(ClientStatus.ACTIVE.getValue(), true);
+        final List<Client> birthdayStaff = this.clientRepository.findBirthdays(ClientStatus.ACTIVE.getValue(), true,
+                today.getDayOfMonth(), today.getMonthValue());
 
         log.info("Found {} client birthday(s) and {} staff birthday(s).", birthdayClients.size(), birthdayStaff.size());
 

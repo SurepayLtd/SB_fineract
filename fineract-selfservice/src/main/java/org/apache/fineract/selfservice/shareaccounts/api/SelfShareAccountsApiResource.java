@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import lombok.RequiredArgsConstructor;
+import org.apache.fineract.portfolio.accounts.data.request.AccountRequest;
 import org.apache.fineract.infrastructure.core.api.ApiRequestParameterHelper;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.serialization.ApiRequestJsonSerializationSettings;
@@ -170,14 +171,15 @@ public class SelfShareAccountsApiResource {
                                     SelfShareAccountsApiResourceSwagger
                                         .PostNewShareApplicationResponse.class))))
   })
-  public String createAccount(final String apiRequestBodyAsJson) {
+  public CommandProcessingResult createAccount(final String apiRequestBodyAsJson) {
     HashMap<String, Object> attr =
         selfShareAccountsDataValidator.validateShareAccountApplication(
             apiRequestBodyAsJson);
     final Long clientId = (Long) attr.get(ShareAccountApiConstants.clientid_paramname);
     validateAppuserClientsMapping(clientId);
     String accountType = ShareAccountApiConstants.shareEntityType;
-    return accountsApiResource.createAccount(accountType, apiRequestBodyAsJson);
+    return accountsApiResource.createAccount(
+        accountType, new com.google.gson.Gson().fromJson(apiRequestBodyAsJson, AccountRequest.class));
   }
 
   @GET

@@ -22,7 +22,7 @@ import org.apache.fineract.portfolio.loanaccount.service.LoanAccrualsProcessingS
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.batch.item.Chunk;
+import org.springframework.batch.infrastructure.item.Chunk;
 
 public class LoanAccrualWriterTest {
 

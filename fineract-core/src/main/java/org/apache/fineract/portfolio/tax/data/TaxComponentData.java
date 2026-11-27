@@ -24,11 +24,13 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.apache.fineract.accounting.glaccount.data.GLAccountData;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 
+@AllArgsConstructor
 @Getter
 public final class TaxComponentData implements Serializable {
 
@@ -42,31 +44,39 @@ public final class TaxComponentData implements Serializable {
     private final LocalDate startDate;
     private final Collection<TaxComponentHistoryData> taxComponentHistories;
 
+    // Edit control flag: false once the component is linked to a charge, savings product, savings account or tax detail
+    private final boolean editable;
+
     // template options
     private final Map<String, List<GLAccountData>> glAccountOptions;
     private final Collection<EnumOptionData> glAccountTypeOptions;
 
     public static TaxComponentData instance(final Long id, final String name, final BigDecimal percentage,
-            final EnumOptionData debitAccountType, final GLAccountData debitAcount, final EnumOptionData creditAccountType,
-            final GLAccountData creditAcount, final LocalDate startDate, final Collection<TaxComponentHistoryData> taxComponentHistories) {
+            final EnumOptionData debitAccountType, final GLAccountData debitAccount, final EnumOptionData creditAccountType,
+            final GLAccountData creditAccount, final LocalDate startDate, final Collection<TaxComponentHistoryData> taxComponentHistories) {
         final Map<String, List<GLAccountData>> glAccountOptions = null;
         final Collection<EnumOptionData> glAccountTypeOptions = null;
-        return new TaxComponentData(id, name, percentage, debitAccountType, debitAcount, creditAccountType, creditAcount, startDate,
-                taxComponentHistories, glAccountOptions, glAccountTypeOptions);
+        return new TaxComponentData(id, name, percentage, debitAccountType, debitAccount, creditAccountType, creditAccount, startDate,
+                taxComponentHistories, false, glAccountOptions, glAccountTypeOptions);
+    }
+
+    public static TaxComponentData withEditable(final TaxComponentData data, final boolean editable) {
+        return new TaxComponentData(data.id, data.name, data.percentage, data.debitAccountType, data.debitAccount, data.creditAccountType,
+                data.creditAccount, data.startDate, data.taxComponentHistories, editable, data.glAccountOptions, data.glAccountTypeOptions);
     }
 
     public static TaxComponentData lookup(final Long id, final String name) {
         final BigDecimal percentage = null;
         final EnumOptionData debitAccountType = null;
-        final GLAccountData debitAcount = null;
+        final GLAccountData debitAccount = null;
         final EnumOptionData creditAccountType = null;
-        final GLAccountData creditAcount = null;
+        final GLAccountData creditAccount = null;
         final LocalDate startDate = null;
         final Collection<TaxComponentHistoryData> taxComponentHistories = null;
         final Map<String, List<GLAccountData>> glAccountOptions = null;
         final Collection<EnumOptionData> glAccountTypeOptions = null;
-        return new TaxComponentData(id, name, percentage, debitAccountType, debitAcount, creditAccountType, creditAcount, startDate,
-                taxComponentHistories, glAccountOptions, glAccountTypeOptions);
+        return new TaxComponentData(id, name, percentage, debitAccountType, debitAccount, creditAccountType, creditAccount, startDate,
+                taxComponentHistories, false, glAccountOptions, glAccountTypeOptions);
     }
 
     public static TaxComponentData template(final Map<String, List<GLAccountData>> glAccountOptions,
@@ -75,43 +85,27 @@ public final class TaxComponentData implements Serializable {
         final String name = null;
         final BigDecimal percentage = null;
         final EnumOptionData debitAccountType = null;
-        final GLAccountData debitAcount = null;
+        final GLAccountData debitAccount = null;
         final EnumOptionData creditAccountType = null;
-        final GLAccountData creditAcount = null;
+        final GLAccountData creditAccount = null;
         final LocalDate startDate = null;
         final Collection<TaxComponentHistoryData> taxComponentHistories = null;
-        return new TaxComponentData(id, name, percentage, debitAccountType, debitAcount, creditAccountType, creditAcount, startDate,
-                taxComponentHistories, glAccountOptions, glAccountTypeOptions);
+        return new TaxComponentData(id, name, percentage, debitAccountType, debitAccount, creditAccountType, creditAccount, startDate,
+                taxComponentHistories, false, glAccountOptions, glAccountTypeOptions);
     }
 
-    private TaxComponentData(final Long id, final String name, final BigDecimal percentage, final EnumOptionData debitAccountType,
-            final GLAccountData debitAcount, final EnumOptionData creditAccountType, final GLAccountData creditAcount,
-            final LocalDate startDate, final Collection<TaxComponentHistoryData> taxComponentHistories,
-            final Map<String, List<GLAccountData>> glAccountOptions, final Collection<EnumOptionData> glAccountTypeOptions) {
-        this.id = id;
-        this.percentage = percentage;
-        this.name = name;
-        this.debitAccountType = debitAccountType;
-        this.debitAccount = debitAcount;
-        this.creditAccountType = creditAccountType;
-        this.creditAccount = creditAcount;
-        this.startDate = startDate;
-        this.taxComponentHistories = taxComponentHistories;
-        this.glAccountOptions = glAccountOptions;
-        this.glAccountTypeOptions = glAccountTypeOptions;
-    }
-
-    private TaxComponentData(final Long id, final BigDecimal percentage, final GLAccountData debitAcount,
-            final GLAccountData creditAcount) {
+    private TaxComponentData(final Long id, final BigDecimal percentage, final GLAccountData debitAccount,
+            final GLAccountData creditAccount) {
         this.id = id;
         this.percentage = percentage;
         this.name = null;
         this.debitAccountType = null;
-        this.debitAccount = debitAcount;
+        this.debitAccount = debitAccount;
         this.creditAccountType = null;
-        this.creditAccount = creditAcount;
+        this.creditAccount = creditAccount;
         this.startDate = null;
         this.taxComponentHistories = null;
+        this.editable = false;
         this.glAccountOptions = null;
         this.glAccountTypeOptions = null;
     }
@@ -137,14 +131,7 @@ public final class TaxComponentData implements Serializable {
     }
 
     private boolean occursOnDayFrom(final LocalDate target) {
-        return DateUtils.isAfter(target, startDate());
+        return DateUtils.isAfter(target, getStartDate());
     }
 
-    public LocalDate startDate() {
-        LocalDate startDate = null;
-        if (this.startDate != null) {
-            startDate = this.startDate;
-        }
-        return startDate;
-    }
 }

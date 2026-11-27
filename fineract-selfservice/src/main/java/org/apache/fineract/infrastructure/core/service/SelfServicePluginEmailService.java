@@ -89,6 +89,20 @@ public class SelfServicePluginEmailService implements PlatformEmailService {
     sendDefinedEmail(emailDetail);
   }
 
+  @Override
+  public void sendForgotPasswordEmail(
+      String organisationName, String contactName, String address, String username, String temporaryPassword) {
+    final String subject = "Password Reset Request - " + organisationName;
+    final String body =
+        "Dear " + contactName + ",\n\n" + "You have requested to reset your password for your account on "
+            + organisationName + ".\n\n" + "Your temporary password is: " + temporaryPassword + "\n\n"
+            + "This temporary password will expire in 1 hour.\n\n" + "Please login with your username: " + username
+            + " and this temporary password.\n"
+            + "You will be required to change your password immediately after logging in.\n\n"
+            + "If you did not request this password reset, please contact your system administrator.\n\n" + "Thank you.";
+    sendDefinedEmail(new EmailDetail(subject, body, address, contactName));
+  }
+
   /**
    * Sends an HTML formatted email.
    *

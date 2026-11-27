@@ -7,7 +7,7 @@ public class SelfServiceTokenAuthenticationToken extends AbstractAuthenticationT
   private final String token;
 
   public SelfServiceTokenAuthenticationToken(String token) {
-    super(null);
+    super((java.util.Collection<? extends org.springframework.security.core.GrantedAuthority>) null);
     this.token = token;
     setAuthenticated(false);
   }

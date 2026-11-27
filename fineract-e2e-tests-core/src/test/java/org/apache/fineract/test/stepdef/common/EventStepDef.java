@@ -28,7 +28,6 @@ import org.apache.fineract.test.messaging.event.Event;
 import org.apache.fineract.test.stepdef.AbstractStepDef;
 import org.apache.fineract.test.support.TestContextKey;
 import org.springframework.beans.factory.annotation.Autowired;
-import retrofit2.Response;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class EventStepDef extends AbstractStepDef {
@@ -36,18 +35,10 @@ public class EventStepDef extends AbstractStepDef {
     @Autowired
     private EventAssertion eventAssertion;
 
-    @Then("{string} event has been raised for the loan")
-    public void assertEventRaisedForLoan(String eventType) {
-        Response<PostLoansResponse> loanResponse = testContext().get(TestContextKey.LOAN_CREATE_RESPONSE);
-        long loanId = loanResponse.body().getLoanId();
-        Class<? extends Event> eventTypeClazz = resolveEventType(eventType);
-        eventAssertion.assertEventRaised(eventTypeClazz, loanId);
-    }
-
     @Then("No new event with type {string} has been raised for the loan")
     public void assertEventNotRaisedForLoan(String eventType) {
-        Response<PostLoansResponse> loanResponse = testContext().get(TestContextKey.LOAN_CREATE_RESPONSE);
-        long loanId = loanResponse.body().getLoanId();
+        PostLoansResponse loanResponse = testContext().get(TestContextKey.LOAN_CREATE_RESPONSE);
+        long loanId = loanResponse.getLoanId();
         Class<? extends Event> eventTypeClazz = resolveEventType(eventType);
         eventAssertion.assertEventNotRaised(eventTypeClazz, loanId);
     }

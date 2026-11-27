@@ -6,8 +6,8 @@ import org.apache.fineract.infrastructure.core.exception.MultiException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.portfolio.loanaccount.data.LoanAccrualData;
 import org.apache.fineract.portfolio.loanaccount.service.LoanAccrualsProcessingService;
-import org.springframework.batch.item.Chunk;
-import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.infrastructure.item.Chunk;
+import org.springframework.batch.infrastructure.item.ItemWriter;
 
 import java.time.LocalDate;
 

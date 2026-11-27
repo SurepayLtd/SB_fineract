@@ -26,29 +26,28 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 import lombok.AllArgsConstructor;
-import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
-import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
-import org.apache.fineract.portfolio.loanaccount.domain.ChangedTransactionDetail;
+import org.apache.fineract.infrastructure.event.business.domain.loan.LoanBalanceChangedBusinessEvent;
+import org.apache.fineract.infrastructure.event.business.domain.loan.LoanScheduleVariationsAddedBusinessEvent;
+import org.apache.fineract.infrastructure.event.business.domain.loan.LoanScheduleVariationsDeletedBusinessEvent;
+import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
+import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.portfolio.common.service.Validator;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanAccountDomainService;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTermVariations;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 import org.apache.fineract.portfolio.loanaccount.rescheduleloan.domain.LoanTermVariationsRepository;
 import org.apache.fineract.portfolio.loanaccount.service.LoanAssembler;
-import org.apache.fineract.portfolio.loanaccount.service.ReplayedTransactionBusinessEventService;
+import org.apache.fineract.portfolio.loanaccount.service.LoanScheduleService;
 import org.springframework.transaction.annotation.Transactional;
 
 @AllArgsConstructor
@@ -58,9 +57,9 @@ public class InterestPauseWritePlatformServiceImpl implements InterestPauseWrite
     private final LoanTermVariationsRepository loanTermVariationsRepository;
     private final LoanRepositoryWrapper loanRepositoryWrapper;
     private final LoanAssembler loanAssembler;
-    private final LoanAccountDomainService loanAccountDomainService;
-    private final AccountTransfersService accountTransfersService;
-    private final ReplayedTransactionBusinessEventService replayedTransactionBusinessEventService;
+    private final BusinessEventNotifierService businessEventNotifierService;
+    private final LoanScheduleService loanScheduleService;
+    private final PlatformSecurityContext context;
 
     @Override
     public CommandProcessingResult createInterestPause(final ExternalId loanExternalId, final String startDateString,
@@ -107,6 +106,7 @@ public class InterestPauseWritePlatformServiceImpl implements InterestPauseWrite
     }
 
     private CommandProcessingResult processDeleteInterestPause(Loan loan, Long variationId) {
+        context.validateAccessRights(loan.getOffice().getHierarchy());
         validateActiveLoan(loan);
 
         LoanTermVariations variation = loanTermVariationsRepository
@@ -115,8 +115,16 @@ public class InterestPauseWritePlatformServiceImpl implements InterestPauseWrite
                         "Variation not found for the given loan ID"));
 
         loanTermVariationsRepository.delete(variation);
+        loan.getLoanTermVariations().remove(variation);
 
-        return new CommandProcessingResultBuilder().withEntityId(variationId).build();
+        loanScheduleService.regenerateScheduleWithReprocessingTransactions(loan);
+
+        businessEventNotifierService.notifyPostBusinessEvent(new LoanScheduleVariationsDeletedBusinessEvent(loan));
+        businessEventNotifierService.notifyPostBusinessEvent(new LoanBalanceChangedBusinessEvent(loan));
+
+        return new CommandProcessingResultBuilder() //
+                .withEntityId(variationId) //
+                .build();
     }
 
     private CommandProcessingResult processUpdateInterestPause(Loan loan, Long variationId, String startDateString, String endDateString,
@@ -124,6 +132,7 @@ public class InterestPauseWritePlatformServiceImpl implements InterestPauseWrite
         LocalDate startDate = parseDate(startDateString, dateFormat, locale);
         LocalDate endDate = parseDate(endDateString, dateFormat, locale);
 
+        context.validateAccessRights(loan.getOffice().getHierarchy());
         validateActiveLoan(loan);
 
         LoanTermVariations variation = loanTermVariationsRepository
@@ -138,12 +147,20 @@ public class InterestPauseWritePlatformServiceImpl implements InterestPauseWrite
 
         LoanTermVariations updatedVariation = loanTermVariationsRepository.save(variation);
 
-        return new CommandProcessingResultBuilder().withEntityId(updatedVariation.getId())
-                .with(Map.of("startDate", startDate.toString(), "endDate", endDate.toString())).build();
+        loanScheduleService.regenerateScheduleWithReprocessingTransactions(loan);
+
+        businessEventNotifierService.notifyPostBusinessEvent(new LoanScheduleVariationsAddedBusinessEvent(loan));
+        businessEventNotifierService.notifyPostBusinessEvent(new LoanBalanceChangedBusinessEvent(loan));
+
+        return new CommandProcessingResultBuilder() //
+                .withEntityId(updatedVariation.getId()) //
+                .with(Map.of("startDate", startDate.toString(), "endDate", endDate.toString())) //
+                .build();
     }
 
     private CommandProcessingResult processInterestPause(final Loan loan, final LocalDate startDate, final LocalDate endDate,
             String dateFormat, String locale) {
+        context.validateAccessRights(loan.getOffice().getHierarchy());
         validateActiveLoan(loan);
         validateInterestPauseDates(loan, startDate, endDate, dateFormat, locale, null);
 
@@ -151,24 +168,22 @@ public class InterestPauseWritePlatformServiceImpl implements InterestPauseWrite
                 loan);
 
         final LoanTermVariations savedVariation = loanTermVariationsRepository.saveAndFlush(variation);
-
         loan.getLoanTermVariations().add(savedVariation);
-        final ChangedTransactionDetail changedTransactionDetail = loan.reprocessTransactions();
-        if (changedTransactionDetail != null) {
-            for (final Map.Entry<Long, LoanTransaction> mapEntry : changedTransactionDetail.getNewTransactionMappings().entrySet()) {
-                loanAccountDomainService.saveLoanTransactionWithDataIntegrityViolationChecks(mapEntry.getValue());
-                accountTransfersService.updateLoanTransaction(mapEntry.getKey(), mapEntry.getValue());
-            }
-            replayedTransactionBusinessEventService.raiseTransactionReplayedEvents(changedTransactionDetail);
-        }
 
-        return new CommandProcessingResultBuilder().withEntityId(savedVariation.getId()).build();
+        loanScheduleService.regenerateScheduleWithReprocessingTransactions(loan);
+
+        businessEventNotifierService.notifyPostBusinessEvent(new LoanScheduleVariationsAddedBusinessEvent(loan));
+        businessEventNotifierService.notifyPostBusinessEvent(new LoanBalanceChangedBusinessEvent(loan));
+
+        return new CommandProcessingResultBuilder() //
+                .withEntityId(savedVariation.getId()) //
+                .build();
     }
 
     private void validateInterestPauseDates(Loan loan, LocalDate startDate, LocalDate endDate, String dateFormat, String locale,
             Long currentVariationId) {
 
-        validateOrThrow(baseDataValidator -> {
+        Validator.validateOrThrow("InterestPause", baseDataValidator -> {
             baseDataValidator.reset().parameter("startDate").value(startDate).notBlank();
             baseDataValidator.reset().parameter("endDate").value(endDate).notBlank();
             baseDataValidator.reset().parameter("dateFormat").value(dateFormat).notBlank();
@@ -199,6 +214,11 @@ public class InterestPauseWritePlatformServiceImpl implements InterestPauseWrite
                     "Interest pause is only supported for progressive loans.");
         }
 
+        if (!loan.isInterestBearing()) {
+            throw new GeneralPlatformDomainRuleException("loan.must.be.interest.bearing",
+                    "Interest pause is only supported for interest bearing loans.");
+        }
+
         if (!loan.getLoanRepaymentScheduleDetail().isInterestRecalculationEnabled()) {
             throw new GeneralPlatformDomainRuleException("loan.must.have.recalculate.interest.enabled",
                     "Interest pause is only supported for loans with recalculate interest enabled.");
@@ -219,7 +239,7 @@ public class InterestPauseWritePlatformServiceImpl implements InterestPauseWrite
     }
 
     private void validateActiveLoan(Loan loan) {
-        if (!Objects.equals(loan.getLoanStatus(), ACTIVE.getValue())) {
+        if (!Objects.equals(loan.getLoanStatus(), ACTIVE)) {
             throw new GeneralPlatformDomainRuleException("loan.must.be.active",
                     "Operations on interest pauses are restricted to active loans.");
         }
@@ -233,18 +253,6 @@ public class InterestPauseWritePlatformServiceImpl implements InterestPauseWrite
             throw new PlatformApiDataValidationException("validation.msg.invalid.date.format",
                     String.format("Invalid date format. Provided: %s, Expected format: %s, Locale: %s", date, dateFormat, locale),
                     e.getMessage(), e);
-        }
-    }
-
-    private void validateOrThrow(Consumer<DataValidatorBuilder> baseDataValidator) {
-        final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
-        final DataValidatorBuilder dataValidatorBuilder = new DataValidatorBuilder(dataValidationErrors).resource("InterestPause");
-
-        baseDataValidator.accept(dataValidatorBuilder);
-
-        if (!dataValidationErrors.isEmpty()) {
-            throw new PlatformApiDataValidationException("validation.msg.validation.errors.exist", "Validation errors exist.",
-                    dataValidationErrors);
         }
     }
 }

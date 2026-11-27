@@ -81,7 +81,7 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty("fineract.security.basicauth.enabled")
 @Path("/v1/self/authentication")
 @Tag(
-    name = "Authentication HTTP Basic",
+    name = "Self Authentication",
     description =
         "An API capability that allows client applications to verify authentication details using HTTP Basic Authentication.")
 @RequiredArgsConstructor

@@ -52,6 +52,9 @@ public class JournalEntryCommand {
 
     private final SingleDebitOrCreditEntryCommand[] credits;
     private final SingleDebitOrCreditEntryCommand[] debits;
+    private final String locale;
+    private final String dateFormat;
+    private final String externalAssetOwner;
 
     public void validateForCreate() {
 
@@ -73,10 +76,14 @@ public class JournalEntryCommand {
 
         baseDataValidator.reset().parameter("paymentTypeId").value(this.paymentTypeId).ignoreIfNull().longGreaterThanZero();
 
+        baseDataValidator.reset().parameter(JournalEntryJsonInputParams.EXTERNAL_ASSET_OWNER.getValue()).value(this.externalAssetOwner)
+                .ignoreIfNull().notExceedingLengthOf(100);
+
         // validation for credit array elements
         if (this.credits != null) {
             if (this.credits.length == 0) {
-                validateSingleDebitOrCredit(baseDataValidator, "credits", 0, new SingleDebitOrCreditEntryCommand(null, null, null, null, null));
+                validateSingleDebitOrCredit(baseDataValidator, "credits", 0,
+                        new SingleDebitOrCreditEntryCommand(null, null, null, null, null));
             } else {
                 int i = 0;
                 for (final SingleDebitOrCreditEntryCommand credit : this.credits) {
@@ -89,7 +96,8 @@ public class JournalEntryCommand {
         // validation for debit array elements
         if (this.debits != null) {
             if (this.debits.length == 0) {
-                validateSingleDebitOrCredit(baseDataValidator, "debits", 0, new SingleDebitOrCreditEntryCommand(null, null, null, null, null));
+                validateSingleDebitOrCredit(baseDataValidator, "debits", 0,
+                        new SingleDebitOrCreditEntryCommand(null, null, null, null, null));
             } else {
                 int i = 0;
                 for (final SingleDebitOrCreditEntryCommand debit : this.debits) {

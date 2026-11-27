@@ -21,13 +21,15 @@ package org.apache.fineract.infrastructure.core.service;
 import java.time.LocalDate;
 import java.util.HashMap;
 import org.apache.fineract.infrastructure.businessdate.domain.BusinessDateType;
+import org.apache.fineract.infrastructure.cache.service.ThreadLocalCacheStore;
 import org.apache.fineract.infrastructure.core.domain.ActionContext;
 import org.apache.fineract.infrastructure.core.domain.FineractContext;
 import org.apache.fineract.infrastructure.core.domain.FineractPlatformTenant;
 import org.springframework.util.Assert;
 
 /**
- *
+ * A utility class for managing ThreadLocal context in the application. Provides methods for context initialization and
+ * cleanup.
  */
 public final class ThreadLocalContextUtil {
 
@@ -151,5 +153,8 @@ public final class ThreadLocalContextUtil {
         businessDateContext.remove();
         actionContext.remove();
         commandHandlerDepth.remove();
+        // Transaction-scoped cache entries must not survive from one request (or job execution) to the next.
+        ThreadLocalCacheStore.remove();
     }
+
 }

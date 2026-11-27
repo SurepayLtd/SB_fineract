@@ -67,13 +67,13 @@ class SelfRunReportApiResourceTest {
     when(uriInfo.getQueryParameters(true)).thenReturn(qp);
 
     Response expected = mock(Response.class);
-    when(core.runReport(eq("Client Details"), any(UriInfo.class), eq(true))).thenReturn(expected);
+    when(core.runReport(eq("Client Details"), any(UriInfo.class))).thenReturn(expected);
 
     Response resp = resource.runReport("Client Details", uriInfo);
     org.junit.jupiter.api.Assertions.assertSame(expected, resp);
 
     ArgumentCaptor<UriInfo> captor = ArgumentCaptor.forClass(UriInfo.class);
-    verify(core).runReport(eq("Client Details"), captor.capture(), eq(true));
+    verify(core).runReport(eq("Client Details"), captor.capture());
 
     MultivaluedMap<String, String> forwarded = captor.getValue().getQueryParameters(true);
     // R_* stripped except injected R_clientId

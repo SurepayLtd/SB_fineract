@@ -19,11 +19,13 @@
 package org.apache.fineract.portfolio.loanaccount.loanschedule.data;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.time.LocalDate;
 import lombok.Builder;
 import lombok.Getter;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.core.service.MathUtil;
+import org.apache.fineract.organisation.monetary.domain.MoneyHelper;
 
 /**
  * Immutable data object that represents a period of a loan schedule.
@@ -128,6 +130,12 @@ public final class LoanSchedulePeriodData {
 
     public static LoanSchedulePeriodData downPaymentOnlyPeriod(final Integer periodNumber, final LocalDate periodDate,
             final BigDecimal principalDue, final BigDecimal outstandingLoanBalance) {
+        return downPaymentOnlyPeriod(periodNumber, periodDate, principalDue, outstandingLoanBalance, BigDecimal.ZERO, BigDecimal.ZERO);
+    }
+
+    public static LoanSchedulePeriodData downPaymentOnlyPeriod(final Integer periodNumber, final LocalDate periodDate,
+            final BigDecimal principalDue, final BigDecimal outstandingLoanBalance, final BigDecimal feeDue, final BigDecimal penaltyDue) {
+        final BigDecimal totalDue = MathUtil.add(principalDue, feeDue, penaltyDue);
         return builder().period(periodNumber) //
                 .fromDate(periodDate) //
                 .dueDate(periodDate) //
@@ -135,12 +143,17 @@ public final class LoanSchedulePeriodData {
                 .principalDue(principalDue) //
                 .principalOutstanding(principalDue) //
                 .principalLoanBalanceOutstanding(outstandingLoanBalance) //
-                .totalOriginalDueForPeriod(principalDue) //
-                .totalDueForPeriod(principalDue) //
-                .totalOutstandingForPeriod(principalDue) //
+                .feeChargesDue(feeDue) //
+                .feeChargesOutstanding(feeDue) //
+                .penaltyChargesDue(penaltyDue) //
+                .penaltyChargesOutstanding(penaltyDue) //
+                .totalOriginalDueForPeriod(totalDue) //
+                .totalDueForPeriod(totalDue) //
+                .totalOutstandingForPeriod(totalDue) //
                 .totalInstallmentAmountForPeriod(principalDue) //
+                .totalActualCostOfLoanForPeriod(MathUtil.add(feeDue, penaltyDue)) //
                 .downPaymentPeriod(true) //
-                .totalOverdue(DateUtils.isBeforeBusinessDate(periodDate) ? principalDue : null) //
+                .totalOverdue(DateUtils.isBeforeBusinessDate(periodDate) ? totalDue : null) //
                 .build();
     }
 
@@ -156,11 +169,13 @@ public final class LoanSchedulePeriodData {
             final BigDecimal totalPaidLateForPeriod, final BigDecimal totalWaived, final BigDecimal totalWrittenOff,
             final BigDecimal totalCredits, final boolean isDownPayment, final BigDecimal totalAccruedInterest) {
 
-        BigDecimal totalDue = MathUtil.add(principalOriginalDue, interestDue, feeChargesDue, penaltyChargesDue);
-        BigDecimal totalOutstanding = MathUtil.add(principalOutstanding, interestOutstanding, feeChargesOutstanding,
+        final MathContext mc = MoneyHelper.getMathContext();
+
+        BigDecimal totalDue = MathUtil.add(mc, principalOriginalDue, interestDue, feeChargesDue, penaltyChargesDue);
+        BigDecimal totalOutstanding = MathUtil.add(mc, principalOutstanding, interestOutstanding, feeChargesOutstanding,
                 penaltyChargesOutstanding);
-        BigDecimal totalActualCostOfLoanForPeriod = MathUtil.add(interestDue, feeChargesDue, penaltyChargesDue);
-        BigDecimal totalInstallmentAmount = MathUtil.add(principalOriginalDue, interestDue);
+        BigDecimal totalActualCostOfLoanForPeriod = MathUtil.add(mc, interestDue, feeChargesDue, penaltyChargesDue);
+        BigDecimal totalInstallmentAmount = MathUtil.add(mc, principalOriginalDue, interestDue);
 
         return builder().period(periodNumber) //
                 .fromDate(fromDate) //

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
@@ -12,8 +13,19 @@ import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.portfolio.client.domain.CRBStatus;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
-import org.apache.fineract.portfolio.crb.data.*;
-import org.apache.fineract.portfolio.crb.domain.*;
+import org.apache.fineract.portfolio.crb.domain.CrbCheckRepository;
+import org.apache.fineract.portfolio.crb.domain.CrbConsentRepository;
+import org.apache.fineract.portfolio.crb.domain.CrbConsent;
+import org.apache.fineract.portfolio.crb.domain.ConsentStatus;
+import org.apache.fineract.portfolio.crb.domain.CrbRequestType;
+import org.apache.fineract.portfolio.crb.domain.CrbCheck;
+import org.apache.fineract.portfolio.crb.domain.CrbValidationType;
+import org.apache.fineract.portfolio.crb.data.CrbProviderResult;
+import org.apache.fineract.portfolio.crb.data.CrbApiConstants;
+import org.apache.fineract.portfolio.crb.data.ValidatePersonalInformationRequestData;
+import org.apache.fineract.portfolio.crb.data.ValidatePhoneResponseData;
+import org.apache.fineract.portfolio.crb.data.ValidateNINResponseData;
+import org.apache.fineract.portfolio.crb.data.ValidatePersonalInformationResponseData;
 import org.apache.fineract.portfolio.crb.serializer.CrbDataValidator;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
@@ -36,17 +48,25 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
     private final ObjectMapper objectMapper;
     private final CrbConsentRepository crbConsentRepository;
     private final CrbDataValidator fromApiJsonDeserializer;
+    private final ConfigurationDomainService configurationDomainService;
 
     @Transactional
     @Override
     public CommandProcessingResult crbCheck(Long clientId, JsonCommand command) {
+
+        boolean isCrbEnabled = this.configurationDomainService.isCRBEnabled();
+
+        if (!isCrbEnabled){
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.not.enabled", "CRB not enabled for this Tenant.");
+        }
+
         final Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
 
         this.fromApiJsonDeserializer.validateCrbCheck(command);
 
-        Integer type = command.integerValueOfParameterNamed("crbValidationType");
+        Integer type = command.integerValueOfParameterNamed(CrbApiConstants.crbValidationTypeParamName);
 
-        Integer request = command.integerValueOfParameterNamed("crbRequestType");
+        Integer request = command.integerValueOfParameterNamed(CrbApiConstants.crbRequestTypeParamName);
 
         final CrbConsent crbConsent = this.crbConsentRepository.findVerifiedClient(client.getId(), ConsentStatus.VERIFIED.getValue());
 
@@ -69,7 +89,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
 
 
-        final CrbCheck crbCheck = CrbCheck.create(client, crbConsent, type, CrbRequestType.INITIAL.getValue());
+        final CrbCheck crbCheck = CrbCheck.create(client, null, crbConsent, type, CrbRequestType.INITIAL.getValue());
 
         this.crbCheckRepository.saveAndFlush(crbCheck);
 
@@ -113,7 +133,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
 
     private CommandProcessingResult reCheck(Client client, Integer type, CrbConsent crbConsent) {
 
-        final CrbCheck crbCheck = CrbCheck.create(client, crbConsent, type, CrbRequestType.REVALIDATION.getValue());
+        final CrbCheck crbCheck = CrbCheck.create(client, null, crbConsent, type, CrbRequestType.REVALIDATION.getValue());
 
         this.crbCheckRepository.saveAndFlush(crbCheck);
 
@@ -138,7 +158,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
             }
 
             return new CommandProcessingResultBuilder()
-                    .withEntityId(crbConsent.getId())
+                    .withEntityId(crbCheck.getId())
                     .withClientId(client.getId())
                     .build();
 
@@ -394,6 +414,7 @@ public class CrbCheckWritePlatformServiceImpl implements CrbCheckWritePlatformSe
                 .responsePayload(serializeResponse(responseData))
                 .build();
     }
+
 
     private String resolveValidationMessage(final String errorMessage, final String message) {
 

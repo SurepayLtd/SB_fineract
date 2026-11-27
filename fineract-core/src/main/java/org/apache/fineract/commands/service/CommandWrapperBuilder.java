@@ -4428,4 +4428,22 @@ public class CommandWrapperBuilder {
         this.href = "/working-capital-loans/" + loanId + "/originators/" + originatorId;
         return this;
     }
+
+    public CommandWrapperBuilder createCreditCheck(final Long loanId) {
+        this.actionName = "CREATE";
+        this.entityName = "CRBCREDIT";
+        this.loanId = loanId;
+        this.json = "{}";
+        this.href = "/crbchecks/" + loanId  + "/credit/ " ;
+        return this;
+    }
+
+    public CommandWrapperBuilder createCrbKycCheck(final Long clientId) {
+        this.actionName = "CREATE";
+        this.entityName = "CRBKYC";
+        this.clientId = clientId;
+        this.json = "{}";
+        this.href = "/crbchecks/" + clientId  + "/kyc/ " ;
+        return this;
+    }
 }

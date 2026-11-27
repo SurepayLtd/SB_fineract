@@ -28,9 +28,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.avro.data.Json;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @SuppressWarnings({ "MemberName" })
 @Entity
@@ -41,10 +45,10 @@ import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
 @Accessors(chain = true)
 public class CreditBureauLoanProductMapping extends AbstractPersistableCustom<Long> {
 
-    @Column(name = "is_credit_check_mandatory")
+    @Column(name = "is_creditcheck_mandatory")
     private boolean creditCheckMandatory;
 
-    @Column(name = "skip_credit_check_in_failure")
+    @Column(name = "skip_creditcheck_in_failure")
     private boolean skipCreditCheckInFailure;
 
     @Column(name = "stale_period")
@@ -54,10 +58,11 @@ public class CreditBureauLoanProductMapping extends AbstractPersistableCustom<Lo
     private boolean active;
 
     @ManyToOne
+    @JoinColumn(name = "organisation_creditbureau_id",  nullable = false)
     private OrganisationCreditBureau organisation_creditbureau;
 
     @OneToOne
-    @JoinColumn(name = "loan_product_id")
+    @JoinColumn(name = "loan_product_id", nullable = false)
     private LoanProduct loanProduct;
 
     public static CreditBureauLoanProductMapping fromJson(final JsonCommand command, OrganisationCreditBureau organisation_creditbureau,
@@ -86,5 +91,35 @@ public class CreditBureauLoanProductMapping extends AbstractPersistableCustom<Lo
                 .setSkipCreditCheckInFailure(skipCreditCheckInFailure).setStalePeriod(stalePeriod).setActive(isActive)
                 .setOrganisation_creditbureau(organisation_creditbureau).setLoanProduct(loanProduct);
 
+    }
+
+    public Map<String, Object> changes(final JsonCommand command) {
+        final Map<String, Object> changes = new HashMap<>(4);
+
+        if (command.isChangeInBooleanParameterNamed("isCreditcheckMandatory", this.creditCheckMandatory)) {
+            final boolean newValue = command.booleanPrimitiveValueOfParameterNamed("isCreditcheckMandatory");
+            this.creditCheckMandatory = newValue;
+            changes.put("creditCheckMandatory", newValue);
+        }
+
+        if (command.isChangeInBooleanParameterNamed("skipCreditcheckInFailure", this.skipCreditCheckInFailure)) {
+            final boolean newValue = command.booleanPrimitiveValueOfParameterNamed("skipCreditcheckInFailure");
+            this.skipCreditCheckInFailure = newValue;
+            changes.put("skipCreditcheckInFailure", newValue);
+        }
+
+        if (command.isChangeInIntegerParameterNamed("stalePeriod", this.stalePeriod)) {
+            final int newValue = command.integerValueOfParameterNamed("stalePeriod");
+            this.stalePeriod = newValue;
+            changes.put("stalePeriod", newValue);
+        }
+
+        if (command.isChangeInBooleanParameterNamed("isActive", this.active)) {
+            final boolean newValue = command.booleanPrimitiveValueOfParameterNamed("isActive");
+            this.active = newValue;
+            changes.put("active", newValue);
+        }
+
+        return changes;
     }
 }

@@ -386,4 +386,16 @@
             <column name="text" value="I consent to the verification of my identity and personal information through the Credit Reference Bureau for the purposes of this application."/>
         </insert>
     </changeSet>
+
+    <changeSet id="add-document-to-paper-consent" author="victor">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="m_crb_consent" columnName="document_id"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="m_crb_consent">
+            <column name="document_id" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

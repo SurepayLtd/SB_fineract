@@ -223,4 +223,17 @@ public interface ConfigurationDomainService {
     boolean isCRBValidateNINEnabled();
 
     boolean isCRBValidatePhoneEnabled();
+
+    boolean isCrbKycEnquiryEnabled();
+
+    boolean isCrbCreditEnquiryEnabled();
+
+    boolean isCrbKycReportEnabled();
+
+    boolean isCrbCreditReportEnabled();
+
+    boolean isCrbCreditScoreEnabled();
+
+    Integer retrieveCrbLoanApplicationRequirement();
+
 }

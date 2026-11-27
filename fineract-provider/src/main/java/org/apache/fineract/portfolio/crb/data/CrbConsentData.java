@@ -31,12 +31,13 @@ public final class CrbConsentData {
     private final String revokedByName;
     private final Long reactivatedBy;
     private final String reactivatedByName;
+    private final Long documentId;
     private final Collection<EnumOptionData> consentChannels;
     private final Collection<CodeValueData> narrations;
 
 
     private CrbConsentData(Long id, Long clientId, String clientName, EnumOptionData consentChannel, EnumOptionData consentStatus, String phoneNumber, String consentVersion, LocalDateTime consentedAt, LocalDateTime revokedAt,
-                           LocalDateTime reactivatedAt, Long consentedBy, String consentedByName, Long verifiedBy, String verifiedByName, Long revokedBy, String revokedByName, Long reactivatedBy, String reactivatedByName) {
+                           LocalDateTime reactivatedAt, Long consentedBy, String consentedByName, Long verifiedBy, String verifiedByName, Long revokedBy, String revokedByName, Long reactivatedBy, String reactivatedByName, Long documentId) {
         this.id = id;
         this.clientId = clientId;
         this.clientName = clientName;
@@ -55,6 +56,7 @@ public final class CrbConsentData {
         this.revokedByName = revokedByName;
         this.reactivatedBy = reactivatedBy;
         this.reactivatedByName = reactivatedByName;
+        this.documentId = documentId;
         this.consentChannels = null;
         this.narrations = null;
     }
@@ -79,13 +81,14 @@ public final class CrbConsentData {
         this.revokedByName = null;
         this.reactivatedByName = null;
         this.verifiedByName = null;
+        this.documentId = null;
         this.narrations = narrations;
     }
 
     public static CrbConsentData instance(Long id, Long clientId, String clientName, Integer consentChannel, Integer consentStatus, String phoneNumber, String consentVersion, LocalDateTime consentedAt, LocalDateTime revokedAt,
-                                          LocalDateTime reactivatedAt, Long consentedBy, String consentedByName, Long verifiedBy, String verifiedByName, Long revokedBy, String revokedByName, Long reactivatedBy, String reactivatedByName) {
+                                          LocalDateTime reactivatedAt, Long consentedBy, String consentedByName, Long verifiedBy, String verifiedByName, Long revokedBy, String revokedByName, Long reactivatedBy, String reactivatedByName, Long documentId) {
         return new CrbConsentData(id, clientId, clientName,  getChannel(consentChannel), getStatus(consentStatus), phoneNumber, consentVersion, consentedAt,
-                revokedAt, reactivatedAt, consentedBy, consentedByName, verifiedBy, verifiedByName, revokedBy, revokedByName, reactivatedBy, reactivatedByName
+                revokedAt, reactivatedAt, consentedBy, consentedByName, verifiedBy, verifiedByName, revokedBy, revokedByName, reactivatedBy, reactivatedByName, documentId
         );
     }
 

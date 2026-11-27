@@ -9,9 +9,16 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.commands.domain.CommandWrapper;
@@ -19,17 +26,16 @@ import org.apache.fineract.commands.service.CommandWrapperBuilder;
 import org.apache.fineract.commands.service.PortfolioCommandSourceWritePlatformService;
 import org.apache.fineract.infrastructure.core.api.ApiRequestParameterHelper;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
-import org.apache.fineract.infrastructure.core.exception.UnrecognizedQueryParamException;
 import org.apache.fineract.infrastructure.core.serialization.ApiRequestJsonSerializationSettings;
 import org.apache.fineract.infrastructure.core.serialization.ToApiJsonSerializer;
-import org.apache.fineract.infrastructure.core.service.CommandParameterUtil;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.portfolio.crb.data.CrbApiConstants;
 import org.apache.fineract.portfolio.crb.data.CrbCheckData;
-import org.apache.fineract.portfolio.crb.data.CrbConsentData;
+import org.apache.fineract.portfolio.crb.data.CrbReportFetchResult;
 import org.apache.fineract.portfolio.crb.service.CrbCheckReadServicePlatform;
 import org.springframework.stereotype.Component;
 
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
@@ -51,7 +57,7 @@ public class CrbCheckApiResource {
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Retrieve CRB Checks", description = "Retrieves the saved CRB validation checks for a client, including their statuses and provider results.")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.GetCrbChecksResponse.class)))})
-    public String retrieveChecks(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId, @Context final UriInfo uriInfo) {
+    public String retrieveClientChecks(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId, @Context final UriInfo uriInfo) {
 
         context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_CHECK_RESOURCE_NAME);
 
@@ -59,7 +65,84 @@ public class CrbCheckApiResource {
             throw new IllegalArgumentException("clientId is required");
         }
 
-        final List<CrbCheckData> checks = crbCheckReadService.retrieveChecks(clientId);
+        final List<CrbCheckData> checks = crbCheckReadService.retrieveClientChecks(clientId);
+
+        final ApiRequestJsonSerializationSettings settings = apiRequestParameterHelper.process(uriInfo.getQueryParameters());
+
+        return toApiJsonSerializer.serialize(settings, checks);
+    }
+
+    @GET
+    @Path("{checkId}/report-pdf")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces("application/pdf")
+    @Operation(summary = "Retrieve CRB Credit Reports", description = "Retrieves the saved CRB Credit Report Url")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "OK")})
+    public Response proxyCreditReportPdf(@PathParam("checkId") @Parameter(description = "Report Check ID", required = true) final Long checkId, @Context final UriInfo uriInfo) {
+
+        context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_CHECK_RESOURCE_NAME);
+
+        if (checkId == null) {
+            throw new IllegalArgumentException("checkId is required");
+        }
+
+        final CrbReportFetchResult result = crbCheckReadService.fetchPdf(checkId);
+
+        if (result.isSuccess()) {
+            final InputStream stream = result.getStream();
+            return Response.ok(stream)
+                    .header("Content-Type", "application/pdf")
+                    .header("Content-Length", result.getLength())
+                    .header("Content-Disposition",
+                            "inline; filename=\"CRB_Report_" + checkId + ".pdf\"")
+                    .build();
+        }
+        if (result.isUpstreamError()) {
+            // Forward whatever the CRB said (404, 500, 401…) so the
+            // frontend can show an accurate message.
+            return Response.status(result.getStatusCode()).build();
+        }
+        return Response.serverError()
+                .entity("Failed to fetch CRB report: " + result.getError())
+                .build();
+    }
+
+    @GET
+    @Path("{clientId}/kyc")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Retrieve Kyc Checks", description = "Retrieves the saved CRB kyc checks for a client, including their statuses and provider results.")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.GetCrbChecksResponse.class)))})
+    public String retrieveKycChecks(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId, @QueryParam("type") @Parameter(description = "Validation Type", required = true) final Integer type, @Context final UriInfo uriInfo) {
+
+        context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_KYC_RESOURCE_NAME);
+
+        if (clientId == null || type == null) {
+            throw new IllegalArgumentException("clientId is required");
+        }
+
+        final List<CrbCheckData> checks = crbCheckReadService.retrieveKycChecks(clientId, type);
+
+        final ApiRequestJsonSerializationSettings settings = apiRequestParameterHelper.process(uriInfo.getQueryParameters());
+
+        return toApiJsonSerializer.serialize(settings, checks);
+    }
+
+    @GET
+    @Path("{loanId}/credit")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Retrieve CRB Credit Checks", description = "Retrieves the saved CRB credit validation checks for a client, including their statuses and provider results.")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.GetCrbChecksResponse.class)))})
+    public String retrieveCreditChecks(@PathParam("loanId") @Parameter(description = "Loan ID", required = true) final Long loanId, @QueryParam("type") @Parameter(description = "Validation Type", required = true) final Integer type, @Context final UriInfo uriInfo) {
+
+        context.authenticatedUser().validateHasReadPermission(CrbApiConstants.CRB_CREDIT_RESOURCE_NAME);
+
+        if (loanId == null || type == null) {
+            throw new IllegalArgumentException("loanId/Type is required");
+        }
+
+        final List<CrbCheckData> checks = crbCheckReadService.retrieveCreditChecks(loanId, type);
 
         final ApiRequestJsonSerializationSettings settings = apiRequestParameterHelper.process(uriInfo.getQueryParameters());
 
@@ -86,6 +169,62 @@ public class CrbCheckApiResource {
 
         final CommandWrapper commandRequest = new CommandWrapperBuilder()
                 .createCrbCheck(clientId)
+                .withJson(apiRequestBodyAsJson)
+                .build();
+
+        final CommandProcessingResult result = commandsSourceWritePlatformService.logCommandSource(commandRequest);
+
+        return toApiJsonSerializer.serialize(result);
+    }
+
+    @POST
+    @Path("{clientId}/kyc")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Create KYC Check", description = "Creates and executes an initial CRB KYC validation check for a client with verified, non-revoked consent.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.PostCrbKycRequest.class)))
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "CRB Kyc check processed successfully", content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.PostCrbCheckResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request or missing verified consent"),
+            @ApiResponse(responseCode = "404", description = "Client not found")
+    })
+    public String createKycCheck(@PathParam("clientId") @Parameter(description = "Client ID", required = true) final Long clientId,
+                         @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+
+
+        if (clientId == null) {
+            throw new IllegalArgumentException("clientId is required");
+        }
+
+        final CommandWrapper commandRequest = new CommandWrapperBuilder()
+                .createCrbKycCheck(clientId)
+                .withJson(apiRequestBodyAsJson)
+                .build();
+
+        final CommandProcessingResult result = commandsSourceWritePlatformService.logCommandSource(commandRequest);
+
+        return toApiJsonSerializer.serialize(result);
+    }
+
+    @POST
+    @Path("{loanId}/credit")
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Operation(summary = "Create CRB Credit Check", description = "Creates and executes an initial CRB Credit validation check for a client with verified, non-revoked consent.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.PostCrbCreditRequest.class)))
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "CRB check processed successfully", content = @Content(schema = @Schema(implementation = CrbCheckApiResourceSwagger.PostCrbCheckResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request or missing verified consent"),
+            @ApiResponse(responseCode = "404", description = "Client not found")
+    })
+    public String createCreditCheck(@PathParam("loanId") @Parameter(description = "Loan ID", required = true) final Long loanId,
+                         @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+
+
+        if (loanId == null) {
+            throw new IllegalArgumentException("loanId is required");
+        }
+
+        final CommandWrapper commandRequest = new CommandWrapperBuilder()
+                .createCreditCheck(loanId)
                 .withJson(apiRequestBodyAsJson)
                 .build();
 

@@ -739,4 +739,45 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
         return Arrays.stream(property.getStringValue().split(",")).map(String::trim).filter(StringUtils::isNotEmpty)
                 .collect(Collectors.toUnmodifiableSet());
     }
+
+
+    @Override
+    public boolean isCrbKycEnquiryEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_KYC_ENQUIRY).isEnabled();
+    }
+
+    @Override
+    public boolean isCrbCreditEnquiryEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_CREDIT_ENQUIRY).isEnabled();
+    }
+
+    @Override
+    public boolean isCrbCreditScoreEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_CREDIT_SCORE).isEnabled();
+    }
+
+    @Override
+    public boolean isCrbKycReportEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_KYC_REPORT).isEnabled();
+    }
+
+    @Override
+    public boolean isCrbCreditReportEnabled() {
+        return getGlobalConfigurationPropertyData(GlobalConfigurationConstants.ENABLE_SUREPAY_CRB_CREDIT_REPORT).isEnabled();
+    }
+
+    @Override
+    public Integer retrieveCrbLoanApplicationRequirement() {
+        String name = "crb-loan-approval-requirement";
+        GlobalConfigurationPropertyData property = getGlobalConfigurationPropertyData(name);
+        int defaultValue = 3;
+        if (property.isEnabled()){
+            int value = property.getValue().intValue();
+            if (value <1){
+                return defaultValue;
+            }
+            return value;
+        }
+        return defaultValue;
+    }
 }

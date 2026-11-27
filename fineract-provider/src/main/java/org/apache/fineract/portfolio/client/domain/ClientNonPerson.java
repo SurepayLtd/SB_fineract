@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.codes.domain.CodeValue;
@@ -41,8 +42,8 @@ import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.portfolio.client.api.ClientApiConstants;
 
 @Entity
-@Getter
 @Table(name = "m_client_non_person")
+@Getter
 public class ClientNonPerson extends AbstractPersistableCustom<Long> {
 
     @OneToOne(optional = false)

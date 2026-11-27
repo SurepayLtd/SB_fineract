@@ -343,7 +343,7 @@ public class Client extends AbstractAuditableWithUTCDateTimeCustom<Long> {
         this.clientClassification = clientClassification;
         this.setLegalForm(legalForm);
         this.isStaff = isStaff;
-        this.nationalId = nationalId;
+        this.nationalId = nationalId.toUpperCase();
         this.cardNumber = cardNumber;
         this.crbVerificationStatus = CRBStatus.NOT_STARTED.getValue();
         deriveDisplayName();

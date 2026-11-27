@@ -7,7 +7,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
-import org.apache.fineract.portfolio.crb.data.*;
+import org.apache.fineract.portfolio.crb.data.ValidatePersonalInformationResponseData;
+import org.apache.fineract.portfolio.crb.data.CreditReportPdfResponseData;
+import org.apache.fineract.portfolio.crb.data.CreditReportJsonResponseData;
+import org.apache.fineract.portfolio.crb.data.CreditScoreResponseData;
+import org.apache.fineract.portfolio.crb.data.CreditScoreRequestData;
+import org.apache.fineract.portfolio.crb.data.CreditReportRequestData;
+import org.apache.fineract.portfolio.crb.data.CreditEnquiryRequestData;
+import org.apache.fineract.portfolio.crb.data.CreditEnquiryResponseData;
+import org.apache.fineract.portfolio.crb.data.KycReportResponseJsonData;
+import org.apache.fineract.portfolio.crb.data.KycReportRequestData;
+import org.apache.fineract.portfolio.crb.data.KycEnquiryRequestData;
+import org.apache.fineract.portfolio.crb.data.KycEnquiryResponseData;
+import org.apache.fineract.portfolio.crb.data.ValidatePhoneResponseData;
+import org.apache.fineract.portfolio.crb.data.ValidateNINResponseData;
+import org.apache.fineract.portfolio.crb.data.ValidatePersonalInformationRequestData;
+import org.apache.fineract.portfolio.crb.data.GnugridTokenResponse;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,6 +36,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Predicate;
 
 @Service
 @RequiredArgsConstructor
@@ -29,11 +45,218 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
 
     private final Environment env;
     private final ConfigurationDomainService configurationDomainService;
+    private final ObjectMapper objectMapper;
+
+
+
 
     @Override
-    public ValidatePersonalInformationResponseData validatePersonalInfo(ValidatePersonalInformationRequestData requestData) {
+    public CreditScoreResponseData creditScore(CreditScoreRequestData creditScoreRequestData) {
 
-        ValidatePersonalInformationResponseData responseData;
+        boolean isCrbCreditScoreEnquiryEnabled = configurationDomainService.isCrbCreditScoreEnabled();
+
+        if (!isCrbCreditScoreEnquiryEnabled) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.credit.score.disabled", "CRB Credit Score is disabled.");
+        }
+        final String endpoint = "credit-enquiries/credit-scores";
+
+        final String url = baseUrl() + endpoint;
+
+        final var responseData = executeCrbRequest(
+                url,
+                HttpMethod.POST,
+                creditScoreRequestData,
+                CreditScoreResponseData.class,
+                "error.msg.crb.credit.enquiry.invalid.response",
+                "Credit Enquiry returned an invalid personal information validation response..",
+                response -> response.getData() != null,
+                "error.msg.crb.credit.enquiry.request.failed",
+                "error.msg.crb.credit.enquiry.connection.failed"
+        );
+
+//        log.info("Credit Score: {}", responseData);
+
+        return responseData;
+    }
+
+    @Override
+    public CreditReportJsonResponseData creditReport(CreditReportRequestData creditReportRequestData) {
+
+        boolean isCrbReportEnquiryEnabled = configurationDomainService.isCrbCreditReportEnabled();
+
+        if (!isCrbReportEnquiryEnabled) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.credit.report.disabled", "CRB Credit ENQUIRY is disabled.");
+        }
+
+        final boolean hasIndividualId = creditReportRequestData.getIndividual_id() != null;
+
+        final boolean hasNonIndividualId = creditReportRequestData.getNon_individual_id() != null;
+
+        if (hasIndividualId == hasNonIndividualId) {
+            throw new GeneralPlatformDomainRuleException("error.msg.credit.identifier.invalid", "Exactly one identifier must be provided: individual_id or non_individual_id.");
+        }
+
+        final String endpoint = hasIndividualId ? "credit-enquiries/individual/credit-report" : "credit-enquiries/non-individual/credit-report";
+
+        final String url = baseUrl() + endpoint;
+
+        final var responseData = executeCrbRequest(
+                url,
+                HttpMethod.POST,
+                creditReportRequestData,
+                CreditReportJsonResponseData.class,
+                "error.msg.crb.credit.report.invalid.response",
+                "Credit Report returned an invalid personal information validation response..",
+                response -> response.getCreditInformation() != null,
+                "error.msg.crb.report.enquiry.request.failed",
+                "error.msg.crb.report.enquiry.connection.failed"
+        );
+
+//        log.info("Credit Report: {}", responseData);
+
+        return responseData;
+    }
+
+    @Override
+    public CreditReportPdfResponseData creditPdfReport(CreditReportRequestData creditReportRequestData) {
+
+        boolean isCrbReportEnquiryEnabled = configurationDomainService.isCrbCreditReportEnabled();
+
+        if (!isCrbReportEnquiryEnabled) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.credit.report.disabled", "CRB Credit ENQUIRY is disabled.");
+        }
+
+        final boolean hasIndividualId = creditReportRequestData.getIndividual_id() != null;
+
+        final boolean hasNonIndividualId = creditReportRequestData.getNon_individual_id() != null;
+
+        if (hasIndividualId == hasNonIndividualId) {
+            throw new GeneralPlatformDomainRuleException("error.msg.credit.identifier.invalid", "Exactly one identifier must be provided: individual_id or non_individual_id.");
+        }
+
+        final String endpoint = hasIndividualId ? "credit-enquiries/individual/credit-report" : "credit-enquiries/non-individual/credit-report";
+
+        final String url = baseUrl() + endpoint;
+
+        final var responseData = executeCrbRequest(
+                url,
+                HttpMethod.POST,
+                creditReportRequestData,
+                CreditReportPdfResponseData.class,
+                "error.msg.crb.credit.report.invalid.response",
+                "Credit Report returned an invalid personal information validation response..",
+                response -> response.getToken() != null,
+                "error.msg.crb.report.enquiry.request.failed",
+                "error.msg.crb.report.enquiry.connection.failed"
+        );
+
+//        log.info("Credit Report: {}", responseData);
+
+        return responseData;
+    }
+
+    @Override
+    public CreditEnquiryResponseData creditEnquiry(CreditEnquiryRequestData creditEnquiryRequestData) {
+        boolean isCrbCreditEnquiryEnabled = configurationDomainService.isCrbCreditEnquiryEnabled();
+
+        if (!isCrbCreditEnquiryEnabled) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.credit.enquiry.disabled", "CRB Credit ENQUIRY is disabled.");
+        }
+        final String endpoint = "credit-enquiries/request/new";
+
+        final String url = baseUrl() + endpoint;
+
+        final var responseData = executeCrbRequest(
+                url,
+                HttpMethod.POST,
+                creditEnquiryRequestData,
+                CreditEnquiryResponseData.class,
+                "error.msg.crb.credit.enquiry.invalid.response",
+                "Credit Enquiry returned an invalid personal information validation response..",
+                response -> response.getEnquiry() != null,
+                "error.msg.crb.credit.enquiry.request.failed",
+                "error.msg.crb.credit.enquiry.connection.failed"
+        );
+
+//        log.info("Credit Enquiry: {}", responseData);
+
+        return responseData;
+    }
+
+    @Override
+    public KycReportResponseJsonData kycReport(final KycReportRequestData kycReportRequestData) {
+
+        boolean isKycReportEnabled = configurationDomainService.isCrbKycReportEnabled();
+
+
+        if (!isKycReportEnabled) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.kyc.report.disabled", "CRB KYC REPORT is disabled.");
+        }
+
+        final boolean hasIndividualId = kycReportRequestData.getIndividual_id() != null;
+
+        final boolean hasNonIndividualId = kycReportRequestData.getNon_individual_id() != null;
+
+        if (hasIndividualId == hasNonIndividualId) {
+            throw new GeneralPlatformDomainRuleException("error.msg.kyc.identifier.invalid", "Exactly one identifier must be provided: individual_id or non_individual_id.");
+        }
+
+        final String endpoint = hasIndividualId ? "kyc-enquiries/individual/kyc-report" : "kyc-enquiries/non-individual/kyc-report";
+
+        final String url = baseUrl() + endpoint;
+
+        final var responseData = executeCrbRequest(
+                url,
+                HttpMethod.POST,
+                kycReportRequestData,
+                KycReportResponseJsonData.class,
+                "error.msg.crb.kyc.report.invalid.response",
+                "KYC Report returned an invalid personal information validation response.",
+                response -> response.getKycInformation() != null,
+                "error.msg.crb..kyc.report.request.failed",
+                "error.msg.crb..kyc.report.connection.failed"
+        );
+
+        log.info("KYC Report: {}", responseData);
+
+        return responseData;
+    }
+
+
+    @Override
+    public KycEnquiryResponseData validateKyc(final KycEnquiryRequestData kycEnquiryRequestData) {
+
+
+        boolean isKycEnquiryEnabled = configurationDomainService.isCrbKycEnquiryEnabled();
+
+        if (!isKycEnquiryEnabled) {
+            throw new GeneralPlatformDomainRuleException("error.msg.crb.kyc.enquiry.disabled", "CRB KYC ENQUIRY is disabled.");
+        }
+
+        final String endpoint = "kyc-enquiries/request/new";
+
+        final String url = baseUrl() + endpoint;
+
+        final var responseData = executeCrbRequest(
+                url,
+                HttpMethod.POST,
+                kycEnquiryRequestData,
+                KycEnquiryResponseData.class,
+                "error.msg.crb.kyc.enquiry.invalid.response",
+                "KYC Enquiry returned an invalid personal information validation response..",
+                response -> response.getEnquiry() != null,
+                "error.msg.crb.kyc.enquiry.request.failed",
+                "error.msg.crb.kyc.enquiry.connection.failed"
+        );
+
+//        log.info("KYC Enquiry: {}", responseData);
+
+        return responseData;
+    }
+
+    @Override
+    public ValidatePersonalInformationResponseData validatePersonalInfo( final ValidatePersonalInformationRequestData requestData) {
+
 
         boolean isValidateInfoEnabled = configurationDomainService.isCRBValidateDetailsEnabled();
 
@@ -41,48 +264,25 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
             throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.disabled", "CRB personal information validation is disabled.");
         }
 
-        String accessToken = getCrbAccessToken();
-        RestTemplate restTemplate = new RestTemplate();
-        String url = baseUrl() + "validate-personal-info";
+        final String endpoint = "validate-personal-info";
 
-        try {
+        final String url = baseUrl() + endpoint;
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setAccept(MediaType.parseMediaTypes(MediaType.APPLICATION_JSON_VALUE));
-            headers.setBearerAuth(accessToken);
+        var responseData = executeCrbRequest(
+                url,
+                HttpMethod.POST,
+                requestData,
+                ValidatePersonalInformationResponseData.class,
+                "error.msg.crb.validation.invalid.response",
+                "CRB returned an invalid personal information validation response..",
+                response -> response.getValidation() != null,
+                "error.msg.crb.validation.request.failed",
+                "error.msg.crb.validation.connection.failed"
+        );
 
-            HttpEntity<ValidatePersonalInformationRequestData> entity = new HttpEntity<>(requestData, headers);
+        //log.info("Personal Details: {}", responseData);
 
-            ResponseEntity<ValidatePersonalInformationResponseData> response = restTemplate.exchange(url, HttpMethod.POST, entity, ValidatePersonalInformationResponseData.class);
-
-            int code = response.getStatusCode().value();
-
-            responseData = response.getBody();
-
-            if (code != 200 || responseData == null || responseData.getValidation() == null) {
-
-                throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.invalid.response",
-                        "CRB returned an invalid personal information validation response.");
-            }
-            log.info("Personal Details: {}", responseData);
-
-            return responseData;
-
-
-        }catch (final HttpStatusCodeException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.request.failed",
-                    "CRB personal information validation failed with HTTP status "
-                            + exception.getStatusCode().value() + "."
-            );
-
-        } catch (final RestClientException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.connection.failed",
-                    "Unable to communicate with the CRB validation service."
-            );
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return responseData;
 
     }
 
@@ -96,48 +296,25 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
             throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.disabled", "CRB personal information validation is disabled.");
         }
 
-        String accessToken = getCrbAccessToken();
-        RestTemplate restTemplate = new RestTemplate();
-        String url = baseUrl() + "personal-info-validation" + "/" + validationId.trim();
+        final String endpoint = "personal-info-validation" + "/" + validationId.trim();
 
-        try {
+        final String url = baseUrl() + endpoint;
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setAccept(MediaType.parseMediaTypes(MediaType.APPLICATION_JSON_VALUE));
-            headers.setBearerAuth(accessToken);
+        responseData = executeCrbRequest(
+                url,
+                HttpMethod.GET,
+                null,
+                ValidatePersonalInformationResponseData.class,
+                "error.msg.crb.validation.invalid.response",
+                "CRB returned an invalid personal information validation response...",
+                response -> response.getValidation() != null,
+                "error.msg.crb.validation.request.failed",
+                "error.msg.crb.validation.connection.failed"
+        );
 
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
+        //log.info("Personal Details: {}", responseData);
 
-            ResponseEntity<ValidatePersonalInformationResponseData> response = restTemplate.exchange(url, HttpMethod.GET, entity, ValidatePersonalInformationResponseData.class);
-
-            int code = response.getStatusCode().value();
-
-            responseData = response.getBody();
-
-            if (code != 200 || responseData == null || responseData.getValidation() == null) {
-
-                throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.invalid.response",
-                        "CRB returned an invalid personal information validation response.");
-            }
-            log.info("Personal Details: {}", responseData);
-
-            return responseData;
-
-
-        }catch (final HttpStatusCodeException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.request.failed",
-                    "CRB personal information validation failed with HTTP status "
-                            + exception.getStatusCode().value() + "."
-            );
-
-        } catch (final RestClientException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.validation.connection.failed",
-                    "Unable to communicate with the CRB validation service."
-            );
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return responseData;
     }
 
     @Override
@@ -150,50 +327,28 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
             throw new GeneralPlatformDomainRuleException("error.msg.crb.nin.validation.disabled", "CRB NIN validation is disabled.");
         }
 
-        String accessToken = getCrbAccessToken();
-        RestTemplate restTemplate = new RestTemplate();
-        String url = baseUrl() + "validate-nin";
+        Map<String, String> requestBody = new HashMap<>();
+        requestBody.put("nin", ninNumber);
 
-        try {
+        final String endpoint = "validate-nin";
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setAccept(MediaType.parseMediaTypes(MediaType.APPLICATION_JSON_VALUE));
-            headers.setBearerAuth(accessToken);
+        final String url = baseUrl() + endpoint;
 
-            Map<String, String> requestBody = new HashMap<>();
-            requestBody.put("nin", ninNumber);
+        responseData = executeCrbRequest(
+                url,
+                HttpMethod.POST,
+                requestBody,
+                ValidateNINResponseData.class,
+                "error.msg.crb.nin.validation.invalid.response",
+                "CRB returned an invalid NIN validation response..",
+                response -> response.getValidation() != null,
+                "error.msg.crb.nin.validation.request.failed",
+                "error.msg.crb.nin.validation.connection.failed"
+        );
 
-            HttpEntity<Map<String, String>> entity = new HttpEntity<>(requestBody,headers);
+        //log.info("NinData: {}", responseData);
 
-            ResponseEntity<ValidateNINResponseData> response = restTemplate.exchange(url, HttpMethod.POST, entity, ValidateNINResponseData.class);
-
-            int code = response.getStatusCode().value();
-
-            responseData = response.getBody();
-
-            if (code != 200 || responseData == null || responseData.getValidation() == null) {
-
-                throw new GeneralPlatformDomainRuleException("error.msg.crb.nin.validation.invalid.response",
-                        "CRB returned an invalid NIN validation response.");
-            }
-            log.info("NinData: {}", responseData);
-            return responseData;
-
-
-        }catch (final HttpStatusCodeException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.nin.validation.request.failed",
-                    "CRB NIN validation failed with HTTP status "
-                            + exception.getStatusCode().value() + "."
-            );
-
-        } catch (final RestClientException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.nin.validation.connection.failed",
-                    "Unable to communicate with the CRB NIN service."
-            );
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return responseData;
     }
 
     @Override
@@ -206,48 +361,25 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
             throw new GeneralPlatformDomainRuleException("error.msg.crb.nin.validation.disabled", "CRB NIN validation is disabled.");
         }
 
-        String accessToken = getCrbAccessToken();
-        RestTemplate restTemplate = new RestTemplate();
-        String url = baseUrl() + "nin-validation" + "/" + validationId.trim();
+        final String endpoint = "nin-validation" + "/" + validationId.trim();
 
-        try {
+        final String url = baseUrl() + endpoint;
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setAccept(MediaType.parseMediaTypes(MediaType.APPLICATION_JSON_VALUE));
-            headers.setBearerAuth(accessToken);
+        responseData = executeCrbRequest(
+                url,
+                HttpMethod.GET,
+                null,
+                ValidateNINResponseData.class,
+                "error.msg.crb.nin.validation.invalid.response",
+                "CRB returned an invalid NIN validation response.",
+                response -> response.getValidation() != null,
+                "error.msg.crb.nin.validation.request.failed",
+                "error.msg.crb.nin.validation.connection.failed"
+        );
 
+        //log.info("NinData: {}", responseData);
 
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<ValidateNINResponseData> response = restTemplate.exchange(url, HttpMethod.GET, entity, ValidateNINResponseData.class);
-
-            int code = response.getStatusCode().value();
-
-            responseData = response.getBody();
-
-            if (code != 200 || responseData == null || responseData.getValidation() == null) {
-
-                throw new GeneralPlatformDomainRuleException("error.msg.crb.nin.validation.invalid.response",
-                        "CRB returned an invalid NIN validation response.");
-            }
-            log.info("NinData: {}", responseData);
-            return responseData;
-
-
-        }catch (final HttpStatusCodeException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.nin.validation.request.failed",
-                    "CRB NIN validation failed with HTTP status "
-                            + exception.getStatusCode().value() + "."
-            );
-
-        } catch (final RestClientException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.nin.validation.connection.failed",
-                    "Unable to communicate with the CRB NIN service."
-            );
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return responseData;
     }
 
     @Override
@@ -260,50 +392,28 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
             throw new GeneralPlatformDomainRuleException("error.msg.crb.phone.validation.disabled", "CRB Phone Number validation is disabled.");
         }
 
-        String accessToken = getCrbAccessToken();
-        RestTemplate restTemplate = new RestTemplate();
-        String url = baseUrl() + "validate-phone";
+        final String endpoint = "validate-phone";
 
-        try {
+        final String url = baseUrl() + endpoint;
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setAccept(MediaType.parseMediaTypes(MediaType.APPLICATION_JSON_VALUE));
-            headers.setBearerAuth(accessToken);
+        Map<String, String> requestBody = new HashMap<>();
+        requestBody.put("phonenumber", phone);
 
-            Map<String, String> requestBody = new HashMap<>();
-            requestBody.put("phonenumber", phone);
+        responseData = executeCrbRequest(
+                url,
+                HttpMethod.POST,
+                requestBody,
+                ValidatePhoneResponseData.class,
+                "error.msg.crb.phone.validation.invalid.response",
+                "CRB returned an invalid Phone Number validation response.",
+                response -> response.getValidation() != null,
+                "error.msg.crb.phone.validation.request.failed",
+                "error.msg.crb.phone.validation.connection.failed"
+        );
 
-            HttpEntity<Map<String, String>> entity = new HttpEntity<>(requestBody,headers);
+        //log.info("Phone Data: {}", responseData);
 
-            ResponseEntity<ValidatePhoneResponseData> response = restTemplate.exchange(url, HttpMethod.POST, entity, ValidatePhoneResponseData.class);
-
-            int code = response.getStatusCode().value();
-
-            responseData = response.getBody();
-
-            if (code != 200 || responseData == null || responseData.getValidation() == null) {
-
-                throw new GeneralPlatformDomainRuleException("error.msg.crb.phone.validation.invalid.response",
-                        "CRB returned an invalid Phone Number validation response.");
-            }
-            log.info("PhoneData: {}", responseData);
-            return responseData;
-
-
-        }catch (final HttpStatusCodeException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.phone.validation.request.failed",
-                    "CRB Phone Number validation failed with HTTP status "
-                            + exception.getStatusCode().value() + "."
-            );
-
-        } catch (final RestClientException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.phone.validation.connection.failed",
-                    "Unable to communicate with the Phone Number service."
-            );
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return responseData;
     }
 
     @Override
@@ -316,47 +426,26 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
             throw new GeneralPlatformDomainRuleException("error.msg.crb.phone.validation.disabled", "CRB Phone Number validation is disabled.");
         }
 
-        String accessToken = getCrbAccessToken();
-        RestTemplate restTemplate = new RestTemplate();
-        String url = baseUrl() + "phone-validation" + "/" + validationId.trim();
+        final String endpoint = "phone-validation" + "/" + validationId.trim();
 
-        try {
+        final String url = baseUrl() + endpoint;
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setAccept(MediaType.parseMediaTypes(MediaType.APPLICATION_JSON_VALUE));
-            headers.setBearerAuth(accessToken);
+        responseData = executeCrbRequest(
+                url,
+                HttpMethod.GET,
+                null,
+                ValidatePhoneResponseData.class,
+                "error.msg.crb.phone.validation.invalid.response",
+                "CRB returned an invalid Phone Number validation response.",
+                response -> response.getValidation() != null,
+                "error.msg.crb.phone.validation.request.failed",
+                "error.msg.crb.phone.validation.connection.failed"
+        );
 
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
+        //log.info("Phone Data: {}", responseData);
 
-            ResponseEntity<ValidatePhoneResponseData> response = restTemplate.exchange(url, HttpMethod.GET, entity, ValidatePhoneResponseData.class);
+        return responseData;
 
-            int code = response.getStatusCode().value();
-
-            responseData = response.getBody();
-
-            if (code != 200 || responseData == null || responseData.getValidation() == null) {
-
-                throw new GeneralPlatformDomainRuleException("error.msg.crb.phone.validation.invalid.response",
-                        "CRB returned an invalid Phone Number validation response.");
-            }
-            log.info("PhoneData: {}", responseData);
-            return responseData;
-
-
-        }catch (final HttpStatusCodeException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.phone.validation.request.failed",
-                    "CRB Phone Number validation failed with HTTP status "
-                            + exception.getStatusCode().value() + "."
-            );
-
-        } catch (final RestClientException exception) {
-            throw new GeneralPlatformDomainRuleException("error.msg.crb.phone.validation.connection.failed",
-                    "Unable to communicate with the Phone Number service."
-            );
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private String getProperty(String property){
@@ -403,7 +492,7 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                     );
 
                 }
-                log.info("AccessToken: {}", tokenResponse.getAccess_token());
+                //log.info("AccessToken: {}", tokenResponse.getAccess_token());
                 return tokenResponse.getAccess_token();
 
 
@@ -430,7 +519,8 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
                 }
 
             } catch (Exception e) {
-                return e.getMessage();
+                throw new GeneralPlatformDomainRuleException("error.msg.crb.authentication.failed", "Unable to authenticate with the CRB service."
+                );
             }
         }else {
             log.info("** CRB is disabled for this Tenant :-> " + ThreadLocalContextUtil.getTenant().getName());
@@ -444,4 +534,67 @@ public class GnugridNotificationWritePlatformServiceImpl implements GnugridNotif
     private String baseUrl(){
         return getProperty("crb.base.url");
     }
+
+
+    /**
+     * Executes an authenticated request against the Gnugrid CRB API.
+     *
+     * @param url CRB endpoint URL
+     * @param method HTTP method
+     * @param requestBody request payload (can be null for GET requests)
+     * @param responseType expected response class
+     * @param invalidResponseCode error code for invalid responses
+     * @param invalidResponseMessage error message for invalid responses
+     * @param responseValidator validates the returned response body
+     * @return deserialized response
+     */
+    private <T> T executeCrbRequest(final String url, final HttpMethod method, final Object requestBody, final Class<T> responseType,
+            final String invalidResponseCode, final String invalidResponseMessage, final Predicate<T> responseValidator, final String requestFailedCode, final String connectionFailedCode) {
+
+        final String accessToken = getCrbAccessToken();
+
+        final RestTemplate restTemplate = new RestTemplate();
+
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setAccept(MediaType.parseMediaTypes(MediaType.APPLICATION_JSON_VALUE));
+        headers.setBearerAuth(accessToken);
+
+        final HttpEntity<?> entity = new HttpEntity<>(requestBody, headers);
+
+        try {
+            final ResponseEntity<String> response = restTemplate.exchange(url, method, entity, String.class);
+
+            final String responseBody = response.getBody();
+
+            log.info("Gnugrid HTTP Status: {}", response.getStatusCode());
+
+            final T responseData = objectMapper.readValue( responseBody, responseType);
+
+            log.debug("Gnugrid raw response: {}", responseData);
+
+
+            if (!response.getStatusCode().is2xxSuccessful() || responseData == null || !responseValidator.test(responseData)) {
+
+                throw new GeneralPlatformDomainRuleException(invalidResponseCode, invalidResponseMessage);
+            }
+
+            return responseData;
+
+        } catch (final HttpStatusCodeException exception) {
+
+            throw new GeneralPlatformDomainRuleException(requestFailedCode, "CRB request failed with HTTP status " + exception.getStatusCode().value() + ".");
+        } catch (final RestClientException exception) {
+
+            throw new GeneralPlatformDomainRuleException(connectionFailedCode, "Unable to communicate with the CRB service.");
+        } catch (JsonProcessingException e) {
+            log.error("Unable to deserialize Gnugrid response", e);
+
+            throw new GeneralPlatformDomainRuleException(
+                    invalidResponseCode,
+                    invalidResponseMessage
+            );
+        }
+    }
+
 }

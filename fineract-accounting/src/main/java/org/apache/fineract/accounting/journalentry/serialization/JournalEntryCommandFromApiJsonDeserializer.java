@@ -128,7 +128,8 @@ public class JournalEntryCommandFromApiJsonDeserializer extends AbstractFromApiJ
             final String comments = this.fromApiJsonHelper.extractStringNamed("comments", creditElement);
             final BigDecimal amount = this.fromApiJsonHelper.extractBigDecimalNamed("amount", creditElement, locale);
 
-            debitOrCredits[i] = new SingleDebitOrCreditEntryCommand(glAccountId, glAccountName, amount, comments, parametersPassedInForCreditsCommand);
+            debitOrCredits[i] = new SingleDebitOrCreditEntryCommand(glAccountId, glAccountName, amount, comments,
+                    parametersPassedInForCreditsCommand);
         }
         return debitOrCredits;
     }

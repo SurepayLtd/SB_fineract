@@ -1381,7 +1381,7 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
                     chargeOffBehaviour.getValueAsStringEnumOptionData(), interestRecognitionOnDisbursementDate, allowFullTermForTranche,
                     daysInYearCustomStrategy, enableIncomeCapitalization, capitalizedIncomeCalculationType, capitalizedIncomeStrategy,
                     capitalizedIncomeType, enableBuyDownFee, buyDownFeeCalculationType, buyDownFeeStrategy, buyDownFeeIncomeType,
-                    merchantBuyDownFee, channel).setMonthEndDueDateStrategy(monthEndDueDateStrategy)
+                    merchantBuyDownFee, channel, isLoanProductCrbEnabled).setMonthEndDueDateStrategy(monthEndDueDateStrategy)
                     .setFirstRepaymentDayOfMonth(JdbcSupport.getInteger(rs, "firstRepaymentDayOfMonth"))
                     .setSecondRepaymentDayOfMonth(JdbcSupport.getInteger(rs, "secondRepaymentDayOfMonth"))
                     .setDisbursedViaMomoPay(disbursedViaMomoPay).setDisbursementPayoutCompleted(dibursementPayoutCompleted)

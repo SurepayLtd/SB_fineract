@@ -18,8 +18,7 @@
  */
 package org.apache.fineract.test.data;
 
-public enum
-ChargeTimeType {
+public enum ChargeTimeType {
 
     DISBURSEMENT(1), //
     SPECIFIED_DUE_DATE(2), //

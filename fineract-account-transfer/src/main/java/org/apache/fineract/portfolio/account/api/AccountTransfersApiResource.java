@@ -184,9 +184,11 @@ public class AccountTransfersApiResource {
     public CommandProcessingResult accountTransferOperation(
             @PathParam("accountTransferTransactionId") @Parameter(description = "accountTransferTransactionId") final Long accountTransferTransactionId,
             @PathParam("fromAccountId") @Parameter(description = "fromAccountId") final Long fromAccountId,
-            @QueryParam("command") @Parameter(description = "command") final String commandParam, @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+            @QueryParam("command") @Parameter(description = "command") final String commandParam,
+            @Parameter(hidden = true) final String apiRequestBodyAsJson) {
         final CommandWrapper commandRequest = switch (commandParam) {
-            case "undo" -> new CommandWrapperBuilder().withJson(apiRequestBodyAsJson).undoAccountTransfer(accountTransferTransactionId, fromAccountId).build();
+            case "undo" -> new CommandWrapperBuilder().withJson(apiRequestBodyAsJson)
+                    .undoAccountTransfer(accountTransferTransactionId, fromAccountId).build();
             default -> throw new UnsupportedOperationException("Unsupported command: " + commandParam);
         };
 

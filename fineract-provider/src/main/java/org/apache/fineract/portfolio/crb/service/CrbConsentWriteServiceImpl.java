@@ -13,9 +13,8 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuild
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
-import org.apache.fineract.infrastructure.documentmanagement.command.DocumentCommand;
+import org.apache.fineract.infrastructure.documentmanagement.data.DocumentCreateRequest;
 import org.apache.fineract.infrastructure.documentmanagement.service.DocumentWritePlatformService;
-import org.apache.fineract.infrastructure.documentmanagement.service.DocumentWritePlatformServiceJpaRepositoryImpl;
 import org.apache.fineract.infrastructure.security.service.HashingPasswordEncoder;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.notification.data.SmsTypeEnum;
@@ -95,7 +94,6 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
             LocalDateTime expiryTime = null;
             Integer consentStatus = null;
             LocalDateTime consentedAt = null;
-            DocumentCommand documentCommand = null;
 
             if (consentChannel.equals(ConsentChannel.OTP.getValue())){
                  otp = String.valueOf(secureRandom.nextInt( 90000) + 10000);
@@ -115,11 +113,20 @@ public class CrbConsentWriteServiceImpl implements CrbConsentWriteService{
 
             if (file != null && fileSize != null && fileSize > 0) {
 
-                documentCommand = new DocumentCommand(null, null, DocumentWritePlatformServiceJpaRepositoryImpl.DocumentManagementEntity.CRB_CONSENT.toString(), crbConsent.getId(),
-                        fileName, fileName, fileSize, contentType, "Consent Paper", null);
+                DocumentCreateRequest documentRequest = DocumentCreateRequest.builder()
+                        .entityType("crb_consent")
+                        .entityId(crbConsent.getId())
+                        .name(fileName)
+                        .description("CRB Consent Document")
+                        .fileName(fileName)
+                        .size(fileSize)
+                        .type(contentType)
+                        .stream(file)
+                        .build();
 
-                Long docId = this.documentWritePlatformService.createDocument(documentCommand, file);
-                crbConsent.setDocumentId(docId);
+                var documentResponse = this.documentWritePlatformService.createDocument(documentRequest);
+
+                crbConsent.setDocumentId(documentResponse.getResourceId());
                 crbConsent.setConsentStatus(ConsentStatus.VERIFIED.getValue());
                 client.markCrbVerificationPending();
                 this.crbConsentRepository.saveAndFlush(crbConsent);

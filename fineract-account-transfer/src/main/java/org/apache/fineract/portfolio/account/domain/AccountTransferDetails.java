@@ -121,8 +121,13 @@ public class AccountTransferDetails extends AbstractPersistableCustom<Long> {
         this.accountTransferStandingInstruction = accountTransferStandingInstruction;
     }
 
-    public Client fromClient(){return this.fromClient;}
-    public Client toClient(){return this.toClient;}
+    public Client fromClient() {
+        return this.fromClient;
+    }
+
+    public Client toClient() {
+        return this.toClient;
+    }
 
     public SavingsAccount toSavingsAccount() {
         return this.toSavingsAccount;
